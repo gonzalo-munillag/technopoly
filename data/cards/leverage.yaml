@@ -1,0 +1,49 @@
+# ============================================================
+# RESOURCE CARDS
+# ============================================================
+# Cards that give immediate resources or ongoing resource boosts.
+#
+#   name        - Display name
+#   cost        - Resource cost to play
+#   tag         - Category tag
+#   description - What the card does
+#   immediate   - Resources gained immediately on play
+#   production  - Ongoing production per turn (optional)
+# ============================================================
+
+- name: Mining Operation
+  cost: 3
+  tag: extraction
+  description: Extract raw minerals from the earth.
+  immediate:
+    credits: 2
+  production:
+    materials: 1
+
+- name: Data Center
+  cost: 5
+  tag: computing
+  description: A warehouse full of servers crunching numbers.
+  immediate:
+    data: 1
+  production:
+    data: 1
+
+- name: Power Plant
+  cost: 4
+  tag: energy
+  description: A conventional power plant providing steady energy.
+  immediate:
+    energy: 2
+  production:
+    energy: 1
+
+# Add more resource cards below:
+# - name: ...
+#   cost: ...
+#   tag: ...
+#   description: ...
+#   immediate:
+#     resource_name: amount
+#   production:
+#     resource_name: amount

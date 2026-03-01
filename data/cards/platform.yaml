@@ -1,0 +1,36 @@
+# ============================================================
+# ACTION CARDS
+# ============================================================
+# One-time effect cards that are discarded after use.
+#
+#   name        - Display name
+#   cost        - Resource cost to play
+#   tag         - Category tag
+#   description - What the card does
+#   effect      - The action performed when played
+# ============================================================
+
+- name: Hostile Takeover
+  cost: 10
+  tag: corporate
+  description: Acquire a competitor's asset by force.
+  effect: steal_card
+
+- name: Government Grant
+  cost: 0
+  tag: political
+  description: Receive funding from the government.
+  effect: gain_credits_5
+
+- name: Hack Attack
+  cost: 3
+  tag: cyber
+  description: Disrupt an opponent's production for one turn.
+  effect: disable_production
+
+# Add more action cards below:
+# - name: ...
+#   cost: ...
+#   tag: ...
+#   description: ...
+#   effect: ...

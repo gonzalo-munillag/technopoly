@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Technopoly</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- LOGIN SCREEN -->
+    <section id="login-screen" class="screen active">
+      <div class="card-panel login-panel">
+        <h1 class="logo">TECHNOPOLY</h1>
+        <p class="subtitle">The Technology Board Game</p>
+        <div class="form-group">
+          <label for="player-name">Your Name</label>
+          <input type="text" id="player-name" placeholder="Enter your name" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter game password" />
+        </div>
+        <button id="login-btn" class="btn btn-primary">Enter</button>
+        <p id="login-error" class="error-msg"></p>
+      </div>
+    </section>
+
+    <!-- LOBBY SCREEN -->
+    <section id="lobby-screen" class="screen">
+      <div class="card-panel lobby-panel">
+        <h2>Lobby</h2>
+        <p class="lobby-info">Waiting for the game master to start...</p>
+        <ul id="player-list"></ul>
+        <button id="start-game-btn" class="btn btn-primary hidden">Start Game</button>
+        <p id="lobby-error" class="error-msg"></p>
+      </div>
+    </section>
+
+    <!-- GAME SCREEN -->
+    <section id="game-screen" class="screen">
+      <header class="game-header">
+        <h1 class="logo-sm">TECHNOPOLY</h1>
+        <div class="game-info">
+          <span id="gen-badge" class="badge">Gen 1</span>
+          <span id="deck-badge" class="badge">Deck: --</span>
+          <span id="turn-badge" class="badge turn-badge">Turn: --</span>
+        </div>
+      </header>
+
+      <div class="game-layout">
+        <!-- PLAYER INFO -->
+        <aside class="sidebar">
+          <h3>Your Resources</h3>
+          <div id="resources-panel" class="resource-grid"></div>
+          <h3>Your Production</h3>
+          <div id="production-panel" class="resource-grid"></div>
+          <h3>Played Cards</h3>
+          <div id="played-cards" class="played-list"></div>
+        </aside>
+
+        <!-- HAND -->
+        <main class="main-area">
+          <div class="hand-header">
+            <h3>Your Hand</h3>
+            <div class="action-btns">
+              <button id="draw-btn" class="btn btn-sm">Draw Card</button>
+              <button id="end-turn-btn" class="btn btn-sm btn-accent">End Turn</button>
+            </div>
+          </div>
+          <div id="hand-container" class="hand-container"></div>
+        </main>
+      </div>
+
+      <div id="game-error" class="error-msg floating-error"></div>
+    </section>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
