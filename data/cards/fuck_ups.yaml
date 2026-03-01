@@ -10,7 +10,7 @@
 #   effect      - Special effect when played (optional)
 # ============================================================
 
-- name: Solar Farm
+- name: fuck up 1 
   cost: 4
   tag: energy
   description: A large-scale solar energy installation.
@@ -18,7 +18,7 @@
     energy: 2
   effect: null
 
-- name: Quantum Processor
+- name: fuck up 2
   cost: 8
   tag: computing
   description: Bleeding-edge quantum computing hardware.
@@ -26,7 +26,15 @@
     data: 3
   effect: null
 
-- name: Bioreactor
+- name: fuck up 3
+  cost: 6
+  tag: biotech
+  description: Genetically engineered organisms producing raw materials.
+  production:
+    materials: 2
+  effect: null
+
+- name: fuck up 4
   cost: 6
   tag: biotech
   description: Genetically engineered organisms producing raw materials.

@@ -1,0 +1,9 @@
+services:
+  technopoly:
+    image: gonzalomg0/technopoly:latest
+    container_name: technopoly
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    env_file:
+      - .env

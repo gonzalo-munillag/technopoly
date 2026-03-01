@@ -3,11 +3,17 @@
 # ============================================================
 # One-time effect cards that are discarded after use.
 #
-#   name        - Display name
-#   cost        - Resource cost to play
+#   name            - Display name
+#   description     - Explains what the card is in the real-world
 #   tag         - Category tag
-#   description - What the card does
-#   effect      - The action performed when played
+#   type - SW platform / SW service / HW platform
+#   price       - Resource cost to play
+#   engineers  - Resource cost to play
+#   servers  - Resource cost to play
+#   suits  - Resource cost to play
+#   ads  - Resource cost to play
+#   users - number of users gained
+#   reputation - the points of reputation gained or lost
 # ============================================================
 
 - name: Hostile Takeover
@@ -23,6 +29,48 @@
   effect: gain_credits_5
 
 - name: Hack Attack
+  cost: 3
+  tag: cyber
+  description: Disrupt an opponent's production for one turn.
+  effect: disable_production
+
+- name: Hostile Takeover 2
+  cost: 10
+  tag: corporate
+  description: Acquire a competitor's asset by force.
+  effect: steal_card
+
+- name: Government Grant 2
+  cost: 0
+  tag: political
+  description: Receive funding from the government.
+  effect: gain_credits_5
+
+- name: Hack Attack 2
+  cost: 3
+  tag: cyber
+  description: Disrupt an opponent's production for one turn.
+  effect: disable_production
+
+- name: Government Grant 5
+  cost: 0
+  tag: political
+  description: Receive funding from the government.
+  effect: gain_credits_5
+
+- name: Hack Attack 25
+  cost: 3
+  tag: cyber
+  description: Disrupt an opponent's production for one turn.
+  effect: disable_production
+
+- name: Government Grant 7
+  cost: 0
+  tag: political
+  description: Receive funding from the government.
+  effect: gain_credits_5
+
+- name: Hack Attack 8
   cost: 3
   tag: cyber
   description: Disrupt an opponent's production for one turn.

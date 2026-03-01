@@ -2,3 +2,4 @@ flask
 flask-socketio
 pyyaml
 eventlet
+python-dotenv

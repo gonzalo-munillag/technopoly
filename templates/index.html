@@ -13,7 +13,7 @@
     <section id="login-screen" class="screen active">
       <div class="card-panel login-panel">
         <h1 class="logo">TECHNOPOLY</h1>
-        <p class="subtitle">The Technology Board Game</p>
+        <p class="subtitle">"The culture seeks its authorisation in technology, finds its satisfactions in technology, and takes its orders from technology" - Neil Postman</p>
         <div class="form-group">
           <label for="player-name">Your Name</label>
           <input type="text" id="player-name" placeholder="Enter your name" autocomplete="off" />
@@ -30,7 +30,7 @@
     <!-- LOBBY SCREEN -->
     <section id="lobby-screen" class="screen">
       <div class="card-panel lobby-panel">
-        <h2>Lobby</h2>
+        <h2>CEO Lobby</h2>
         <p class="lobby-info">Waiting for the game master to start...</p>
         <ul id="player-list"></ul>
         <button id="start-game-btn" class="btn btn-primary hidden">Start Game</button>
@@ -43,38 +43,101 @@
       <header class="game-header">
         <h1 class="logo-sm">TECHNOPOLY</h1>
         <div class="game-info">
-          <span id="gen-badge" class="badge">Gen 1</span>
-          <span id="deck-badge" class="badge">Deck: --</span>
+          <span id="year-badge" class="badge">Year 1</span>
+          <span id="phase-badge" class="badge">Phase: --</span>
           <span id="turn-badge" class="badge turn-badge">Turn: --</span>
+          <span id="dealer-badge" class="badge dealer-badge">Start: --</span>
         </div>
       </header>
 
       <div class="game-layout">
-        <!-- PLAYER INFO -->
+        <!-- PLAYER INFO SIDEBAR -->
         <aside class="sidebar">
-          <h3>Your Resources</h3>
+          <h3>Company</h3>
+          <div id="company-panel" class="company-display"></div>
+          <h3>Resources</h3>
           <div id="resources-panel" class="resource-grid"></div>
-          <h3>Your Production</h3>
+          <h3>Production</h3>
           <div id="production-panel" class="resource-grid"></div>
           <h3>Played Cards</h3>
           <div id="played-cards" class="played-list"></div>
+          <button id="show-hand-btn" class="btn btn-sm show-hand-btn">Show All Cards</button>
         </aside>
 
-        <!-- HAND -->
+        <!-- MAIN AREA -->
         <main class="main-area">
-          <div class="hand-header">
-            <h3>Your Hand</h3>
-            <div class="action-btns">
-              <button id="draw-btn" class="btn btn-sm">Draw Card</button>
-              <button id="end-turn-btn" class="btn btn-sm btn-accent">End Turn</button>
+
+          <!-- COMPANY PICK PHASE -->
+          <div id="company-pick-area" class="phase-area hidden">
+            <h2>Choose Your Company</h2>
+            <p class="phase-hint">Pick the company you want to lead.</p>
+            <div id="company-waiting" class="waiting-msg hidden">You picked your company. Waiting for other players...</div>
+            <div id="company-cards-container" class="hand-container"></div>
+          </div>
+
+          <!-- DRAFT PHASE -->
+          <div id="draft-area" class="phase-area hidden">
+            <h2>Draft Phase — Year <span id="draft-year">1</span></h2>
+            <p class="phase-hint">You drew 3 Projects + 2 Boosters. Pay 3 money to keep each card. Fuck-up cards are free and go straight to your hand.</p>
+            <div id="draft-container" class="draft-grid"></div>
+            <div class="action-btns draft-actions">
+              <button id="done-draft-btn" class="btn btn-sm btn-accent">Done Drafting</button>
             </div>
           </div>
-          <div id="hand-container" class="hand-container"></div>
+
+          <!-- REGULATION PHASE -->
+          <div id="regulation-area" class="phase-area hidden">
+            <h2>Regulation</h2>
+            <p class="phase-hint">A new regulation has been enacted this year.</p>
+            <div id="regulation-card-display" class="regulation-display"></div>
+            <div id="regulation-alert-box" class="regulation-alert hidden"></div>
+            <div id="regulation-actions" class="action-btns hidden">
+              <button id="reg-accept-btn" class="btn btn-sm btn-accent">Accept Penalty</button>
+              <button id="reg-court-btn" class="btn btn-sm btn-danger-sm">Go to Court</button>
+            </div>
+            <div id="regulation-result-box" class="regulation-result hidden"></div>
+            <div id="regulation-waiting" class="waiting-msg hidden">Waiting for others to resolve their compliance...</div>
+            <button id="reg-proceed-btn" class="btn btn-sm btn-accent hidden" style="margin-top:1rem;">Proceed</button>
+          </div>
+
+          <!-- PLAYER TURNS PHASE -->
+          <div id="turns-area" class="phase-area hidden">
+            <div id="fuckup-alert" class="fuckup-alert hidden"></div>
+            <div id="year-done-waiting" class="waiting-msg hidden">You ended your fiscal year. Waiting for other players...</div>
+            <div id="turns-content">
+              <div class="hand-header">
+                <h3>Your Hand <span id="cards-played-info" class="cards-played-counter"></span></h3>
+              </div>
+              <div id="hand-container" class="hand-container"></div>
+              <div class="turn-actions">
+                <button id="end-turn-btn" class="btn btn-sm btn-accent">End Turn</button>
+                <button id="end-year-btn" class="btn btn-sm btn-danger-sm">End Year</button>
+              </div>
+            </div>
+          </div>
+
         </main>
+      </div>
+
+      <!-- MASTER CONTROLS (master only) -->
+      <div id="end-game-bar" class="end-game-bar hidden">
+        <button id="restart-game-btn" class="btn btn-sm btn-accent">Restart Game</button>
+        <button id="end-game-btn" class="btn btn-danger">End Game</button>
       </div>
 
       <div id="game-error" class="error-msg floating-error"></div>
     </section>
+
+    <!-- HAND MODAL -->
+    <div id="hand-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Your Cards</h2>
+          <button id="close-hand-modal" class="btn btn-sm">&times;</button>
+        </div>
+        <div id="hand-modal-body" class="modal-body"></div>
+      </div>
+    </div>
 
   </div>
 
