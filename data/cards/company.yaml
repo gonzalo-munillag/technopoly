@@ -1,20 +1,13 @@
 # ============================================================
 # COMPANY CARDS
 # ============================================================
-# Each player is shown 2 random companies and picks one.
-#
-#   name                - Company name
-#   cost                - 0 (free to pick)
-#   tag                 - Industry sector
-#   description         - Flavour text
-#   starting_resources  - Initial resource values
-#   starting_production - Initial production values
-# ============================================================
 
 - name: NovaTech
+  id: 1
   cost: 0
   tag: startup
-  description: A scrappy tech startup with big ambitions and a garage full of energy drinks.
+  description: A scrappy tech startup with big ambitions and a garage full of energy
+    drinks.
   starting_resources:
     users: 0
     money: 20
@@ -25,8 +18,8 @@
     reputation: 5
   starting_production:
     hr: 1
-
 - name: OmniCorp
+  id: 2
   cost: 0
   tag: megacorp
   description: An established corporation with deep pockets and deeper bureaucracy.
@@ -40,23 +33,8 @@
     reputation: 3
   starting_production:
     hr: 2
-
-- name: DataVault
-  cost: 0
-  tag: cloud
-  description: Cloud infrastructure giant. They own the servers, you rent the dreams.
-  starting_resources:
-    users: 2
-    money: 15
-    engineers: 2
-    suits: 1
-    servers: 4
-    ads: 0
-    reputation: 4
-  starting_production:
-    hr: 1
-
 - name: ViralWave
+  id: 4
   cost: 0
   tag: social
   description: Social media disruptor. Engagement is their drug, attention their currency.
@@ -70,8 +48,8 @@
     reputation: 2
   starting_production:
     hr: 1
-
 - name: IronGate
+  id: 5
   cost: 0
   tag: cybersec
   description: Cybersecurity firm forged in paranoia. Trust no one, encrypt everything.
@@ -85,3 +63,4 @@
     reputation: 6
   starting_production:
     hr: 1
+  boosts: null

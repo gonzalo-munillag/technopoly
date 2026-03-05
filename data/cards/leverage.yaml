@@ -1,17 +1,9 @@
 # ============================================================
-# RESOURCE CARDS
-# ============================================================
-# Cards that give immediate resources or ongoing resource boosts.
-#
-#   name        - Display name
-#   cost        - Resource cost to play
-#   tag         - Category tag
-#   description - What the card does
-#   immediate   - Resources gained immediately on play
-#   production  - Ongoing production per turn (optional)
+# LEVERAGE CARDS (BOOSTERS deck)
 # ============================================================
 
 - name: Mining Operation
+  id: 22
   cost: 3
   tag: extraction
   description: Extract raw minerals from the earth.
@@ -19,8 +11,13 @@
     credits: 2
   production:
     materials: 1
-
+  boosts:
+  - target_id: 11
+    bonus:
+      money: 1
+      reputation: 2
 - name: Data Center
+  id: 23
   cost: 5
   tag: computing
   description: A warehouse full of servers crunching numbers.
@@ -28,8 +25,12 @@
     data: 1
   production:
     data: 1
-
+  boosts:
+  - target_id: 9
+    bonus:
+      users: 4
 - name: Power Plant
+  id: 24
   cost: 4
   tag: energy
   description: A conventional power plant providing steady energy.
@@ -37,13 +38,8 @@
     energy: 2
   production:
     energy: 1
-
-# Add more resource cards below:
-# - name: ...
-#   cost: ...
-#   tag: ...
-#   description: ...
-#   immediate:
-#     resource_name: amount
-#   production:
-#     resource_name: amount
+  boosts:
+  - target_id: 7
+    bonus:
+      money: 2
+      reputation: 1

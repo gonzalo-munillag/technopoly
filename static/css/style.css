@@ -638,6 +638,666 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+/* ── Card Editor ─────────────────────────────────────────── */
+.edit-cards-btn {
+  flex-shrink: 0;
+}
+
+.editor-modal-content {
+  width: 95%;
+  max-width: 1100px;
+  max-height: 90vh;
+}
+
+.editor-body {
+  padding: 1.5rem;
+}
+
+.editor-section {
+  margin-bottom: 2rem;
+}
+
+.editor-section-title {
+  font-size: .9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: .8rem;
+  padding-bottom: .4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: .8rem;
+}
+
+.editor-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .8rem;
+  transition: border-color .2s, transform .1s;
+}
+
+.editor-card:hover:not(.editor-card-locked) {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.editor-card-locked {
+  opacity: .5;
+  cursor: not-allowed !important;
+}
+
+.editor-card-name {
+  font-weight: 700;
+  font-size: .9rem;
+  margin-bottom: .3rem;
+}
+
+.editor-card-meta {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  margin-bottom: .3rem;
+}
+
+.editor-card-tag {
+  padding: .1rem .4rem;
+  background: var(--primary);
+  border-radius: 8px;
+  font-size: .65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.editor-card-cost {
+  font-size: .75rem;
+  color: var(--text-dim);
+}
+
+.editor-card-desc {
+  font-size: .75rem;
+  color: var(--text-dim);
+  line-height: 1.3;
+}
+
+.editor-lock-indicator {
+  margin-top: .4rem;
+  font-size: .7rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.editor-form {
+  max-width: 600px;
+}
+
+.editor-fields {
+  margin: 1.2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+
+.editor-field label,
+.editor-dict-label {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.editor-field input,
+.editor-field textarea {
+  width: 100%;
+  padding: .5rem .7rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: .9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .2s;
+}
+
+.editor-field input:focus,
+.editor-field textarea:focus {
+  border-color: var(--primary);
+}
+
+.editor-dict-field {
+  padding: .6rem .8rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.editor-dict-label {
+  display: block;
+  margin-bottom: .5rem;
+}
+
+.editor-dict-row {
+  display: flex;
+  gap: .4rem;
+  align-items: center;
+  margin-bottom: .3rem;
+}
+
+.editor-dict-key {
+  flex: 1;
+  padding: .35rem .5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: .85rem;
+  outline: none;
+}
+
+.editor-dict-val {
+  width: 80px;
+  padding: .35rem .5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--accent);
+  font-size: .85rem;
+  font-weight: 700;
+  text-align: right;
+  outline: none;
+}
+
+.editor-dict-key:focus,
+.editor-dict-val:focus {
+  border-color: var(--primary);
+}
+
+.editor-remove-btn {
+  padding: .2rem .5rem !important;
+  font-size: .8rem !important;
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger) !important;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.editor-add-btn {
+  margin-top: .4rem;
+  font-size: .75rem !important;
+  padding: .25rem .6rem !important;
+}
+
+.editor-form-actions {
+  display: flex;
+  gap: .6rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Editor section header with add button ─────────────── */
+.editor-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .6rem;
+}
+
+.editor-add-card-btn {
+  font-size: .75rem !important;
+  padding: .3rem .7rem !important;
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+/* ── Editor toolbar (count + search) ─────────────────────── */
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .5rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-total-count {
+  font-size: .85rem;
+  color: var(--text-dim);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.editor-search {
+  flex: 1;
+  max-width: 320px;
+  padding: .4rem .7rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: .85rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .2s;
+}
+
+.editor-search:focus {
+  border-color: var(--primary);
+}
+
+.editor-search::placeholder {
+  color: var(--text-dim);
+  opacity: .7;
+}
+
+/* ── Card delete button ──────────────────────────────────── */
+.editor-card {
+  position: relative;
+}
+
+.editor-card-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 50%;
+  font-size: .85rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 2;
+}
+
+.editor-card:hover .editor-card-delete {
+  opacity: 1;
+}
+
+.editor-card-locked .editor-card-delete {
+  display: none;
+}
+
+.editor-card-id {
+  font-size: .65rem;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: .15rem;
+}
+
+.editor-header-actions {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+
+/* ── Boost fields ────────────────────────────────────────── */
+.editor-boosts-field {
+  padding: .6rem .8rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.editor-boost-entry {
+  margin-bottom: .8rem;
+  padding: .5rem;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.editor-boost-label {
+  font-size: .7rem;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 600;
+  margin-right: .4rem;
+}
+
+.boost-bonus-rows {
+  padding-left: .8rem;
+  margin-top: .3rem;
+}
+
+/* ── Card Trees ──────────────────────────────────────────── */
+.trees-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem 1.5rem;
+  padding: .6rem 1.5rem;
+  font-size: .85rem;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.trees-stat strong {
+  color: var(--text);
+}
+
+.tree-group {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.tree-title {
+  font-size: .9rem;
+  margin-bottom: .8rem;
+  color: var(--primary);
+}
+
+.tree-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+}
+
+.tree-boosters-col {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  flex: 1;
+}
+
+.tree-arrow-col {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+}
+
+.tree-arrow {
+  font-size: 1.5rem;
+  color: var(--accent);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-height: 80px;
+}
+
+.tree-target-col {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.tree-card {
+  padding: .7rem .8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  transition: border-color .2s, transform .15s;
+}
+
+.tree-card:hover:not(.editor-card-locked) {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.tree-booster-card {
+  border-left: 3px solid var(--primary);
+}
+
+.tree-target-card {
+  border-left: 3px solid var(--accent);
+  width: 100%;
+}
+
+.tree-bonus {
+  font-size: .75rem;
+  color: var(--accent);
+  font-weight: 600;
+  margin-top: .3rem;
+}
+
+/* ── Tree edit form spacing ───────────────────────────────── */
+.tree-edit-title {
+  margin-top: 1.2rem;
+  margin-bottom: .5rem;
+}
+
+/* ── Graveyard ───────────────────────────────────────────── */
+.graveyard-card {
+  border-left: 3px solid var(--danger);
+}
+
+.graveyard-actions {
+  display: flex;
+  gap: .4rem;
+  margin-top: .6rem;
+  padding-top: .5rem;
+  border-top: 1px solid var(--border);
+}
+
+.graveyard-actions .btn {
+  flex: 1;
+  font-size: .7rem !important;
+  padding: .3rem .5rem !important;
+}
+
+/* ── Dropdown key select (for bonus fields) ──────────────── */
+select.editor-dict-key {
+  flex: 1;
+  padding: .35rem .5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: .85rem;
+  outline: none;
+  cursor: pointer;
+}
+
+select.editor-dict-key:focus {
+  border-color: var(--primary);
+}
+
+/* ── Game Board ──────────────────────────────────────────── */
+.board-btn {
+  width: 100%;
+  margin-top: 1rem;
+  margin-bottom: .8rem;
+  background: var(--primary) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.board-modal-content {
+  width: 95%;
+  max-width: 900px;
+  max-height: 92vh;
+}
+
+.board-container {
+  position: relative;
+  overflow: auto;
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.board-svg {
+  display: block;
+}
+
+.board-hex-group polygon {
+  transition: opacity .15s;
+}
+
+.board-hex-group:hover polygon {
+  opacity: .8;
+}
+
+.board-hex-placeable {
+  stroke: var(--accent) !important;
+  stroke-width: 2.5 !important;
+  stroke-dasharray: 4 2;
+  animation: pulse-hex 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-hex {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .6; }
+}
+
+.board-tooltip {
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .4rem .7rem;
+  font-size: .78rem;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+.board-pending {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .85rem;
+  color: var(--text);
+  padding: .3rem .7rem;
+  background: rgba(255,255,255,.05);
+  border-radius: 6px;
+}
+
+.pending-tile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: .65rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.board-info-bar {
+  padding: 0 1rem;
+  min-height: 0;
+}
+
+.board-placed-msg {
+  padding: .5rem;
+  background: rgba(46, 204, 113, .15);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: .85rem;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: .5rem;
+}
+
+/* ── Board Editor ────────────────────────────────────────── */
+.board-tile-form {
+  padding: .8rem 1.2rem;
+  border-top: 1px solid var(--border);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.board-tile-form h3 { color: var(--accent); }
+
+.board-tile-form .editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+}
+
+.board-tile-form .editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.board-tile-form .editor-field label {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.editor-form-actions {
+  display: flex;
+  gap: .5rem;
+  margin-top: .8rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.board-form-input {
+  width: 100%;
+  padding: .4rem .6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: .9rem;
+}
+
+.board-bonus-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .6rem;
+  margin-top: .2rem;
+}
+
+.board-bonus-sub {
+  display: block;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin: .4rem 0 .2rem;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.board-res-container {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.board-res-row {
+  display: flex;
+  gap: .4rem;
+  align-items: center;
+}
+
+.board-res-row select { flex: 1; }
+.board-res-row input[type="number"] { width: 60px; flex: none; }
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 700px) {
   .game-layout { flex-direction: column; }

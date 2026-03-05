@@ -21,6 +21,7 @@ class Player:
     draft_pool: list[Card] = field(default_factory=list)
     regulation_resolved: bool = False
     year_done: bool = False
+    pending_tile: str | None = None
 
     def __post_init__(self):
         if not self.resources:
@@ -106,4 +107,5 @@ class Player:
             "regulation_resolved": self.regulation_resolved,
             "has_fuckups": self.has_pending_fuckups(),
             "year_done": self.year_done,
+            "pending_tile": self.pending_tile,
         }

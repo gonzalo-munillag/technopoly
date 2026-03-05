@@ -34,6 +34,8 @@
         <p class="lobby-info">Waiting for the game master to start...</p>
         <ul id="player-list"></ul>
         <button id="start-game-btn" class="btn btn-primary hidden">Start Game</button>
+        <button id="edit-cards-lobby-btn" class="btn btn-sm hidden" style="margin-top:.5rem;width:100%;">Edit Cards</button>
+        <button id="edit-board-lobby-btn" class="btn btn-sm hidden" style="margin-top:.3rem;width:100%;">Edit Board</button>
         <p id="lobby-error" class="error-msg"></p>
       </div>
     </section>
@@ -48,6 +50,8 @@
           <span id="turn-badge" class="badge turn-badge">Turn: --</span>
           <span id="dealer-badge" class="badge dealer-badge">Start: --</span>
         </div>
+        <button id="edit-board-btn" class="btn btn-sm edit-cards-btn hidden">Edit Board</button>
+        <button id="edit-cards-btn" class="btn btn-sm edit-cards-btn hidden">Edit Cards</button>
       </header>
 
       <div class="game-layout">
@@ -59,6 +63,7 @@
           <div id="resources-panel" class="resource-grid"></div>
           <h3>Production</h3>
           <div id="production-panel" class="resource-grid"></div>
+          <button id="open-board-btn" class="btn btn-sm board-btn">View Board</button>
           <h3>Played Cards</h3>
           <div id="played-cards" class="played-list"></div>
           <button id="show-hand-btn" class="btn btn-sm show-hand-btn">Show All Cards</button>
@@ -128,6 +133,32 @@
       <div id="game-error" class="error-msg floating-error"></div>
     </section>
 
+    <!-- BOARD MODAL (game play) -->
+    <div id="board-modal" class="modal-overlay hidden">
+      <div class="modal-content board-modal-content">
+        <div class="modal-header">
+          <h2>Game Board</h2>
+          <div id="board-pending" class="board-pending hidden"></div>
+          <button id="close-board-modal" class="btn btn-sm">&times;</button>
+        </div>
+        <div id="board-info-bar" class="board-info-bar"></div>
+        <div id="board-container" class="board-container"></div>
+      </div>
+    </div>
+
+    <!-- BOARD EDITOR MODAL (master only) -->
+    <div id="board-editor-modal" class="modal-overlay hidden">
+      <div class="modal-content board-modal-content">
+        <div class="modal-header">
+          <h2 id="board-editor-title">Board Editor</h2>
+          <button id="close-board-editor" class="btn btn-sm">&times;</button>
+        </div>
+        <p class="phase-hint" style="padding:0 1rem .5rem;">Click any tile to edit its terrain and properties.</p>
+        <div id="board-editor-container" class="board-container"></div>
+        <div id="board-tile-form" class="board-tile-form hidden"></div>
+      </div>
+    </div>
+
     <!-- HAND MODAL -->
     <div id="hand-modal" class="modal-overlay hidden">
       <div class="modal-content">
@@ -136,6 +167,49 @@
           <button id="close-hand-modal" class="btn btn-sm">&times;</button>
         </div>
         <div id="hand-modal-body" class="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- CARD EDITOR MODAL -->
+    <div id="editor-modal" class="modal-overlay hidden">
+      <div class="modal-content editor-modal-content">
+        <div class="modal-header">
+          <h2 id="editor-title">Card Editor</h2>
+          <div class="editor-header-actions">
+            <button id="card-trees-btn" class="btn btn-sm">Card Trees</button>
+            <button id="graveyard-btn" class="btn btn-sm">Graveyard</button>
+            <button id="close-editor-modal" class="btn btn-sm">&times;</button>
+          </div>
+        </div>
+        <div class="editor-toolbar">
+          <div id="editor-total-count" class="editor-total-count"></div>
+          <input id="editor-search" type="text" class="editor-search" placeholder="Search by name or ID..." />
+        </div>
+        <div id="editor-body" class="modal-body editor-body"></div>
+      </div>
+    </div>
+
+    <!-- CARD TREES MODAL -->
+    <div id="trees-modal" class="modal-overlay hidden">
+      <div class="modal-content editor-modal-content">
+        <div class="modal-header">
+          <h2>Card Trees</h2>
+          <button id="close-trees-modal" class="btn btn-sm">Back to cards overview</button>
+        </div>
+        <div id="trees-stats" class="trees-stats"></div>
+        <input id="trees-search" type="text" class="editor-search" placeholder="Search trees by card name or ID..." style="margin:.8rem 1.5rem;" />
+        <div id="trees-body" class="modal-body editor-body"></div>
+      </div>
+    </div>
+
+    <!-- GRAVEYARD MODAL -->
+    <div id="graveyard-modal" class="modal-overlay hidden">
+      <div class="modal-content editor-modal-content">
+        <div class="modal-header">
+          <h2>Card Graveyard</h2>
+          <button id="close-graveyard-modal" class="btn btn-sm">Back to cards overview</button>
+        </div>
+        <div id="graveyard-body" class="modal-body editor-body"></div>
       </div>
     </div>
 

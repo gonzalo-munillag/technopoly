@@ -8,6 +8,7 @@ class Card:
     cost: int
     tag: str
     card_type: str  # "cyber_attack", "fuck_up", "platform", "leverage", "innovation", "company", "regulation"
+    id: int = 0
     deck: str = ""  # "projects", "boosters", "company", "regulation"
     description: str = ""
     production: dict[str, int] = field(default_factory=dict)
@@ -20,10 +21,14 @@ class Card:
     penalty: dict[str, int] = field(default_factory=dict)
     court_penalty: dict[str, int] = field(default_factory=dict)
     court_threshold: int = 4            # roll >= this to win in court
+    # Card connections: list of {"target_id": int, "bonus": {resource: amount}}
+    boosts: list[dict] = field(default_factory=list)
+    tile_type: str | None = None        # "power_plant", "factory", "data_center", "store", "ads"
 
     def to_dict(self) -> dict:
         return {
             "name": self.name,
+            "id": self.id,
             "cost": self.cost,
             "tag": self.tag,
             "card_type": self.card_type,
@@ -38,12 +43,15 @@ class Card:
             "penalty": self.penalty,
             "court_penalty": self.court_penalty,
             "court_threshold": self.court_threshold,
+            "boosts": self.boosts,
+            "tile_type": self.tile_type,
         }
 
     @classmethod
     def from_yaml(cls, data: dict, card_type: str, deck: str) -> Card:
         return cls(
             name=data["name"],
+            id=data.get("id", 0),
             cost=data.get("cost", 0),
             tag=data.get("tag", ""),
             card_type=card_type,
@@ -58,4 +66,6 @@ class Card:
             penalty=data.get("penalty") or {},
             court_penalty=data.get("court_penalty") or {},
             court_threshold=data.get("court_threshold", 4),
+            boosts=data.get("boosts") or [],
+            tile_type=data.get("tile_type"),
         )

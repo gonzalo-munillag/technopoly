@@ -1,30 +1,17 @@
 # ============================================================
 # CYBER ATTACK CARDS (PROJECTS deck)
 # ============================================================
-#   name        - Attack name
-#   cost        - Money cost to play
-#   tag         - Attack category
-#   description - What it does
-#   effect      - Effect identifier
-#   immediate   - Immediate resource changes (optional)
-#   production  - Production changes (optional)
-# ============================================================
 
 - name: DDoS Storm
+  id: 16
   cost: 3
   tag: network
   description: Overwhelm a competitor's servers, reducing their uptime.
   effect: ddos
 
 - name: Ransomware
+  id: 17
   cost: 5
   tag: malware
   description: Encrypt a competitor's data and demand payment.
   effect: ransomware
-
-# Add more cyber attack cards below:
-# - name: ...
-#   cost: ...
-#   tag: ...
-#   description: ...
-#   effect: ...

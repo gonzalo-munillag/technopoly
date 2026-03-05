@@ -1,84 +1,96 @@
 # ============================================================
-# ACTION CARDS
-# ============================================================
-# One-time effect cards that are discarded after use.
-#
-#   name            - Display name
-#   description     - Explains what the card is in the real-world
-#   tag         - Category tag
-#   type - SW platform / SW service / HW platform
-#   price       - Resource cost to play
-#   engineers  - Resource cost to play
-#   servers  - Resource cost to play
-#   suits  - Resource cost to play
-#   ads  - Resource cost to play
-#   users - number of users gained
-#   reputation - the points of reputation gained or lost
+# PLATFORM CARDS (PROJECTS deck)
 # ============================================================
 
 - name: Hostile Takeover
+  id: 6
   cost: 10
   tag: corporate
   description: Acquire a competitor's asset by force.
   effect: steal_card
-
-- name: Government Grant
-  cost: 0
-  tag: political
-  description: Receive funding from the government.
-  effect: gain_credits_5
-
 - name: Hack Attack
+  id: 8
   cost: 3
   tag: cyber
   description: Disrupt an opponent's production for one turn.
   effect: disable_production
-
+- name: Government Grant 2
+  id: 10
+  cost: 0
+  tag: political
+  description: Receive funding from the government.
+  effect: gain_credits_5
+- name: Hack Attack 2
+  id: 11
+  cost: 3
+  tag: cyber
+  description: Disrupt an opponent's production for one turn.
+  effect: disable_production
+  boosts: null
+- name: Government Grant 5
+  id: 12
+  cost: 0
+  tag: political
+  description: Receive funding from the government.
+  effect: gain_credits_5
+- name: Hack Attack 25
+  id: 13
+  cost: 3
+  tag: cyber
+  description: Disrupt an opponent's production for one turn.
+  effect: disable_production
+- name: Hack Attack 8
+  id: 15
+  cost: 3
+  tag: cyber
+  description: Disrupt an opponent's production for one turn.
+  effect: disable_production
+- name: Government Grant
+  id: 7
+  cost: 0
+  tag: political
+  description: Receive funding from the government.
+  effect: gain_credits_5
 - name: Hostile Takeover 2
+  id: 9
   cost: 10
   tag: corporate
   description: Acquire a competitor's asset by force.
   effect: steal_card
-
-- name: Government Grant 2
+- name: Build Power Plant
+  id: 33
   cost: 0
-  tag: political
-  description: Receive funding from the government.
-  effect: gain_credits_5
-
-- name: Hack Attack 2
-  cost: 3
-  tag: cyber
-  description: Disrupt an opponent's production for one turn.
-  effect: disable_production
-
-- name: Government Grant 5
+  tag: energy
+  description: Construct a power plant on the board. Generates steady income. Bonus
+    near lakes.
+  tile_type: power_plant
+  boosts: null
+- name: Build Data Center
+  id: 34
+  cost: 7
+  tag: computing
+  description: Establish a data center on the board. Expands server capacity. Bonus
+    near lakes.
+  tile_type: data_center
+- name: Build Factory
+  id: 35
+  cost: 4
+  tag: manufacturing
+  description: Open a hardware factory. Produces engineers and income. Bonus near
+    cities.
+  tile_type: factory
+- name: Open Store
+  id: 36
   cost: 0
-  tag: political
-  description: Receive funding from the government.
-  effect: gain_credits_5
-
-- name: Hack Attack 25
-  cost: 3
-  tag: cyber
-  description: Disrupt an opponent's production for one turn.
-  effect: disable_production
-
-- name: Government Grant 7
-  cost: 0
-  tag: political
-  description: Receive funding from the government.
-  effect: gain_credits_5
-
-- name: Hack Attack 8
-  cost: 3
-  tag: cyber
-  description: Disrupt an opponent's production for one turn.
-  effect: disable_production
-
-# Add more action cards below:
-# - name: ...
-#   cost: ...
-#   tag: ...
-#   description: ...
-#   effect: ...
+  tag: retail
+  description: Open a retail store. Attracts users and generates income. Bonus near
+    cities.
+  tile_type: store
+  boosts: null
+- name: Launch Ad Campaign
+  id: 37
+  cost: 2
+  tag: marketing
+  description: Deploy advertising infrastructure. Boosts visibility and users. Bonus
+    near government.
+  tile_type: ads

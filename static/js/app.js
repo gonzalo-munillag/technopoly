@@ -3,6 +3,7 @@ const socket = io();
 let myRole = null;
 let myPlayerId = null;
 let myName = null;
+let isEditor = false;
 let lastGameState = null;
 let lastPrivateState = null;
 
@@ -61,6 +62,11 @@ const showHandBtn       = document.getElementById("show-hand-btn");
 const handModal         = document.getElementById("hand-modal");
 const closeHandModal    = document.getElementById("close-hand-modal");
 const handModalBody     = document.getElementById("hand-modal-body");
+const editCardsBtn      = document.getElementById("edit-cards-btn");
+const editorModal       = document.getElementById("editor-modal");
+const editorTitle       = document.getElementById("editor-title");
+const closeEditorModal  = document.getElementById("close-editor-modal");
+const editorBody        = document.getElementById("editor-body");
 
 const PHASE_LABELS = {
   company_pick: "Company Pick",
@@ -117,10 +123,15 @@ socket.on("login_success", (data) => {
   myRole = data.role;
   myPlayerId = data.player_id;
   myName = data.name;
+  isEditor = !!data.is_editor;
   loginError.textContent = "";
   showScreen(lobbyScreen);
   if (myRole === "master") {
     startGameBtn.classList.remove("hidden");
+  }
+  if (isEditor) {
+    document.getElementById("edit-cards-lobby-btn").classList.remove("hidden");
+    document.getElementById("edit-board-lobby-btn").classList.remove("hidden");
   }
 });
 
@@ -154,6 +165,10 @@ socket.on("game_started", (state) => {
   if (myRole === "master") {
     endGameBar.classList.remove("hidden");
   }
+  if (isEditor) {
+    editCardsBtn.classList.remove("hidden");
+    document.getElementById("edit-board-btn").classList.remove("hidden");
+  }
   renderGameState(state);
 });
 
@@ -162,6 +177,7 @@ socket.on("game_state", (state) => {
 });
 
 socket.on("your_state", (data) => {
+  const hadPending = lastPrivateState?.pending_tile;
   lastPrivateState = data;
   renderResources(data.resources);
   renderProduction(data.production);
@@ -178,6 +194,10 @@ socket.on("your_state", (data) => {
 
   updateTurnsUI();
   updateRegulationUI();
+
+  if (!hadPending && data.pending_tile) {
+    socket.emit("get_board");
+  }
 });
 
 function updateTurnsUI() {
@@ -657,3 +677,1543 @@ function showFloatingError(msg) {
   gameError.classList.add("visible");
   setTimeout(() => gameError.classList.remove("visible"), 3000);
 }
+
+// ══════════════════════════════════════════════════════════════
+// ── Card Editor ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+let editorCards = {};
+let editorLocksMap = {};
+let editingKey = null;
+let editorContext = "grid"; // "grid" | "trees"
+
+const DICT_FIELDS = new Set([
+  "production", "immediate", "starting_resources", "starting_production",
+  "penalty", "court_penalty",
+]);
+
+const RESOURCE_OPTIONS = [
+  "users", "money", "engineers", "suits", "servers", "ads", "reputation", "hr",
+];
+
+const EDITOR_TYPE_LABELS = {
+  company: "Company",
+  platform: "Platform",
+  cyber_attack: "Cyber Attacks",
+  fuck_up: "Fuck-ups",
+  leverage: "Leverage",
+  innovation: "Innovation",
+  regulation: "Regulation",
+};
+
+const editorTotalCount = document.getElementById("editor-total-count");
+const editorSearch = document.getElementById("editor-search");
+const cardTreesBtn = document.getElementById("card-trees-btn");
+const treesModal = document.getElementById("trees-modal");
+const closeTreesModal = document.getElementById("close-trees-modal");
+const treesStats = document.getElementById("trees-stats");
+const treesSearch = document.getElementById("trees-search");
+const treesBody = document.getElementById("trees-body");
+
+editCardsBtn.addEventListener("click", () => {
+  editorContext = "grid";
+  socket.emit("get_all_cards");
+});
+
+document.getElementById("edit-cards-lobby-btn").addEventListener("click", () => {
+  editorContext = "grid";
+  socket.emit("get_all_cards");
+});
+
+closeEditorModal.addEventListener("click", () => {
+  if (editingKey) {
+    const fields = editorBody.querySelector(".editor-fields");
+    if (fields) {
+      const [ct, idx] = editingKey.split(":");
+      const card = editorCards[ct]?.[parseInt(idx)];
+      if (card) {
+        const cardData = collectFormData(fields, card);
+        socket.emit("save_card", { card_type: ct, index: parseInt(idx), card_data: cardData });
+      }
+    }
+    editingKey = null;
+  }
+  editorModal.classList.add("hidden");
+});
+
+editorModal.addEventListener("click", (e) => {
+  if (e.target === editorModal) closeEditorModal.click();
+});
+
+socket.on("all_cards", (data) => {
+  editorCards = data.cards;
+  editorLocksMap = data.locks || {};
+  if (!editingKey) renderEditorGrid();
+  editorModal.classList.remove("hidden");
+  editorTitle.textContent = "Card Editor";
+});
+
+socket.on("card_locked", (data) => {
+  editorLocksMap[data.key] = data.who;
+});
+
+socket.on("card_unlocked", (data) => {
+  delete editorLocksMap[data.key];
+});
+
+socket.on("lock_result", (data) => {
+  if (data.success) {
+    editingKey = data.key;
+    if (editorContext === "trees") {
+      renderTreeEditForm();
+    } else {
+      renderEditorForm();
+    }
+  } else {
+    showFloatingError(data.message);
+  }
+});
+
+editorSearch.addEventListener("input", () => renderEditorGrid());
+
+// ── Editor Grid ──────────────────────────────────────────────
+function renderEditorGrid() {
+  editorBody.innerHTML = "";
+  editingKey = null;
+  editorTitle.textContent = "Card Editor";
+
+  const query = (editorSearch.value || "").toLowerCase().trim();
+
+  let totalCards = 0;
+  for (const cards of Object.values(editorCards)) {
+    totalCards += (cards || []).length;
+  }
+  editorTotalCount.textContent = `Total cards: ${totalCards}`;
+
+  for (const [cardType, cards] of Object.entries(editorCards)) {
+    const filtered = (cards || []).map((card, index) => ({ card, index }));
+    const visible = query
+      ? filtered.filter(({ card }) =>
+          (card.name || "").toLowerCase().includes(query) ||
+          String(card.id ?? "").includes(query))
+      : filtered;
+
+    if (visible.length === 0 && query) continue;
+
+    const section = document.createElement("div");
+    section.className = "editor-section";
+
+    const headerRow = document.createElement("div");
+    headerRow.className = "editor-section-header";
+
+    const h3 = document.createElement("h3");
+    h3.className = "editor-section-title";
+    const countLabel = query
+      ? `${visible.length} / ${(cards || []).length}`
+      : `${(cards || []).length}`;
+    h3.textContent = `${EDITOR_TYPE_LABELS[cardType] || cardType} (${countLabel})`;
+    headerRow.appendChild(h3);
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn btn-sm editor-add-card-btn";
+    addBtn.textContent = "+ Add Card";
+    addBtn.addEventListener("click", () => {
+      socket.emit("add_card", { card_type: cardType });
+    });
+    headerRow.appendChild(addBtn);
+
+    section.appendChild(headerRow);
+
+    const grid = document.createElement("div");
+    grid.className = "editor-grid";
+
+    visible.forEach(({ card, index }) => {
+      const key = `${cardType}:${index}`;
+      const lockStatus = editorLocksMap[key];
+
+      const el = document.createElement("div");
+      el.className = "editor-card";
+      if (lockStatus === "other") el.classList.add("editor-card-locked");
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "editor-card-delete";
+      deleteBtn.textContent = "\u00d7";
+      deleteBtn.title = "Delete card";
+      deleteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (lockStatus === "other") {
+          showFloatingError("Card is locked by another editor.");
+          return;
+        }
+        if (confirm(`Delete "${card.name || "Unnamed"}"? It will be moved to the Graveyard.`)) {
+          socket.emit("delete_card", { card_type: cardType, index });
+        }
+      });
+      el.appendChild(deleteBtn);
+
+      const body = document.createElement("div");
+      body.className = "editor-card-body";
+      body.innerHTML = `
+        <div class="editor-card-id">ID: ${card.id ?? "\u2014"}</div>
+        <div class="editor-card-name">${card.name || "Unnamed"}</div>
+        <div class="editor-card-meta">
+          <span class="editor-card-tag">${card.tag || ""}</span>
+          <span class="editor-card-cost">Cost: ${card.cost ?? 0}</span>
+        </div>
+        <div class="editor-card-desc">${card.description || ""}</div>
+        ${lockStatus === "other" ? '<div class="editor-lock-indicator">Locked by another editor</div>' : ""}
+      `;
+      el.appendChild(body);
+
+      if (lockStatus !== "other") {
+        el.style.cursor = "pointer";
+        el.addEventListener("click", () => {
+          editorContext = "grid";
+          socket.emit("lock_card", { card_type: cardType, index });
+        });
+      }
+
+      grid.appendChild(el);
+    });
+
+    section.appendChild(grid);
+    editorBody.appendChild(section);
+  }
+}
+
+// ── Editor Form ──────────────────────────────────────────────
+function renderEditorForm() {
+  if (!editingKey) return;
+  const [cardType, idxStr] = editingKey.split(":");
+  const index = parseInt(idxStr);
+  const card = editorCards[cardType]?.[index];
+  if (!card) return;
+
+  editorTitle.textContent = `Editing: ${card.name}`;
+  editorBody.innerHTML = "";
+
+  const form = document.createElement("div");
+  form.className = "editor-form";
+
+  const fields = document.createElement("div");
+  fields.className = "editor-fields";
+
+  for (const [key, value] of Object.entries(card)) {
+    if (key === "boosts") {
+      fields.appendChild(buildBoostsField(value || []));
+    } else if (DICT_FIELDS.has(key) && value && typeof value === "object") {
+      fields.appendChild(buildDictField(key, value));
+    } else {
+      fields.appendChild(buildSimpleField(key, value));
+    }
+  }
+
+  if (!("boosts" in card)) {
+    fields.appendChild(buildBoostsField([]));
+  }
+
+  function saveAndGoBack() {
+    const cardData = collectFormData(fields, card);
+    socket.emit("save_card", { card_type: cardType, index, card_data: cardData });
+    editingKey = null;
+  }
+
+  const backBtn = document.createElement("button");
+  backBtn.className = "btn btn-sm";
+  backBtn.textContent = "\u2190 Back to all cards (auto-saves)";
+  backBtn.addEventListener("click", saveAndGoBack);
+  form.appendChild(backBtn);
+
+  form.appendChild(fields);
+
+  const actions = document.createElement("div");
+  actions.className = "editor-form-actions";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn btn-sm btn-accent";
+  saveBtn.textContent = "Save";
+  saveBtn.addEventListener("click", () => {
+    const cardData = collectFormData(fields, card);
+    socket.emit("save_card", { card_type: cardType, index, card_data: cardData });
+  });
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn btn-sm";
+  cancelBtn.textContent = "Discard changes";
+  cancelBtn.addEventListener("click", () => {
+    socket.emit("unlock_card", { card_type: cardType, index });
+    editingKey = null;
+    renderEditorGrid();
+  });
+
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+  form.appendChild(actions);
+  editorBody.appendChild(form);
+}
+
+function buildSimpleField(key, value) {
+  const row = document.createElement("div");
+  row.className = "editor-field";
+
+  const label = document.createElement("label");
+  label.textContent = key;
+  row.appendChild(label);
+
+  if (key === "description") {
+    const ta = document.createElement("textarea");
+    ta.dataset.fieldKey = key;
+    ta.value = value ?? "";
+    ta.rows = 3;
+    row.appendChild(ta);
+  } else {
+    const input = document.createElement("input");
+    input.dataset.fieldKey = key;
+    input.type = typeof value === "number" ? "number" : "text";
+    input.value = value ?? "";
+    if (key === "id") input.readOnly = true;
+    row.appendChild(input);
+  }
+
+  return row;
+}
+
+function buildDictField(key, dict) {
+  const container = document.createElement("div");
+  container.className = "editor-dict-field";
+  container.dataset.dictKey = key;
+
+  const label = document.createElement("label");
+  label.className = "editor-dict-label";
+  label.textContent = key;
+  container.appendChild(label);
+
+  const entries = dict && typeof dict === "object" ? Object.entries(dict) : [];
+  entries.forEach(([k, v]) => container.appendChild(buildDictRow(k, v)));
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm editor-add-btn";
+  addBtn.textContent = "+ Add field";
+  addBtn.addEventListener("click", () => container.insertBefore(buildDictRow("", 0), addBtn));
+  container.appendChild(addBtn);
+
+  return container;
+}
+
+function buildDictRow(k, v, keyOptions) {
+  const row = document.createElement("div");
+  row.className = "editor-dict-row";
+
+  let keyEl;
+  if (keyOptions && keyOptions.length > 0) {
+    keyEl = document.createElement("select");
+    keyEl.className = "editor-dict-key";
+    keyOptions.forEach(opt => {
+      const o = document.createElement("option");
+      o.value = opt;
+      o.textContent = opt;
+      if (opt === k) o.selected = true;
+      keyEl.appendChild(o);
+    });
+  } else {
+    keyEl = document.createElement("input");
+    keyEl.type = "text";
+    keyEl.className = "editor-dict-key";
+    keyEl.value = k;
+    keyEl.placeholder = "key";
+  }
+
+  const valInput = document.createElement("input");
+  valInput.type = "number";
+  valInput.className = "editor-dict-val";
+  valInput.value = v;
+  valInput.placeholder = "value";
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "btn btn-sm editor-remove-btn";
+  removeBtn.textContent = "\u00d7";
+  removeBtn.addEventListener("click", () => row.remove());
+
+  row.appendChild(keyEl);
+  row.appendChild(valInput);
+  row.appendChild(removeBtn);
+  return row;
+}
+
+// ── Boosts field builder ─────────────────────────────────────
+function buildBoostsField(boosts) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.boostsKey = "boosts";
+
+  const label = document.createElement("label");
+  label.className = "editor-dict-label";
+  label.textContent = "boosts";
+  container.appendChild(label);
+
+  (boosts || []).forEach(boost => container.appendChild(buildBoostEntry(boost)));
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm editor-add-btn";
+  addBtn.textContent = "+ Add boost";
+  addBtn.addEventListener("click", () => {
+    container.insertBefore(buildBoostEntry({ target_id: 0, bonus: {} }), addBtn);
+  });
+  container.appendChild(addBtn);
+
+  return container;
+}
+
+function buildBoostEntry(boost) {
+  const entry = document.createElement("div");
+  entry.className = "editor-boost-entry";
+
+  const tidRow = document.createElement("div");
+  tidRow.className = "editor-dict-row";
+  const tidLabel = document.createElement("span");
+  tidLabel.className = "editor-boost-label";
+  tidLabel.textContent = "target_id:";
+  const tidInput = document.createElement("input");
+  tidInput.type = "number";
+  tidInput.className = "boost-target-id";
+  tidInput.value = boost.target_id || 0;
+  const removeEntry = document.createElement("button");
+  removeEntry.className = "btn btn-sm editor-remove-btn";
+  removeEntry.textContent = "\u00d7";
+  removeEntry.addEventListener("click", () => entry.remove());
+  tidRow.appendChild(tidLabel);
+  tidRow.appendChild(tidInput);
+  tidRow.appendChild(removeEntry);
+  entry.appendChild(tidRow);
+
+  const bonusLabel = document.createElement("span");
+  bonusLabel.className = "editor-boost-label";
+  bonusLabel.textContent = "bonus:";
+  entry.appendChild(bonusLabel);
+
+  const bonusContainer = document.createElement("div");
+  bonusContainer.className = "boost-bonus-rows";
+  Object.entries(boost.bonus || {}).forEach(([k, v]) => {
+    bonusContainer.appendChild(buildDictRow(k, v, RESOURCE_OPTIONS));
+  });
+  const addBonusBtn = document.createElement("button");
+  addBonusBtn.className = "btn btn-sm editor-add-btn";
+  addBonusBtn.textContent = "+ Add bonus field";
+  addBonusBtn.addEventListener("click", () => {
+    bonusContainer.insertBefore(buildDictRow("", 0, RESOURCE_OPTIONS), addBonusBtn);
+  });
+  bonusContainer.appendChild(addBonusBtn);
+  entry.appendChild(bonusContainer);
+
+  return entry;
+}
+
+// ── Collect form data ────────────────────────────────────────
+function collectFormData(fieldsEl, originalCard) {
+  const data = {};
+
+  fieldsEl.querySelectorAll(":scope > .editor-field").forEach(row => {
+    const input = row.querySelector("input, textarea");
+    if (!input) return;
+    const key = input.dataset.fieldKey;
+    let val = input.value;
+    if (input.type === "number") {
+      val = val === "" ? 0 : Number(val);
+    } else if (val === "" || val === "null") {
+      val = null;
+    }
+    data[key] = val;
+  });
+
+  fieldsEl.querySelectorAll(":scope > .editor-dict-field").forEach(container => {
+    const dictKey = container.dataset.dictKey;
+    const dict = {};
+    container.querySelectorAll(".editor-dict-row").forEach(row => {
+      const k = row.querySelector(".editor-dict-key").value.trim();
+      const v = Number(row.querySelector(".editor-dict-val").value) || 0;
+      if (k) dict[k] = v;
+    });
+    data[dictKey] = Object.keys(dict).length > 0 ? dict : null;
+  });
+
+  const boostsContainer = fieldsEl.querySelector(".editor-boosts-field");
+  if (boostsContainer) {
+    const boosts = [];
+    boostsContainer.querySelectorAll(".editor-boost-entry").forEach(entry => {
+      const tid = Number(entry.querySelector(".boost-target-id").value) || 0;
+      const bonus = {};
+      entry.querySelectorAll(".boost-bonus-rows .editor-dict-row").forEach(row => {
+        const k = row.querySelector(".editor-dict-key").value.trim();
+        const v = Number(row.querySelector(".editor-dict-val").value) || 0;
+        if (k) bonus[k] = v;
+      });
+      if (tid) boosts.push({ target_id: tid, bonus });
+    });
+    data.boosts = boosts.length > 0 ? boosts : null;
+  }
+
+  return data;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── Card Trees ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+let treesData = null;
+let treesLocksMap = {};
+
+cardTreesBtn.addEventListener("click", () => {
+  socket.emit("get_card_trees");
+});
+
+closeTreesModal.addEventListener("click", () => {
+  if (editingKey) {
+    const [ct, idx] = editingKey.split(":");
+    socket.emit("unlock_card", { card_type: ct, index: parseInt(idx) });
+    editingKey = null;
+  }
+  treesModal.classList.add("hidden");
+  editorModal.classList.remove("hidden");
+});
+
+treesModal.addEventListener("click", (e) => {
+  if (e.target === treesModal) closeTreesModal.click();
+});
+
+socket.on("card_trees", (data) => {
+  treesData = data;
+  treesLocksMap = data.locks || {};
+  treesSearch.value = "";
+  renderTreesView();
+  treesModal.classList.remove("hidden");
+});
+
+treesSearch.addEventListener("input", () => renderTreesView());
+
+function renderTreesView() {
+  if (!treesData) return;
+  const { trees, stats } = treesData;
+  const query = (treesSearch.value || "").toLowerCase().trim();
+
+  treesStats.innerHTML = `
+    <div class="trees-stat"><strong>Trees:</strong> ${stats.total_trees}</div>
+    <div class="trees-stat"><strong>Avg boosters/tree:</strong> ${stats.avg_boosters_per_tree}</div>
+    <div class="trees-stat"><strong>Total connections:</strong> ${stats.total_connections}</div>
+    <div class="trees-stat"><strong>Unconnected platforms:</strong> ${stats.unconnected_platforms} / ${stats.total_platform_cards}</div>
+    <div class="trees-stat"><strong>Unconnected boosters:</strong> ${stats.unconnected_boosters} / ${stats.total_booster_cards}</div>
+  `;
+
+  treesBody.innerHTML = "";
+  editingKey = null;
+
+  if (trees.length === 0) {
+    treesBody.innerHTML = '<p class="text-dim" style="padding:1rem;">No card connections found. Add boosts to leverage/innovation cards to create trees.</p>';
+    return;
+  }
+
+  const filteredTrees = query
+    ? trees.filter(tree => {
+        const targetMatch = (tree.target.name || "").toLowerCase().includes(query) ||
+          String(tree.target.id ?? "").includes(query);
+        const boosterMatch = tree.boosters.some(b =>
+          (b.card.name || "").toLowerCase().includes(query) ||
+          String(b.card.id ?? "").includes(query));
+        return targetMatch || boosterMatch;
+      })
+    : trees;
+
+  if (filteredTrees.length === 0) {
+    treesBody.innerHTML = '<p class="text-dim" style="padding:1rem;">No trees match your search.</p>';
+    return;
+  }
+
+  filteredTrees.forEach((tree, treeIdx) => {
+    const treeEl = document.createElement("div");
+    treeEl.className = "tree-group";
+
+    const treeTitle = document.createElement("h3");
+    treeTitle.className = "tree-title";
+    treeTitle.textContent = `Tree ${treeIdx + 1}`;
+    treeEl.appendChild(treeTitle);
+
+    const treeLayout = document.createElement("div");
+    treeLayout.className = "tree-layout";
+
+    const boostersCol = document.createElement("div");
+    boostersCol.className = "tree-boosters-col";
+
+    tree.boosters.forEach(b => {
+      const boosterCard = document.createElement("div");
+      boosterCard.className = "tree-card tree-booster-card";
+
+      const boosterLockKey = findEditorKeyForId(b.card.id, b.card_type);
+      const lockStatus = boosterLockKey ? (treesLocksMap[boosterLockKey] || null) : null;
+      if (lockStatus === "other") boosterCard.classList.add("editor-card-locked");
+
+      boosterCard.innerHTML = `
+        <div class="editor-card-id">ID: ${b.card.id ?? "—"}</div>
+        <div class="editor-card-name">${b.card.name}</div>
+        <div class="editor-card-tag">${b.card.tag || b.card_type}</div>
+        <div class="tree-bonus">Bonus: ${Object.entries(b.bonus).map(([k,v]) => `+${v} ${k}`).join(", ") || "none"}</div>
+        ${lockStatus === "other" ? '<div class="editor-lock-indicator">Locked</div>' : ""}
+      `;
+
+      if (lockStatus !== "other" && boosterLockKey) {
+        boosterCard.style.cursor = "pointer";
+        boosterCard.addEventListener("click", () => {
+          editorContext = "trees";
+          const [ct, idx] = boosterLockKey.split(":");
+          socket.emit("lock_card", { card_type: ct, index: parseInt(idx) });
+        });
+      }
+
+      boostersCol.appendChild(boosterCard);
+    });
+
+    treeLayout.appendChild(boostersCol);
+
+    const arrowCol = document.createElement("div");
+    arrowCol.className = "tree-arrow-col";
+    for (let i = 0; i < tree.boosters.length; i++) {
+      const arrow = document.createElement("div");
+      arrow.className = "tree-arrow";
+      arrow.textContent = "\u2192";
+      arrowCol.appendChild(arrow);
+    }
+    treeLayout.appendChild(arrowCol);
+
+    const targetCol = document.createElement("div");
+    targetCol.className = "tree-target-col";
+    const targetCard = document.createElement("div");
+    targetCard.className = "tree-card tree-target-card";
+
+    const targetLockKey = findEditorKeyForId(tree.target.id, tree.target_type);
+    const targetLock = targetLockKey ? (treesLocksMap[targetLockKey] || null) : null;
+    if (targetLock === "other") targetCard.classList.add("editor-card-locked");
+
+    targetCard.innerHTML = `
+      <div class="editor-card-id">ID: ${tree.target.id ?? "—"}</div>
+      <div class="editor-card-name">${tree.target.name}</div>
+      <div class="editor-card-tag">${tree.target.tag || tree.target_type}</div>
+      <div class="editor-card-desc">${tree.target.description || ""}</div>
+      ${targetLock === "other" ? '<div class="editor-lock-indicator">Locked</div>' : ""}
+    `;
+
+    if (targetLock !== "other" && targetLockKey) {
+      targetCard.style.cursor = "pointer";
+      targetCard.addEventListener("click", () => {
+        editorContext = "trees";
+        const [ct, idx] = targetLockKey.split(":");
+        socket.emit("lock_card", { card_type: ct, index: parseInt(idx) });
+      });
+    }
+
+    targetCol.appendChild(targetCard);
+    treeLayout.appendChild(targetCol);
+
+    treeEl.appendChild(treeLayout);
+    treesBody.appendChild(treeEl);
+  });
+}
+
+function findEditorKeyForId(cardId, cardType) {
+  const cards = editorCards[cardType];
+  if (!cards) return null;
+  const idx = cards.findIndex(c => c.id === cardId);
+  return idx >= 0 ? `${cardType}:${idx}` : null;
+}
+
+function renderTreeEditForm() {
+  if (!editingKey) return;
+  const [cardType, idxStr] = editingKey.split(":");
+  const index = parseInt(idxStr);
+  const card = editorCards[cardType]?.[index];
+  if (!card) return;
+
+  treesBody.innerHTML = "";
+
+  const form = document.createElement("div");
+  form.className = "editor-form";
+
+  const fields = document.createElement("div");
+  fields.className = "editor-fields";
+
+  for (const [key, value] of Object.entries(card)) {
+    if (key === "boosts") {
+      fields.appendChild(buildBoostsField(value || []));
+    } else if (DICT_FIELDS.has(key) && value && typeof value === "object") {
+      fields.appendChild(buildDictField(key, value));
+    } else {
+      fields.appendChild(buildSimpleField(key, value));
+    }
+  }
+
+  if (!("boosts" in card)) {
+    fields.appendChild(buildBoostsField([]));
+  }
+
+  function saveAndGoBackToTrees() {
+    const cardData = collectFormData(fields, card);
+    socket.emit("save_card", { card_type: cardType, index, card_data: cardData });
+    editingKey = null;
+    setTimeout(() => socket.emit("get_card_trees"), 300);
+  }
+
+  const backBtn = document.createElement("button");
+  backBtn.className = "btn btn-sm";
+  backBtn.textContent = "\u2190 Back to trees (auto-saves)";
+  backBtn.addEventListener("click", saveAndGoBackToTrees);
+  form.appendChild(backBtn);
+
+  const title = document.createElement("h3");
+  title.className = "tree-edit-title";
+  title.textContent = `Editing: ${card.name} (ID: ${card.id ?? "\u2014"})`;
+  form.appendChild(title);
+
+  form.appendChild(fields);
+
+  const actions = document.createElement("div");
+  actions.className = "editor-form-actions";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn btn-sm btn-accent";
+  saveBtn.textContent = "Save";
+  saveBtn.addEventListener("click", () => {
+    const cardData = collectFormData(fields, card);
+    socket.emit("save_card", { card_type: cardType, index, card_data: cardData });
+    editingKey = null;
+    setTimeout(() => socket.emit("get_card_trees"), 300);
+  });
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn btn-sm";
+  cancelBtn.textContent = "Discard changes";
+  cancelBtn.addEventListener("click", () => {
+    socket.emit("unlock_card", { card_type: cardType, index });
+    editingKey = null;
+    socket.emit("get_card_trees");
+  });
+
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+  form.appendChild(actions);
+  treesBody.appendChild(form);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── Card Graveyard ───────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+const graveyardBtn = document.getElementById("graveyard-btn");
+const graveyardModal = document.getElementById("graveyard-modal");
+const closeGraveyardModal = document.getElementById("close-graveyard-modal");
+const graveyardBody = document.getElementById("graveyard-body");
+
+graveyardBtn.addEventListener("click", () => {
+  socket.emit("get_graveyard");
+});
+
+closeGraveyardModal.addEventListener("click", () => {
+  graveyardModal.classList.add("hidden");
+  editorModal.classList.remove("hidden");
+});
+
+graveyardModal.addEventListener("click", (e) => {
+  if (e.target === graveyardModal) closeGraveyardModal.click();
+});
+
+socket.on("graveyard_data", (data) => {
+  renderGraveyard(data.cards);
+  graveyardModal.classList.remove("hidden");
+});
+
+function renderGraveyard(cards) {
+  graveyardBody.innerHTML = "";
+
+  if (!cards || cards.length === 0) {
+    graveyardBody.innerHTML = '<p class="text-dim" style="padding:1rem;">The graveyard is empty. Deleted cards will appear here.</p>';
+    return;
+  }
+
+  const grouped = {};
+  cards.forEach((entry, idx) => {
+    const ct = entry.card_type;
+    if (!grouped[ct]) grouped[ct] = [];
+    grouped[ct].push({ ...entry, graveyardIndex: idx });
+  });
+
+  for (const [cardType, entries] of Object.entries(grouped)) {
+    const section = document.createElement("div");
+    section.className = "editor-section";
+
+    const h3 = document.createElement("h3");
+    h3.className = "editor-section-title";
+    h3.textContent = `${EDITOR_TYPE_LABELS[cardType] || cardType} (${entries.length})`;
+    section.appendChild(h3);
+
+    const grid = document.createElement("div");
+    grid.className = "editor-grid";
+
+    entries.forEach(entry => {
+      const card = entry.card_data;
+      const el = document.createElement("div");
+      el.className = "editor-card graveyard-card";
+
+      el.innerHTML = `
+        <div class="editor-card-body">
+          <div class="editor-card-id">ID: ${card.id ?? "\u2014"}</div>
+          <div class="editor-card-name">${card.name || "Unnamed"}</div>
+          <div class="editor-card-meta">
+            <span class="editor-card-tag">${card.tag || ""}</span>
+            <span class="editor-card-cost">Cost: ${card.cost ?? 0}</span>
+          </div>
+          <div class="editor-card-desc">${card.description || ""}</div>
+        </div>
+        <div class="graveyard-actions">
+          <button class="btn btn-sm btn-accent graveyard-restore-btn">Restore</button>
+          <button class="btn btn-sm btn-danger-sm graveyard-perma-btn">Delete Forever</button>
+        </div>
+      `;
+
+      el.querySelector(".graveyard-restore-btn").addEventListener("click", () => {
+        socket.emit("restore_card", { index: entry.graveyardIndex });
+      });
+
+      el.querySelector(".graveyard-perma-btn").addEventListener("click", () => {
+        if (confirm(`Permanently delete "${card.name || "Unnamed"}"? This cannot be undone.`)) {
+          socket.emit("permanent_delete_card", { index: entry.graveyardIndex });
+        }
+      });
+
+      grid.appendChild(el);
+    });
+
+    section.appendChild(grid);
+    graveyardBody.appendChild(section);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── Game Board ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+const boardModal = document.getElementById("board-modal");
+const closeBoardModal = document.getElementById("close-board-modal");
+const boardContainer = document.getElementById("board-container");
+const boardPending = document.getElementById("board-pending");
+const boardInfoBar = document.getElementById("board-info-bar");
+const openBoardBtn = document.getElementById("open-board-btn");
+
+let boardTiles = [];
+const HEX_SIZE = 24;
+const SQRT3 = Math.sqrt(3);
+
+const TERRAIN_COLORS = {
+  empty: "#2a2d35",
+  city: "#2a2d35",
+  lake: "#2980b9",
+  government: "#c0392b",
+};
+
+const TILE_COLORS = {
+  power_plant: "#f1c40f",
+  factory:     "#8b6914",
+  data_center: "#5dade2",
+  store:       "#27ae60",
+  ads:         "#e056a0",
+};
+
+const TILE_LABELS = {
+  power_plant: "PWR",
+  factory:     "FAC",
+  data_center: "SRV",
+  store:       "STO",
+  ads:         "ADS",
+};
+
+const TILE_FULL_NAMES = {
+  power_plant: "Power Plant",
+  factory:     "Hardware Factory",
+  data_center: "Data Center",
+  store:       "Store",
+  ads:         "Ads",
+};
+
+const CLIENT_TILE_BASE_BONUSES = {
+  power_plant: { production: { money: 2 } },
+  factory:     { production: { engineers: 1 }, immediate: { money: 1 } },
+  data_center: { production: { servers: 2 } },
+  store:       { immediate: { users: 3 }, production: { money: 1 } },
+  ads:         { production: { ads: 2 }, immediate: { users: 1 } },
+};
+
+function previewPlacementBonuses(tile, tileType) {
+  const base = CLIENT_TILE_BASE_BONUSES[tileType] || {};
+  const immediate = Object.assign({}, base.immediate || {});
+  const production = Object.assign({}, base.production || {});
+
+  const bb = tile.build_bonuses || {};
+  for (const [res, amt] of Object.entries(bb.immediate || {}))
+    immediate[res] = (immediate[res] || 0) + amt;
+  for (const [res, amt] of Object.entries(bb.production || {}))
+    production[res] = (production[res] || 0) + amt;
+
+  const tilesByKey = {};
+  boardTiles.forEach(t => { tilesByKey[`${t.row},${t.col}`] = t; });
+  const dirs = tile.row & 1
+    ? [[-1,1],[-1,0],[0,-1],[1,0],[1,1],[0,1]]
+    : [[-1,0],[-1,-1],[0,-1],[1,-1],[1,0],[0,1]];
+  for (const [dr, dc] of dirs) {
+    const nb = tilesByKey[`${tile.row+dr},${tile.col+dc}`];
+    if (!nb) continue;
+    for (const [res, amt] of Object.entries(nb.adjacency_bonuses || {}))
+      immediate[res] = (immediate[res] || 0) + amt;
+  }
+
+  return { immediate, production };
+}
+
+openBoardBtn.addEventListener("click", () => {
+  socket.emit("get_board");
+});
+
+closeBoardModal.addEventListener("click", () => {
+  boardModal.classList.add("hidden");
+});
+
+boardModal.addEventListener("click", (e) => {
+  if (e.target === boardModal) boardModal.classList.add("hidden");
+});
+
+socket.on("board_state", (tiles) => {
+  boardTiles = tiles;
+  renderBoard();
+  boardModal.classList.remove("hidden");
+});
+
+socket.on("board_update", (tiles) => {
+  boardTiles = tiles;
+  if (!boardModal.classList.contains("hidden")) {
+    renderBoard();
+  }
+});
+
+socket.on("tile_placed", (data) => {
+  boardInfoBar.innerHTML = `<div class="board-placed-msg">Placed ${TILE_FULL_NAMES[data.tile_type] || data.tile_type}! Bonuses: ${data.bonuses}</div>`;
+  setTimeout(() => { boardInfoBar.innerHTML = ""; }, 5000);
+});
+
+function hexCenter(row, col) {
+  const x = SQRT3 * HEX_SIZE * (col + 0.5 * (row & 1));
+  const y = 1.5 * HEX_SIZE * row;
+  return { x, y };
+}
+
+function hexPointsStr(cx, cy) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.PI / 3 * i - Math.PI / 2;
+    pts.push(`${cx + HEX_SIZE * Math.cos(angle)},${cy + HEX_SIZE * Math.sin(angle)}`);
+  }
+  return pts.join(" ");
+}
+
+function renderBoard() {
+  boardContainer.innerHTML = "";
+
+  const pending = lastPrivateState?.pending_tile;
+  if (pending) {
+    boardPending.classList.remove("hidden");
+    boardPending.innerHTML = `
+      <span class="pending-tile-icon" style="background:${TILE_COLORS[pending] || '#888'}">${TILE_LABELS[pending] || "?"}</span>
+      <span>Place: <strong>${TILE_FULL_NAMES[pending] || pending}</strong></span>
+    `;
+  } else {
+    boardPending.classList.add("hidden");
+  }
+
+  if (!boardTiles.length) return;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  boardTiles.forEach(t => {
+    const { x, y } = hexCenter(t.row, t.col);
+    minX = Math.min(minX, x - HEX_SIZE);
+    minY = Math.min(minY, y - HEX_SIZE);
+    maxX = Math.max(maxX, x + HEX_SIZE);
+    maxY = Math.max(maxY, y + HEX_SIZE);
+  });
+
+  const pad = 4;
+  const svgW = maxX - minX + pad * 2;
+  const svgH = maxY - minY + pad * 2;
+  const offX = -minX + pad;
+  const offY = -minY + pad;
+
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${svgW} ${svgH}`);
+  svg.setAttribute("width", svgW);
+  svg.setAttribute("height", svgH);
+  svg.classList.add("board-svg");
+
+  const tooltip = document.createElement("div");
+  tooltip.className = "board-tooltip hidden";
+
+  boardTiles.forEach(tile => {
+    const { x: rawX, y: rawY } = hexCenter(tile.row, tile.col);
+    const cx = rawX + offX;
+    const cy = rawY + offY;
+
+    const g = document.createElementNS(ns, "g");
+    g.classList.add("board-hex-group");
+
+    const poly = document.createElementNS(ns, "polygon");
+    poly.setAttribute("points", hexPointsStr(cx, cy));
+
+    let fill;
+    if (tile.placed_tile) {
+      fill = TILE_COLORS[tile.placed_tile.type] || "#888";
+    } else {
+      fill = TERRAIN_COLORS[tile.terrain] || TERRAIN_COLORS.empty;
+    }
+    poly.setAttribute("fill", fill);
+    poly.setAttribute("stroke", "#555");
+    poly.setAttribute("stroke-width", "1.5");
+    g.appendChild(poly);
+
+    let label = "";
+    let labelColor = "#fff";
+    let labelSize = "7";
+    if (tile.placed_tile) {
+      label = TILE_LABELS[tile.placed_tile.type] || "?";
+      labelColor = "#000";
+    } else if (tile.name) {
+      label = tile.name.length > 6 ? tile.name.slice(0, 6) : tile.name;
+      labelSize = tile.terrain === "lake" ? "6" : "7";
+    } else if (tile.terrain === "city") {
+      label = "City";
+    }
+    if (label) {
+      const txt = document.createElementNS(ns, "text");
+      txt.setAttribute("x", cx);
+      txt.setAttribute("y", cy + 3);
+      txt.setAttribute("text-anchor", "middle");
+      txt.setAttribute("font-size", labelSize);
+      txt.setAttribute("fill", labelColor);
+      txt.setAttribute("font-weight", "600");
+      txt.setAttribute("pointer-events", "none");
+      txt.textContent = label;
+      g.appendChild(txt);
+    }
+
+    const hasBuildBonus = tile.build_bonuses &&
+      (Object.keys(tile.build_bonuses.immediate || {}).length ||
+       Object.keys(tile.build_bonuses.production || {}).length);
+    const hasAdjBonus = tile.adjacency_bonuses &&
+      Object.keys(tile.adjacency_bonuses).length;
+    if (hasBuildBonus || hasAdjBonus) {
+      const dot = document.createElementNS(ns, "circle");
+      dot.setAttribute("cx", cx + HEX_SIZE * 0.55);
+      dot.setAttribute("cy", cy - HEX_SIZE * 0.55);
+      dot.setAttribute("r", 3);
+      dot.setAttribute("fill", hasBuildBonus ? "var(--accent)" : "#f39c12");
+      dot.setAttribute("pointer-events", "none");
+      g.appendChild(dot);
+    }
+
+    g.addEventListener("mouseenter", (e) => {
+      let info = `<strong>(${tile.row},${tile.col})</strong>`;
+      if (tile.terrain === "city") info += ` — ${tile.name || "City"} (City)`;
+      else if (tile.terrain === "lake") info += ` — ${tile.name || "Lake"} (cannot build)`;
+      else if (tile.terrain === "government") info += ` — ${tile.name || "Gov"} (cannot build)`;
+      else if (tile.placed_tile) {
+        const owner = lastGameState?.players?.[tile.placed_tile.owner_id];
+        info += ` — ${TILE_FULL_NAMES[tile.placed_tile.type] || tile.placed_tile.type}`;
+        if (owner) info += ` (${owner.name})`;
+      } else {
+        info += " — Empty";
+      }
+
+      const isPlaceable = pending && !tile.placed_tile &&
+        (tile.terrain === "empty" || tile.terrain === "city");
+
+      if (isPlaceable) {
+        const preview = previewPlacementBonuses(tile, pending);
+        const parts = [];
+        for (const [res, amt] of Object.entries(preview.immediate))
+          if (amt) parts.push(`+${amt} ${res}`);
+        for (const [res, amt] of Object.entries(preview.production))
+          if (amt) parts.push(`+${amt} ${res}/yr`);
+        info += `<br><strong style="color:#2ecc71">▸ ${TILE_FULL_NAMES[pending]}:</strong> `;
+        info += parts.length ? parts.join(", ") : "no bonuses";
+      } else {
+        const ab = Object.entries(tile.adjacency_bonuses || {});
+        if (ab.length) info += `<br>Adj: ${ab.map(([k,v]) => `+${v} ${k}`).join(", ")}`;
+        const bb = tile.build_bonuses || {};
+        const bImm = Object.entries(bb.immediate || {});
+        const bProd = Object.entries(bb.production || {});
+        if (bImm.length || bProd.length) {
+          info += `<br>Build: `;
+          info += [...bImm.map(([k,v]) => `+${v} ${k}`), ...bProd.map(([k,v]) => `+${v} ${k}/yr`)].join(", ");
+        }
+      }
+
+      tooltip.innerHTML = info;
+      tooltip.classList.remove("hidden");
+      const rect = boardContainer.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 12) + "px";
+      tooltip.style.top = (e.clientY - rect.top - 10) + "px";
+    });
+
+    g.addEventListener("mouseleave", () => {
+      tooltip.classList.add("hidden");
+    });
+
+    if (pending && (tile.terrain === "empty" || tile.terrain === "city") && !tile.placed_tile) {
+      poly.classList.add("board-hex-placeable");
+      g.style.cursor = "pointer";
+      g.addEventListener("click", () => {
+        const preview = previewPlacementBonuses(tile, pending);
+        const parts = [];
+        for (const [res, amt] of Object.entries(preview.immediate))
+          if (amt) parts.push(`+${amt} ${res}`);
+        for (const [res, amt] of Object.entries(preview.production))
+          if (amt) parts.push(`+${amt} ${res}/yr`);
+        const bonusStr = parts.length ? parts.join(", ") : "no bonuses";
+        if (confirm(`Place ${TILE_FULL_NAMES[pending]} at (${tile.row}, ${tile.col})?\n\nYou will get: ${bonusStr}`)) {
+          socket.emit("place_tile", { row: tile.row, col: tile.col });
+        }
+      });
+    }
+
+    svg.appendChild(g);
+  });
+
+  boardContainer.appendChild(svg);
+  boardContainer.appendChild(tooltip);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── Board Editor (master / editors only) ─────────────────────
+// ══════════════════════════════════════════════════════════════
+
+const boardEditorModal = document.getElementById("board-editor-modal");
+const closeBoardEditor = document.getElementById("close-board-editor");
+const boardEditorContainer = document.getElementById("board-editor-container");
+const boardTileForm = document.getElementById("board-tile-form");
+const boardEditorTitle = document.getElementById("board-editor-title");
+const editBoardBtn = document.getElementById("edit-board-btn");
+const editBoardLobbyBtn = document.getElementById("edit-board-lobby-btn");
+
+let editorBoardTiles = [];
+let selectedEditorTile = null;
+
+editBoardBtn.addEventListener("click", () => socket.emit("get_board_editor"));
+editBoardLobbyBtn.addEventListener("click", () => socket.emit("get_board_editor"));
+
+closeBoardEditor.addEventListener("click", () => {
+  boardEditorModal.classList.add("hidden");
+  boardTileForm.classList.add("hidden");
+  selectedEditorTile = null;
+});
+
+boardEditorModal.addEventListener("click", (e) => {
+  if (e.target === boardEditorModal) closeBoardEditor.click();
+});
+
+socket.on("board_editor_data", (tiles) => {
+  editorBoardTiles = tiles;
+  renderBoardEditor();
+  boardEditorModal.classList.remove("hidden");
+});
+
+function renderBoardEditor() {
+  boardEditorContainer.innerHTML = "";
+  boardEditorTitle.textContent = "Board Editor";
+
+  if (!editorBoardTiles.length) return;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  editorBoardTiles.forEach(t => {
+    const { x, y } = hexCenter(t.row, t.col);
+    minX = Math.min(minX, x - HEX_SIZE);
+    minY = Math.min(minY, y - HEX_SIZE);
+    maxX = Math.max(maxX, x + HEX_SIZE);
+    maxY = Math.max(maxY, y + HEX_SIZE);
+  });
+
+  const pad = 4;
+  const svgW = maxX - minX + pad * 2;
+  const svgH = maxY - minY + pad * 2;
+  const offX = -minX + pad;
+  const offY = -minY + pad;
+
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${svgW} ${svgH}`);
+  svg.setAttribute("width", svgW);
+  svg.setAttribute("height", svgH);
+  svg.classList.add("board-svg");
+
+  const tooltip = document.createElement("div");
+  tooltip.className = "board-tooltip hidden";
+
+  editorBoardTiles.forEach(tile => {
+    const { x: rawX, y: rawY } = hexCenter(tile.row, tile.col);
+    const cx = rawX + offX;
+    const cy = rawY + offY;
+
+    const g = document.createElementNS(ns, "g");
+    g.classList.add("board-hex-group");
+
+    const poly = document.createElementNS(ns, "polygon");
+    poly.setAttribute("points", hexPointsStr(cx, cy));
+
+    let fill;
+    if (tile.placed_tile) {
+      fill = TILE_COLORS[tile.placed_tile.type] || "#888";
+    } else {
+      fill = TERRAIN_COLORS[tile.terrain] || TERRAIN_COLORS.empty;
+    }
+    poly.setAttribute("fill", fill);
+    poly.setAttribute("stroke", selectedEditorTile &&
+      selectedEditorTile.row === tile.row && selectedEditorTile.col === tile.col
+      ? "var(--accent)" : "#555");
+    poly.setAttribute("stroke-width", selectedEditorTile &&
+      selectedEditorTile.row === tile.row && selectedEditorTile.col === tile.col
+      ? "3" : "1.5");
+    g.appendChild(poly);
+
+    let label = "";
+    if (tile.placed_tile) {
+      label = TILE_LABELS[tile.placed_tile.type] || "?";
+    } else if (tile.name) {
+      label = tile.name.length > 8 ? tile.name.slice(0, 8) : tile.name;
+    } else if (tile.terrain === "city") {
+      label = "City";
+    }
+    if (label) {
+      const txt = document.createElementNS(ns, "text");
+      txt.setAttribute("x", cx);
+      txt.setAttribute("y", cy + 3);
+      txt.setAttribute("text-anchor", "middle");
+      txt.setAttribute("font-size", label.length > 5 ? "6" : "7");
+      txt.setAttribute("fill", "#fff");
+      txt.setAttribute("font-weight", "600");
+      txt.setAttribute("pointer-events", "none");
+      txt.textContent = label;
+      g.appendChild(txt);
+    }
+
+    const hasBuildBonus = tile.build_bonuses &&
+      (Object.keys(tile.build_bonuses.immediate || {}).length ||
+       Object.keys(tile.build_bonuses.production || {}).length);
+    const hasAdjBonus = tile.adjacency_bonuses &&
+      Object.keys(tile.adjacency_bonuses).length;
+    if (hasBuildBonus || hasAdjBonus) {
+      const dot = document.createElementNS(ns, "circle");
+      dot.setAttribute("cx", cx + HEX_SIZE * 0.55);
+      dot.setAttribute("cy", cy - HEX_SIZE * 0.55);
+      dot.setAttribute("r", 3);
+      dot.setAttribute("fill", hasBuildBonus ? "var(--accent)" : "#f39c12");
+      dot.setAttribute("pointer-events", "none");
+      g.appendChild(dot);
+    }
+
+    g.addEventListener("mouseenter", (e) => {
+      let info = `<strong>(${tile.row},${tile.col})</strong> — ${tile.terrain}`;
+      if (tile.name) info += `: ${tile.name}`;
+      const bb = tile.build_bonuses || {};
+      const bImm = Object.entries(bb.immediate || {});
+      const bProd = Object.entries(bb.production || {});
+      if (bImm.length || bProd.length) {
+        info += `<br>Build: `;
+        info += [...bImm.map(([k,v]) => `+${v} ${k}`), ...bProd.map(([k,v]) => `+${v} ${k}/yr`)].join(", ");
+      }
+      const ab = Object.entries(tile.adjacency_bonuses || {});
+      if (ab.length) {
+        info += `<br>Adj: ${ab.map(([k,v]) => `+${v} ${k}`).join(", ")}`;
+      }
+      tooltip.innerHTML = info;
+      tooltip.classList.remove("hidden");
+      const rect = boardEditorContainer.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 12) + "px";
+      tooltip.style.top = (e.clientY - rect.top - 10) + "px";
+    });
+
+    g.addEventListener("mouseleave", () => tooltip.classList.add("hidden"));
+
+    g.style.cursor = "pointer";
+    g.addEventListener("click", () => {
+      selectedEditorTile = tile;
+      renderBoardEditor();
+      renderBoardTileForm(tile);
+    });
+
+    svg.appendChild(g);
+  });
+
+  boardEditorContainer.appendChild(svg);
+  boardEditorContainer.appendChild(tooltip);
+}
+
+function _boardInput(value, placeholder) {
+  const inp = document.createElement("input");
+  inp.type = "text";
+  inp.value = value;
+  inp.placeholder = placeholder || "";
+  inp.className = "board-form-input";
+  return inp;
+}
+
+function _boardResRow(key, value) {
+  const row = document.createElement("div");
+  row.className = "board-res-row";
+
+  const sel = document.createElement("select");
+  sel.className = "editor-dict-key";
+  RESOURCE_OPTIONS.forEach(r => {
+    const o = document.createElement("option");
+    o.value = r; o.textContent = r;
+    if (r === key) o.selected = true;
+    sel.appendChild(o);
+  });
+  row.appendChild(sel);
+
+  const inp = document.createElement("input");
+  inp.type = "number";
+  inp.value = value;
+  inp.className = "board-form-input";
+  inp.style.width = "60px";
+  row.appendChild(inp);
+
+  const del = document.createElement("button");
+  del.className = "btn btn-sm btn-danger-sm";
+  del.textContent = "×";
+  del.style.padding = "0 .4rem";
+  del.addEventListener("click", () => row.remove());
+  row.appendChild(del);
+
+  return row;
+}
+
+function _collectResRows(container) {
+  const result = {};
+  container.querySelectorAll(".board-res-row").forEach(row => {
+    const sel = row.querySelector("select");
+    const inp = row.querySelector('input[type="number"]');
+    const k = sel ? sel.value : "";
+    const v = inp ? parseInt(inp.value, 10) || 0 : 0;
+    if (k && v) result[k] = v;
+  });
+  return result;
+}
+
+function renderBoardTileForm(tile) {
+  boardTileForm.classList.remove("hidden");
+  boardTileForm.innerHTML = "";
+
+  const title = document.createElement("h3");
+  title.textContent = `Editing tile (${tile.row}, ${tile.col})`;
+  title.style.marginBottom = ".8rem";
+  boardTileForm.appendChild(title);
+
+  const form = document.createElement("div");
+  form.className = "editor-fields";
+
+  // --- Terrain select ---
+  const terrainRow = document.createElement("div");
+  terrainRow.className = "editor-field";
+  const terrainLabel = document.createElement("label");
+  terrainLabel.textContent = "Terrain type";
+  terrainRow.appendChild(terrainLabel);
+  const terrainSelect = document.createElement("select");
+  terrainSelect.className = "editor-dict-key";
+  terrainSelect.style.width = "100%";
+  ["empty", "city", "lake", "government"].forEach(t => {
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+    if (t === tile.terrain) o.selected = true;
+    terrainSelect.appendChild(o);
+  });
+  terrainRow.appendChild(terrainSelect);
+  form.appendChild(terrainRow);
+
+  // --- Name ---
+  const nameRow = document.createElement("div");
+  nameRow.className = "editor-field";
+  const nameLabel = document.createElement("label");
+  nameLabel.textContent = "Name / Label";
+  nameRow.appendChild(nameLabel);
+  const nameInput = _boardInput(tile.name || "", 'e.g. "New York"');
+  nameRow.appendChild(nameInput);
+  form.appendChild(nameRow);
+
+  // --- Build bonuses (for buildable tiles) ---
+  const buildSection = document.createElement("div");
+  buildSection.className = "editor-field board-bonus-section";
+  const buildTitle = document.createElement("label");
+  buildTitle.textContent = "Build bonuses (what a player gets when building here)";
+  buildSection.appendChild(buildTitle);
+
+  const buildImmLabel = document.createElement("span");
+  buildImmLabel.className = "board-bonus-sub";
+  buildImmLabel.textContent = "Immediate";
+  buildSection.appendChild(buildImmLabel);
+  const buildImmContainer = document.createElement("div");
+  buildImmContainer.className = "board-res-container";
+  const bb = tile.build_bonuses || {};
+  Object.entries(bb.immediate || {}).forEach(([k, v]) => {
+    buildImmContainer.appendChild(_boardResRow(k, v));
+  });
+  const addBuildImm = document.createElement("button");
+  addBuildImm.className = "btn btn-sm";
+  addBuildImm.textContent = "+ Add";
+  addBuildImm.addEventListener("click", () => {
+    buildImmContainer.insertBefore(_boardResRow("", 0), addBuildImm);
+  });
+  buildImmContainer.appendChild(addBuildImm);
+  buildSection.appendChild(buildImmContainer);
+
+  const buildProdLabel = document.createElement("span");
+  buildProdLabel.className = "board-bonus-sub";
+  buildProdLabel.textContent = "Production (per year)";
+  buildSection.appendChild(buildProdLabel);
+  const buildProdContainer = document.createElement("div");
+  buildProdContainer.className = "board-res-container";
+  Object.entries(bb.production || {}).forEach(([k, v]) => {
+    buildProdContainer.appendChild(_boardResRow(k, v));
+  });
+  const addBuildProd = document.createElement("button");
+  addBuildProd.className = "btn btn-sm";
+  addBuildProd.textContent = "+ Add";
+  addBuildProd.addEventListener("click", () => {
+    buildProdContainer.insertBefore(_boardResRow("", 0), addBuildProd);
+  });
+  buildProdContainer.appendChild(addBuildProd);
+  buildSection.appendChild(buildProdContainer);
+  form.appendChild(buildSection);
+
+  // --- Adjacency bonuses (for any terrain, but mainly lake/gov) ---
+  const adjSection = document.createElement("div");
+  adjSection.className = "editor-field board-bonus-section";
+  const adjTitle = document.createElement("label");
+  adjTitle.textContent = "Adjacency bonuses (given to players building next to this tile)";
+  adjSection.appendChild(adjTitle);
+  const adjContainer = document.createElement("div");
+  adjContainer.className = "board-res-container";
+  Object.entries(tile.adjacency_bonuses || {}).forEach(([k, v]) => {
+    adjContainer.appendChild(_boardResRow(k, v));
+  });
+  const addAdj = document.createElement("button");
+  addAdj.className = "btn btn-sm";
+  addAdj.textContent = "+ Add";
+  addAdj.addEventListener("click", () => {
+    adjContainer.insertBefore(_boardResRow("", 0), addAdj);
+  });
+  adjContainer.appendChild(addAdj);
+  adjSection.appendChild(adjContainer);
+  form.appendChild(adjSection);
+
+  // --- Hint ---
+  const hint = document.createElement("p");
+  hint.style.fontSize = ".75rem";
+  hint.style.color = "var(--text-dim)";
+  hint.style.margin = ".5rem 0";
+  hint.innerHTML = "<strong>Empty/City</strong> = buildable | <strong>Lake/Government</strong> = not buildable";
+  form.appendChild(hint);
+
+  boardTileForm.appendChild(form);
+
+  // --- Add tile left/right ---
+  const existingCoords = new Set(editorBoardTiles.map(t => `${t.row},${t.col}`));
+  const canLeft = !existingCoords.has(`${tile.row},${tile.col - 1}`);
+  const canRight = !existingCoords.has(`${tile.row},${tile.col + 1}`);
+
+  if (canLeft || canRight) {
+    const addTileBar = document.createElement("div");
+    addTileBar.className = "editor-form-actions";
+    addTileBar.style.borderTop = "1px solid var(--border)";
+    addTileBar.style.paddingTop = ".6rem";
+    addTileBar.style.marginTop = ".4rem";
+
+    const addLabel = document.createElement("span");
+    addLabel.style.fontSize = ".8rem";
+    addLabel.style.color = "var(--text-dim)";
+    addLabel.textContent = "Add new tile:";
+    addTileBar.appendChild(addLabel);
+
+    if (canLeft) {
+      const leftBtn = document.createElement("button");
+      leftBtn.className = "btn btn-sm";
+      leftBtn.textContent = `← Left (${tile.row}, ${tile.col - 1})`;
+      leftBtn.addEventListener("click", () => {
+        socket.emit("add_board_tile", { row: tile.row, col: tile.col - 1 });
+      });
+      addTileBar.appendChild(leftBtn);
+    }
+    if (canRight) {
+      const rightBtn = document.createElement("button");
+      rightBtn.className = "btn btn-sm";
+      rightBtn.textContent = `→ Right (${tile.row}, ${tile.col + 1})`;
+      rightBtn.addEventListener("click", () => {
+        socket.emit("add_board_tile", { row: tile.row, col: tile.col + 1 });
+      });
+      addTileBar.appendChild(rightBtn);
+    }
+    boardTileForm.appendChild(addTileBar);
+  }
+
+  // --- Actions ---
+  const actions = document.createElement("div");
+  actions.className = "editor-form-actions";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn btn-sm btn-accent";
+  saveBtn.textContent = "Save";
+  saveBtn.addEventListener("click", () => {
+    const buildBonuses = {
+      immediate: _collectResRows(buildImmContainer),
+      production: _collectResRows(buildProdContainer),
+    };
+    const adjacencyBonuses = _collectResRows(adjContainer);
+    socket.emit("edit_board_tile", {
+      row: tile.row,
+      col: tile.col,
+      terrain: terrainSelect.value,
+      name: nameInput.value.trim(),
+      build_bonuses: buildBonuses,
+      adjacency_bonuses: adjacencyBonuses,
+    });
+    selectedEditorTile = null;
+    boardTileForm.classList.add("hidden");
+  });
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn btn-sm";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", () => {
+    selectedEditorTile = null;
+    boardTileForm.classList.add("hidden");
+    renderBoardEditor();
+  });
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "btn btn-sm btn-danger-sm";
+  deleteBtn.textContent = "Delete Tile";
+  deleteBtn.addEventListener("click", () => {
+    const label = tile.name ? `"${tile.name}" at` : "";
+    if (confirm(`Delete tile ${label} (${tile.row}, ${tile.col})? This removes it from the board.`)) {
+      socket.emit("remove_board_tile", { row: tile.row, col: tile.col });
+      selectedEditorTile = null;
+      boardTileForm.classList.add("hidden");
+    }
+  });
+
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+  actions.appendChild(deleteBtn);
+  boardTileForm.appendChild(actions);
+}
+

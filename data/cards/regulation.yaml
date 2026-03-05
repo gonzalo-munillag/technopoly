@@ -1,19 +1,9 @@
 # ============================================================
 # REGULATION CARDS
 # ============================================================
-# One drawn per year. Affects players based on 'targets'.
-#
-#   name            - Regulation name
-#   cost            - 0 (automatic)
-#   tag             - Category
-#   description     - What the regulation does
-#   targets         - "all" or a card_type (e.g. "platform", "cyber_attack")
-#   penalty         - Resource changes if player accepts (negative = loss)
-#   court_penalty   - Harsher penalty if player loses in court
-#   court_threshold - Roll >= this on d6 to win court (e.g. 4 means 4,5,6 win)
-# ============================================================
 
 - name: Data Privacy Act
+  id: 29
   cost: 0
   tag: privacy
   description: Companies handling user data must comply with strict rules or face fines.
@@ -26,6 +16,7 @@
   court_threshold: 4
 
 - name: Anti-Monopoly Ruling
+  id: 30
   cost: 0
   tag: antitrust
   description: Large companies are fined for anti-competitive practices.
@@ -38,6 +29,7 @@
   court_threshold: 4
 
 - name: Anti-Monopoly Ruling 4
+  id: 31
   cost: 0
   tag: antitrust
   description: Large companies are fined for anti-competitive practices.
@@ -49,27 +41,16 @@
     reputation: -3
   court_threshold: 4
 
-- name: Anti-Monopoly Ruling 4
+- name: Cybersecurity Mandate
+  id: 32
   cost: 0
-  tag: antitrust
-  description: Large companies are fined for anti-competitive practices.
+  tag: security
+  description: All companies must meet minimum cybersecurity standards.
   targets: all
   penalty:
-    money: -3
+    money: -4
+    reputation: -1
   court_penalty:
-    money: -8
-    reputation: -3
-  court_threshold: 4
-
-# Add more regulation cards below:
-# - name: ...
-#   cost: 0
-#   tag: ...
-#   description: ...
-#   targets: all  # or "platform", "cyber_attack", "leverage", etc.
-#   penalty:
-#     money: -5
-#   court_penalty:
-#     money: -10
-#     reputation: -2
-#   court_threshold: 4
+    money: -12
+    reputation: -4
+  court_threshold: 5

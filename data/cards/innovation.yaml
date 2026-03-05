@@ -1,15 +1,9 @@
 # ============================================================
 # INNOVATION CARDS (BOOSTERS deck)
 # ============================================================
-#   name        - Innovation name
-#   cost        - Money cost to play
-#   tag         - Tech category
-#   description - What it does
-#   immediate   - Immediate resource gains (optional)
-#   production  - Production boost per year (optional)
-# ============================================================
 
 - name: AI Assistant
+  id: 25
   cost: 4
   tag: ai
   description: Automate routine tasks, boosting engineer output.
@@ -17,15 +11,28 @@
     engineers: 1
   production:
     hr: 1
+  boosts:
+    - target_id: 8
+      bonus:
+        engineers: 2
 
 - name: Cloud Migration
+  id: 26
   cost: 3
   tag: infrastructure
   description: Move to the cloud for scalable server capacity.
   immediate:
     servers: 2
- 
+  boosts:
+    - target_id: 6
+      bonus:
+        users: 3
+    - target_id: 9
+      bonus:
+        users: 2
+
 - name: AI Assistant 2
+  id: 27
   cost: 4
   tag: ai
   description: Automate routine tasks, boosting engineer output.
@@ -35,16 +42,9 @@
     hr: 1
 
 - name: Cloud Migration 2
+  id: 28
   cost: 3
   tag: infrastructure
   description: Move to the cloud for scalable server capacity.
   immediate:
     servers: 2
-
-# Add more innovation cards below:
-# - name: ...
-#   cost: ...
-#   tag: ...
-#   description: ...
-#   immediate: ...
-#   production: ...

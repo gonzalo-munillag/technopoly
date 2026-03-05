@@ -1,52 +1,32 @@
 # ============================================================
-# TECHNOLOGY CARDS
-# ============================================================
-# Each card has:
-#   name        - Display name
-#   cost        - Resource cost to play
-#   tag         - Category tag (e.g. energy, computing, biotech)
-#   description - What the card does
-#   production  - Resources this card generates per turn (generation)
-#   effect      - Special effect when played (optional)
+# FUCK-UP CARDS (PROJECTS deck)
 # ============================================================
 
-- name: fuck up 1 
+- name: fuck up 1
+  id: 18
   cost: 4
   tag: energy
   description: A large-scale solar energy installation.
   production:
     energy: 2
-  effect: null
-
 - name: fuck up 2
+  id: 19
   cost: 8
   tag: computing
   description: Bleeding-edge quantum computing hardware.
   production:
     data: 3
-  effect: null
-
-- name: fuck up 3
-  cost: 6
-  tag: biotech
-  description: Genetically engineered organisms producing raw materials.
-  production:
-    materials: 2
-  effect: null
-
 - name: fuck up 4
+  id: 21
   cost: 6
   tag: biotech
   description: Genetically engineered organisms producing raw materials.
   production:
     materials: 2
-  effect: null
-
-# Add more technology cards below following the same format:
-# - name: ...
-#   cost: ...
-#   tag: ...
-#   description: ...
-#   production:
-#     resource_name: amount
-#   effect: null
+- name: fuck up 3
+  id: 20
+  cost: 6
+  tag: biotech
+  description: Genetically engineered organisms producing raw materials.
+  production:
+    materials: 2

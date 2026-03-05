@@ -8,6 +8,7 @@ import yaml
 
 from .card import Card
 from .player import Player
+from .board import Board
 
 CARDS_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "cards"
 
@@ -59,6 +60,7 @@ class Game:
     draft_discard: list[Card] = field(default_factory=list)
     company_offers: dict[str, list[Card]] = field(default_factory=dict)
     drafted_fuckups: dict[str, list[Card]] = field(default_factory=dict)
+    board: Board = field(default_factory=Board)
 
     # ── deck loading ─────────────────────────────────────────
 
@@ -381,8 +383,10 @@ class Game:
             player.ready = False
             player.regulation_resolved = False
             player.year_done = False
+            player.pending_tile = None
             player.resources = {k: 0 for k in player.resources}
             player.production = {k: 0 for k in player.production}
+        self.board.reset()
         self.start()
 
     def end_game(self):
@@ -403,6 +407,7 @@ class Game:
         self.started = False
         self.game_master_id = None
         self.dealer_index = 0
+        self.board.reset()
 
     # ── serialisation ────────────────────────────────────────
 
@@ -419,4 +424,5 @@ class Game:
             "any_affected_by_regulation": self.any_player_affected() if self.current_regulation else False,
             "current_regulation": self.current_regulation.to_dict() if self.current_regulation else None,
             "players": {pid: p.to_dict() for pid, p in self.players.items()},
+            "board": self.board.to_list(),
         }
