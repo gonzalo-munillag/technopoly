@@ -204,6 +204,7 @@ socket.on("login_success", (data) => {
   if (isEditor) {
     document.getElementById("edit-cards-lobby-btn").classList.remove("hidden");
     document.getElementById("edit-board-lobby-btn").classList.remove("hidden");
+    document.getElementById("edit-params-lobby-btn").classList.remove("hidden");
   }
 });
 
@@ -241,6 +242,8 @@ function _applyGameScreenUI() {
   if (isEditor) {
     editCardsBtn.classList.remove("hidden");
     document.getElementById("edit-board-btn").classList.remove("hidden");
+    document.getElementById("edit-params-btn").classList.remove("hidden");
+    document.getElementById("send-values-btn").classList.remove("hidden");
   }
 }
 
@@ -351,12 +354,32 @@ socket.on("game_ended", () => {
   lastPrivateState = null;
 });
 
+function getRepMod(rep) {
+  const thresh = lastGameState?.params?.reputation_thresholds || [
+    { min_rep: 10, modifier: 2 }, { min_rep: 5, modifier: 1 },
+    { max_rep: -10, modifier: -2 }, { max_rep: -5, modifier: -1 },
+  ];
+  for (const t of thresh) {
+    if ("min_rep" in t && rep >= t.min_rep) return t.modifier;
+    if ("max_rep" in t && rep <= t.max_rep) return t.modifier;
+  }
+  return 0;
+}
+
 // ── Render game state ───────────────────────────────────────
 function renderGameState(state) {
   lastGameState = state;
   rebuildCardIndex();
   yearBadge.textContent = `Year ${state.year}`;
   phaseBadge.textContent = PHASE_LABELS[state.phase] || state.phase;
+
+  if (state.params) {
+    const p = state.params;
+    const bs = document.getElementById("buy-server-btn");
+    const ba = document.getElementById("buy-ad-btn");
+    if (bs) bs.setAttribute("data-tip", `${p.buy_server_engineers ?? 1}🔧 + 💰${p.buy_server_money ?? 1}`);
+    if (ba) ba.setAttribute("data-tip", `${p.buy_ad_suits ?? 1}👔 + 💰${p.buy_ad_money ?? 1}`);
+  }
   showPhaseArea(state.phase);
 
   if (state.start_player_id) {
@@ -454,6 +477,14 @@ function renderDraft(pool, draftedFuckups) {
 
   doneDraftBtn.classList.remove("hidden");
 
+  const hintEl = document.querySelector(".phase-hint");
+  if (hintEl) {
+    const pd = lastGameState?.params?.projects_draw ?? 3;
+    const bd = lastGameState?.params?.boosters_draw ?? 3;
+    const dc = lastGameState?.params?.draft_cost ?? 3;
+    hintEl.textContent = `You drew ${pd} Projects + ${bd} Boosters. Pay ${dc} money to keep each card. Fuck-up cards are free and go straight to your hand.`;
+  }
+
   const draftRow = document.createElement("div");
   draftRow.className = "draft-grid";
 
@@ -474,7 +505,8 @@ function renderDraft(pool, draftedFuckups) {
       const el = createCardElement(card);
       const keepBtn = document.createElement("button");
       keepBtn.className = "btn btn-sm btn-keep";
-      keepBtn.textContent = "Keep (3 money)";
+      const draftCost = lastGameState?.params?.draft_cost ?? 3;
+      keepBtn.textContent = `Keep (${draftCost} money)`;
       keepBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         socket.emit("keep_card", { card_name: card.name });
@@ -541,11 +573,7 @@ function renderHiringPhase() {
 
   const hr = lastPrivateState.production?.HR || 0;
   const rep = lastPrivateState.resources?.reputation || 0;
-  let repMod = 0;
-  if (rep >= 10) repMod = 2;
-  else if (rep >= 5) repMod = 1;
-  else if (rep <= -10) repMod = -2;
-  else if (rep <= -5) repMod = -1;
+  const repMod = getRepMod(rep);
   const effective = hr >= 0 ? Math.max(0, hr + repMod) : hr;
   if (hr >= 0) {
     const modStr = repMod ? ` (HR ${hr} + rep ${repMod > 0 ? "+" : ""}${repMod})` : "";
@@ -900,7 +928,7 @@ function renderUsersPie() {
   const info = document.getElementById("users-info");
   if (!canvas || !info || !lastGameState) return;
 
-  const total = lastGameState.total_users || 1000;
+  const total = lastGameState.total_users || (lastGameState.params?.total_users ?? 500);
   const pool = lastGameState.user_pool ?? total;
   const players = lastGameState.players || {};
   const myId = lastPrivateState?.player_id;
@@ -969,7 +997,11 @@ function renderUsersPie() {
   ctx.fillText("USERS", cx, cy);
 
   const myPct = total > 0 ? ((myUsers / total) * 100).toFixed(1) : "0.0";
-  info.innerHTML = `<strong>👥 ${myUsers}</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${myUsers * 5}/yr</span>`;
+  const mpu = lastGameState?.params?.money_per_users ?? 20;
+  const income = mpu > 0 ? Math.floor(myUsers / mpu) : 0;
+  const nextThreshold = mpu > 0 ? (Math.floor(myUsers / mpu) + 1) * mpu : 0;
+  const hint = income === 0 ? `need ${mpu}👥 for $1` : `${nextThreshold}👥 → $${income + 1}`;
+  info.innerHTML = `<strong>👥 ${myUsers}</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${income}/yr</span><br><span class="pie-hint">${hint}</span>`;
 
   let pieTip = document.getElementById("pie-tooltip");
   if (!pieTip) {
@@ -1027,19 +1059,26 @@ function updateReputationBar(val) {
   const bar = document.getElementById("reputation-bar");
   if (!marker) return;
   const v = Math.round(val);
-  const clamped = Math.max(-10, Math.min(10, v));
-  const pct = ((clamped + 10) / 20) * 100;
+  const repMax = lastGameState?.params?.reputation_max ?? 10;
+  const repMin = lastGameState?.params?.reputation_min ?? -10;
+  const range = repMax - repMin;
+  const clamped = Math.max(repMin, Math.min(repMax, v));
+  const pct = ((clamped - repMin) / range) * 100;
   marker.style.left = pct + "%";
   marker.title = `Reputation: ${v}`;
   if (valueEl) valueEl.textContent = v;
   if (bar) {
+    const mod = getRepMod(v);
     let status;
-    if (v >= 10)       status = "⭐ +2👥 per gain, +2🔧👔 per hire";
-    else if (v >= 5)   status = "⭐ +1👥 per gain, +1🔧👔 per hire";
-    else if (v <= -10) status = "⚠️ -2👥 per gain, -2🔧👔 per hire";
-    else if (v <= -5)  status = "⚠️ -1👥 per gain, -1🔧👔 per hire";
-    else               status = "No bonus or penalty";
-    bar.setAttribute("data-tip", `Rep ${v}: ${status}\n≥10: +2 | ≥5: +1 | ≤-5: -1 | ≤-10: -2`);
+    if (mod > 0) status = `⭐ +${mod}👥 per gain, +${mod}🔧👔 per hire`;
+    else if (mod < 0) status = `⚠️ ${mod}👥 per gain, ${mod}🔧👔 per hire`;
+    else status = "No bonus or penalty";
+    const thresh = lastGameState?.params?.reputation_thresholds || [];
+    const threshStr = thresh.map(t =>
+      "min_rep" in t ? `≥${t.min_rep}: ${t.modifier > 0 ? "+" : ""}${t.modifier}` :
+      `≤${t.max_rep}: ${t.modifier > 0 ? "+" : ""}${t.modifier}`
+    ).join(" | ");
+    bar.setAttribute("data-tip", `Rep ${v}: ${status}\n${threshStr}`);
   }
 }
 
@@ -1240,6 +1279,124 @@ function createCardElement(card, options = {}) {
 
   return el;
 }
+
+// ── Parameters editor ────────────────────────────────────────
+const paramsModal = document.getElementById("params-modal");
+const paramsBody = document.getElementById("params-body");
+
+const PARAM_LABELS = {
+  total_users: "Total Users in Pool",
+  money_per_users: "Users per $1/year",
+  projects_draw: "Cards from Projects Deck",
+  boosters_draw: "Cards from Boosters Deck",
+  draft_cost: "Cost to Keep a Card ($)",
+  cards_per_turn: "Cards Playable per Turn",
+  company_offers: "Company Cards per Player",
+  buy_server_engineers: "Buy Server: Engineers",
+  buy_server_money: "Buy Server: Money",
+  buy_ad_suits: "Buy Ad: Suits",
+  buy_ad_money: "Buy Ad: Money",
+  reputation_max: "Reputation Max",
+  reputation_min: "Reputation Min",
+};
+
+let currentParams = {};
+
+function renderParamsForm(params) {
+  currentParams = { ...params };
+  paramsBody.innerHTML = "";
+  const form = document.createElement("div");
+  form.className = "params-form";
+
+  for (const [key, value] of Object.entries(params)) {
+    if (key === "reputation_thresholds") continue;
+    const row = document.createElement("div");
+    row.className = "param-row";
+    const label = document.createElement("label");
+    label.textContent = PARAM_LABELS[key] || key.replace(/_/g, " ");
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "param-input";
+    input.value = value;
+    input.dataset.key = key;
+    input.addEventListener("change", () => {
+      currentParams[key] = Number(input.value);
+    });
+    row.appendChild(label);
+    row.appendChild(input);
+    form.appendChild(row);
+  }
+
+  const threshTitle = document.createElement("h3");
+  threshTitle.textContent = "Reputation Thresholds";
+  threshTitle.style.cssText = "margin-top:1rem;font-size:.9rem;";
+  form.appendChild(threshTitle);
+
+  const thresholds = params.reputation_thresholds || [];
+  thresholds.forEach((t, i) => {
+    const row = document.createElement("div");
+    row.className = "param-row";
+    const isMin = "min_rep" in t;
+    const label = document.createElement("label");
+    label.textContent = isMin ? `Rep ≥ ${t.min_rep} → modifier` : `Rep ≤ ${t.max_rep} → modifier`;
+    const repInput = document.createElement("input");
+    repInput.type = "number";
+    repInput.className = "param-input param-input-sm";
+    repInput.value = isMin ? t.min_rep : t.max_rep;
+    repInput.addEventListener("change", () => {
+      if (isMin) currentParams.reputation_thresholds[i].min_rep = Number(repInput.value);
+      else currentParams.reputation_thresholds[i].max_rep = Number(repInput.value);
+    });
+    const modInput = document.createElement("input");
+    modInput.type = "number";
+    modInput.className = "param-input param-input-sm";
+    modInput.value = t.modifier;
+    modInput.addEventListener("change", () => {
+      currentParams.reputation_thresholds[i].modifier = Number(modInput.value);
+    });
+    row.appendChild(label);
+    row.appendChild(repInput);
+    row.appendChild(modInput);
+    form.appendChild(row);
+  });
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn btn-primary";
+  saveBtn.textContent = "Save Parameters";
+  saveBtn.style.cssText = "margin-top:1rem;width:100%;";
+  saveBtn.addEventListener("click", () => {
+    socket.emit("save_params", currentParams);
+  });
+  form.appendChild(saveBtn);
+
+  paramsBody.appendChild(form);
+}
+
+document.getElementById("edit-params-btn").addEventListener("click", () => {
+  socket.emit("get_params");
+});
+document.getElementById("edit-params-lobby-btn").addEventListener("click", () => {
+  socket.emit("get_params");
+});
+document.getElementById("close-params-modal").addEventListener("click", () => {
+  paramsModal.classList.add("hidden");
+});
+paramsModal.addEventListener("click", (e) => {
+  if (e.target === paramsModal) paramsModal.classList.add("hidden");
+});
+
+socket.on("params_data", (data) => {
+  renderParamsForm(data);
+  paramsModal.classList.remove("hidden");
+});
+
+document.getElementById("send-values-btn").addEventListener("click", () => {
+  showConfirmDialog(
+    "Send all YAML files to your laptop?",
+    () => socket.emit("send_values"),
+    { detail: "This will run the sync script.", confirmText: "Send" }
+  );
+});
 
 // ── End / Restart game ──────────────────────────────────────
 endGameBtn.addEventListener("click", () => {
@@ -2218,13 +2375,13 @@ const TILE_COLORS = {
 };
 
 const TILE_LABELS = {
-  power_plant:  "PWR",
-  factory:      "FAC",
-  data_center:  "DC",
-  store:        "STO",
-  ad_campaign:  "AD",
-  office:       "OFC",
-  lobby_group:  "LOB",
+  power_plant:  "⚡",
+  factory:      "🏭",
+  data_center:  "🖥️",
+  store:        "🏪",
+  ad_campaign:  "📢",
+  office:       "🏢",
+  lobby_group:  "💻",
 };
 
 const TILE_FULL_NAMES = {
@@ -2288,12 +2445,14 @@ function previewPlacementBonuses(tile, tileType) {
     // Power plant ↔ data center synergy
     const pt = nb.placed_tile;
     if (pt) {
-      if (tileType === "power_plant" && pt.type === "data_center")
-        production["data_centers"] = (production["data_centers"] || 0) + 1;
+      if (tileType === "power_plant" && pt.type === "data_center") {
+        const dcBonus = lastPrivateState?.pending_tile_meta?.dc_production_bonus ?? 1;
+        production["data_centers"] = (production["data_centers"] || 0) + dcBonus;
+      }
       if (tileType === "data_center" && pt.type === "power_plant")
-        production["data_centers"] = (production["data_centers"] || 0) + 1;
+        production["data_centers"] = (production["data_centers"] || 0) + (pt.dc_production_bonus || 1);
       if (tileType === "factory" && pt.type === "power_plant")
-        immediate["money"] = (immediate["money"] || 0) + 10;
+        immediate["money"] = (immediate["money"] || 0) + (pt.factory_refund || 0);
     }
   }
 
@@ -2415,16 +2574,19 @@ function renderBoard() {
     let labelSize = "7";
     if (tile.placed_tile) {
       label = TILE_LABELS[tile.placed_tile.type] || "?";
-      labelColor = "#000";
+      labelSize = "12";
     } else if (tile.name) {
       label = tile.name.length > 6 ? tile.name.slice(0, 6) : tile.name;
       labelSize = tile.terrain === "lake" ? "6" : "7";
     } else if (tile.terrain === "city") {
-      label = "City";
+      label = "🏙️";
+      labelSize = "10";
     } else if (tile.terrain === "industrial") {
-      label = "IND";
+      label = "🔩";
+      labelSize = "10";
     } else if (tile.terrain === "commercial") {
-      label = "COM";
+      label = "💼";
+      labelSize = "10";
     }
     if (label) {
       const txt = document.createElementNS(ns, "text");
@@ -2636,23 +2798,25 @@ function renderBoardEditor() {
     g.appendChild(poly);
 
     let label = "";
+    let edLabelSize = "7";
     if (tile.placed_tile) {
       label = TILE_LABELS[tile.placed_tile.type] || "?";
+      edLabelSize = "12";
     } else if (tile.name) {
       label = tile.name.length > 8 ? tile.name.slice(0, 8) : tile.name;
     } else if (tile.terrain === "city") {
-      label = "City";
+      label = "🏙️"; edLabelSize = "10";
     } else if (tile.terrain === "industrial") {
-      label = "IND";
+      label = "🔩"; edLabelSize = "10";
     } else if (tile.terrain === "commercial") {
-      label = "COM";
+      label = "💼"; edLabelSize = "10";
     }
     if (label) {
       const txt = document.createElementNS(ns, "text");
       txt.setAttribute("x", cx);
       txt.setAttribute("y", cy + 3);
       txt.setAttribute("text-anchor", "middle");
-      txt.setAttribute("font-size", label.length > 5 ? "6" : "7");
+      txt.setAttribute("font-size", edLabelSize);
       txt.setAttribute("fill", "#fff");
       txt.setAttribute("font-weight", "600");
       txt.setAttribute("pointer-events", "none");
@@ -2863,41 +3027,56 @@ function renderBoardTileForm(tile) {
 
   boardTileForm.appendChild(form);
 
-  // --- Add tile left/right ---
+  // --- Add tile left/right/top/bottom ---
+  const MAX_BOARD_ROWS = 10;
   const existingCoords = new Set(editorBoardTiles.map(t => `${t.row},${t.col}`));
-  const canLeft = !existingCoords.has(`${tile.row},${tile.col - 1}`);
-  const canRight = !existingCoords.has(`${tile.row},${tile.col + 1}`);
+  const has = (r, c) => existingCoords.has(`${r},${c}`);
 
-  if (canLeft || canRight) {
+  const isOdd = tile.row % 2 === 1;
+  const topRight = isOdd ? [tile.row - 1, tile.col + 1] : [tile.row - 1, tile.col];
+  const topLeft  = isOdd ? [tile.row - 1, tile.col]     : [tile.row - 1, tile.col - 1];
+  const botRight = isOdd ? [tile.row + 1, tile.col + 1] : [tile.row + 1, tile.col];
+  const botLeft  = isOdd ? [tile.row + 1, tile.col]     : [tile.row + 1, tile.col - 1];
+
+  const addOptions = [];
+  // Left / Right
+  if (!has(tile.row, tile.col - 1))
+    addOptions.push({ label: "← Left", row: tile.row, col: tile.col - 1 });
+  if (!has(tile.row, tile.col + 1))
+    addOptions.push({ label: "→ Right", row: tile.row, col: tile.col + 1 });
+  // Top: prefer top-right, fallback top-left
+  if (tile.row - 1 >= 0) {
+    if (!has(...topRight))
+      addOptions.push({ label: "↗ Top", row: topRight[0], col: topRight[1] });
+    else if (!has(...topLeft))
+      addOptions.push({ label: "↖ Top", row: topLeft[0], col: topLeft[1] });
+  }
+  // Bottom: prefer bottom-right, fallback bottom-left
+  if (tile.row + 1 < MAX_BOARD_ROWS) {
+    if (!has(...botRight))
+      addOptions.push({ label: "↘ Bottom", row: botRight[0], col: botRight[1] });
+    else if (!has(...botLeft))
+      addOptions.push({ label: "↙ Bottom", row: botLeft[0], col: botLeft[1] });
+  }
+
+  if (addOptions.length) {
     const addTileBar = document.createElement("div");
     addTileBar.className = "editor-form-actions";
-    addTileBar.style.borderTop = "1px solid var(--border)";
-    addTileBar.style.paddingTop = ".6rem";
-    addTileBar.style.marginTop = ".4rem";
+    addTileBar.style.cssText = "border-top:1px solid var(--border);padding-top:.6rem;margin-top:.4rem;flex-wrap:wrap;";
 
     const addLabel = document.createElement("span");
-    addLabel.style.fontSize = ".8rem";
-    addLabel.style.color = "var(--text-dim)";
+    addLabel.style.cssText = "font-size:.8rem;color:var(--text-dim);width:100%;margin-bottom:.3rem;";
     addLabel.textContent = "Add new tile:";
     addTileBar.appendChild(addLabel);
 
-    if (canLeft) {
-      const leftBtn = document.createElement("button");
-      leftBtn.className = "btn btn-sm";
-      leftBtn.textContent = `← Left (${tile.row}, ${tile.col - 1})`;
-      leftBtn.addEventListener("click", () => {
-        socket.emit("add_board_tile", { row: tile.row, col: tile.col - 1 });
+    for (const opt of addOptions) {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-sm";
+      btn.textContent = opt.label;
+      btn.addEventListener("click", () => {
+        socket.emit("add_board_tile", { row: opt.row, col: opt.col });
       });
-      addTileBar.appendChild(leftBtn);
-    }
-    if (canRight) {
-      const rightBtn = document.createElement("button");
-      rightBtn.className = "btn btn-sm";
-      rightBtn.textContent = `→ Right (${tile.row}, ${tile.col + 1})`;
-      rightBtn.addEventListener("click", () => {
-        socket.emit("add_board_tile", { row: tile.row, col: tile.col + 1 });
-      });
-      addTileBar.appendChild(rightBtn);
+      addTileBar.appendChild(btn);
     }
     boardTileForm.appendChild(addTileBar);
   }
@@ -2956,5 +3135,9 @@ function renderBoardTileForm(tile) {
   actions.appendChild(cancelBtn);
   actions.appendChild(deleteBtn);
   boardTileForm.appendChild(actions);
+
+  requestAnimationFrame(() => {
+    boardTileForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
 }
 

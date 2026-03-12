@@ -1379,6 +1379,7 @@ select.editor-dict-key:focus {
 .users-info strong { color: var(--accent); font-size: .85rem; }
 .pie-pct { color: var(--text-dim); font-size: .68rem; }
 .pie-income { color: var(--text-dim); font-size: .62rem; letter-spacing: .5px; }
+.pie-hint { color: var(--text-dim); font-size: .58rem; opacity: .7; }
 
 .pie-tooltip {
   display: none;
@@ -1469,6 +1470,7 @@ select.editor-dict-key:focus {
   max-width: 900px;
   max-height: 92vh;
   position: relative;
+  overflow-y: auto;
 }
 
 .board-container {
@@ -1777,6 +1779,23 @@ select.editor-dict-key:focus {
   stroke-width: 3;
   filter: drop-shadow(0 0 8px rgba(201,162,39,.6));
 }
+
+/* ── Params editor ──────────────────────────────────────── */
+.params-form { display: flex; flex-direction: column; gap: .5rem; }
+.param-row {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .3rem .5rem; background: rgba(0,0,0,.15);
+  border-radius: 3px;
+}
+.param-row label { flex: 1; font-size: .8rem; color: var(--text); }
+.param-input {
+  width: 70px; padding: .3rem .4rem; font-size: .8rem;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  border-radius: 3px; text-align: right;
+  font-family: 'Share Tech Mono', monospace;
+}
+.param-input-sm { width: 50px; }
+.param-input:focus { border-color: var(--accent); outline: none; }
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 700px) {

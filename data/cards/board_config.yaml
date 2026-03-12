@@ -197,7 +197,7 @@
     production: {}
 - row: 3
   col: 7
-  terrain: empty
+  terrain: industrial
   name: ''
   build_bonuses:
     immediate:
@@ -372,6 +372,10 @@
   terrain: empty
   name: ''
 - row: 6
+  col: 8
+  terrain: empty
+  name: ''
+- row: 6
   col: 9
   terrain: empty
   name: ''
@@ -495,6 +499,22 @@
   terrain: empty
   name: ''
 - row: 6
-  col: 8
+  col: 15
+  terrain: empty
+  name: ''
+- row: 9
+  col: 10
+  terrain: empty
+  name: ''
+- row: 8
+  col: 11
+  terrain: empty
+  name: ''
+- row: 4
+  col: -1
+  terrain: empty
+  name: ''
+- row: 4
+  col: -2
   terrain: empty
   name: ''

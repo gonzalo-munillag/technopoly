@@ -62,6 +62,27 @@
   starting_tiles:
   - ad_campaign
   - ad_campaign
+- name: DeepMind Industries
+  id: 6
+  tag: ai
+  description: An AI research lab turned corporate juggernaut. Their algorithms know you
+    better than you know yourself.
+  image: null
+  starting_resources:
+    engineers: 3
+    suits: 0
+    ads: 0
+    money: 20
+    servers: 3
+    reputation: 1
+    users: 2
+  starting_production:
+    HR: 1
+    data_centers: 2
+    ad_campaigns: 0
+  starting_tiles:
+  - data_center
+  - data_center
 - name: IronGate
   id: 5
   tag: cybersec

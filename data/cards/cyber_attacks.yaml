@@ -73,3 +73,24 @@
     fee_card_id: null
   effect: {}
   boosts: []
+- name: New Card
+  id: 73
+  description: null
+  type: null
+  number: 1
+  build: null
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  boosts: null

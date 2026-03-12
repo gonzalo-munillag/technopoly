@@ -109,8 +109,12 @@ class Board:
             t["adjacency_bonuses"] = dict(_DEFAULT_ADJACENCY[terrain])
         return True
 
+    MAX_ROWS = 10
+
     def add_tile(self, row: int, col: int) -> bool:
         if (row, col) in self._tiles:
+            return False
+        if row < 0 or row >= self.MAX_ROWS:
             return False
         self._tiles[(row, col)] = _make_tile(row, col)
         return True
@@ -203,11 +207,18 @@ class Board:
         return result
 
     def place_tile(self, row: int, col: int,
-                   tile_type: str, owner_id: str) -> dict:
+                   tile_type: str, owner_id: str,
+                   factory_refund: int = 0,
+                   dc_production_bonus: int = 0) -> dict:
         if not self.can_place(row, col, tile_type):
             return {}
         tile = self._tiles[(row, col)]
-        tile["placed_tile"] = {"type": tile_type, "owner_id": owner_id}
+        tile["placed_tile"] = {
+            "type": tile_type,
+            "owner_id": owner_id,
+            "factory_refund": factory_refund,
+            "dc_production_bonus": dc_production_bonus,
+        }
 
         base = TILE_BASE_BONUSES.get(tile_type, {})
         immediate = dict(base.get("immediate", {}))
@@ -224,27 +235,29 @@ class Board:
             for res, amt in ab.items():
                 immediate[res] = immediate.get(res, 0) + amt
 
-        # Power plant ↔ data center synergy
+        # Power plant ↔ data center synergy (per-card bonus)
         if tile_type == "power_plant":
             for nb in self.get_neighbors(row, col):
                 pt = nb.get("placed_tile")
                 if pt and pt["type"] == "data_center":
-                    production["data_centers"] = production.get("data_centers", 0) + 1
+                    production["data_centers"] = production.get("data_centers", 0) + dc_production_bonus
         elif tile_type == "data_center":
             for nb in self.get_neighbors(row, col):
                 pt = nb.get("placed_tile")
                 if pt and pt["type"] == "power_plant":
-                    production["data_centers"] = production.get("data_centers", 0) + 1
+                    bonus = pt.get("dc_production_bonus", 1)
+                    production["data_centers"] = production.get("data_centers", 0) + bonus
 
         return {"immediate": immediate, "production": production}
 
-    def count_adjacent_power_plants(self, row: int, col: int) -> int:
-        count = 0
+    def get_adjacent_factory_refund(self, row: int, col: int) -> int:
+        """Sum factory_refund from all adjacent power plants."""
+        total = 0
         for nb in self.get_neighbors(row, col):
             pt = nb.get("placed_tile")
             if pt and pt["type"] == "power_plant":
-                count += 1
-        return count
+                total += pt.get("factory_refund", 0)
+        return total
 
     def reset(self):
         for t in self._tiles.values():

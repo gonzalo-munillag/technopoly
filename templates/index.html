@@ -39,6 +39,7 @@
         <button id="start-game-btn" class="btn btn-primary hidden">Start Game</button>
         <button id="edit-cards-lobby-btn" class="btn btn-sm hidden" style="margin-top:.5rem;width:100%;">Edit Cards</button>
         <button id="edit-board-lobby-btn" class="btn btn-sm hidden" style="margin-top:.3rem;width:100%;">Edit Board</button>
+        <button id="edit-params-lobby-btn" class="btn btn-sm hidden" style="margin-top:.3rem;width:100%;">Edit Parameters</button>
         <p id="lobby-error" class="error-msg"></p>
       </div>
     </section>
@@ -56,6 +57,8 @@
         <div class="header-edit-btns">
           <button id="edit-board-btn" class="btn btn-sm edit-cards-btn hidden">Edit Board</button>
           <button id="edit-cards-btn" class="btn btn-sm edit-cards-btn hidden">Edit Cards</button>
+          <button id="edit-params-btn" class="btn btn-sm edit-cards-btn hidden">Edit Params</button>
+          <button id="send-values-btn" class="btn btn-sm edit-cards-btn hidden">Send Values</button>
           <button id="restart-game-btn" class="btn btn-sm btn-accent hidden">Restart</button>
           <button id="end-game-btn" class="btn btn-sm btn-danger-sm hidden">End Game</button>
         </div>
@@ -253,6 +256,17 @@
           <button id="close-graveyard-modal" class="btn btn-sm">Back to cards overview</button>
         </div>
         <div id="graveyard-body" class="modal-body editor-body"></div>
+      </div>
+    </div>
+
+    <!-- PARAMS EDITOR MODAL -->
+    <div id="params-modal" class="modal-overlay hidden">
+      <div class="modal-content" style="max-width:500px;">
+        <div class="modal-header">
+          <h2>Game Parameters</h2>
+          <button id="close-params-modal" class="btn btn-sm">&times;</button>
+        </div>
+        <div id="params-body" class="modal-body editor-body" style="padding:1rem;"></div>
       </div>
     </div>
 

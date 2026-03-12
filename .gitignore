@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .env
 rpi_commands.txt
+sync_yaml.sh
+scp_to_laptop.sh

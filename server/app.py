@@ -9,7 +9,7 @@ from flask import Flask, render_template, request, session
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 from .models import Game
-from .models.game import Phase, CARDS_PER_TURN, CARDS_DIR
+from .models.game import Phase, CARDS_DIR, P, load_params, PARAMS_FILE
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -261,7 +261,7 @@ def on_keep_card(data):
 
     card_name = data.get("card_name", "")
     if not game.keep_drafted_card(player_id, card_name):
-        emit("error", {"message": f"Cannot keep '{card_name}'. Not enough money (costs 3)."})
+        emit("error", {"message": f"Cannot keep '{card_name}'. Not enough money (costs {P('draft_cost', 3)})."})
         return
 
     if not player.draft_pool:
@@ -505,8 +505,9 @@ def on_play_card(data):
             _advance_to_next_or_end_year()
         return
 
-    if player.cards_played_this_turn >= CARDS_PER_TURN:
-        emit("error", {"message": f"You can only play {CARDS_PER_TURN} cards per turn."})
+    cpt = P("cards_per_turn", 2)
+    if player.cards_played_this_turn >= cpt:
+        emit("error", {"message": f"You can only play {cpt} cards per turn."})
         return
 
     use_optional = data.get("use_optional") or {}
@@ -527,6 +528,10 @@ def on_play_card(data):
 
     if card.tile_type:
         player.pending_tile = card.tile_type
+        player.pending_tile_meta = {
+            "factory_refund": card.factory_refund,
+            "dc_production_bonus": card.dc_production_bonus,
+        }
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
         return
@@ -549,7 +554,8 @@ def on_buy_resource(data):
         return
     buy_type = data.get("type")
     if buy_type == "server":
-        eng_cost, money_cost = 1, 1
+        eng_cost = P("buy_server_engineers", 1)
+        money_cost = P("buy_server_money", 1)
         if player.resources.get("engineers", 0) < eng_cost:
             emit("error", {"message": f"Need {eng_cost} engineer(s)."})
             return
@@ -560,7 +566,8 @@ def on_buy_resource(data):
         player.resources["money"] -= money_cost
         player.resources["servers"] = player.resources.get("servers", 0) + 1
     elif buy_type == "ad":
-        suit_cost, money_cost = 1, 1
+        suit_cost = P("buy_ad_suits", 1)
+        money_cost = P("buy_ad_money", 1)
         if player.resources.get("suits", 0) < suit_cost:
             emit("error", {"message": f"Need {suit_cost} suit(s)."})
             return
@@ -663,7 +670,12 @@ def on_place_tile(data):
         return
 
     row, col = data.get("row"), data.get("col")
-    bonuses = game.board.place_tile(row, col, player.pending_tile, player_id)
+    meta = player.pending_tile_meta or {}
+    bonuses = game.board.place_tile(
+        row, col, player.pending_tile, player_id,
+        factory_refund=meta.get("factory_refund", 0),
+        dc_production_bonus=meta.get("dc_production_bonus", 0),
+    )
     if not bonuses:
         emit("error", {"message": "Cannot place a tile there."})
         return
@@ -678,12 +690,12 @@ def on_place_tile(data):
 
     tile_type = player.pending_tile
     player.pending_tile = None
+    player.pending_tile_meta = {}
 
-    # Factory cost reduction: $10 refund per adjacent power plant
+    # Factory cost reduction: per-card refund from adjacent power plants
     factory_refund = 0
     if tile_type == "factory":
-        adj_pwr = game.board.count_adjacent_power_plants(row, col)
-        factory_refund = adj_pwr * 10
+        factory_refund = game.board.get_adjacent_factory_refund(row, col)
         if factory_refund > 0:
             player.resources["money"] = player.resources.get("money", 0) + factory_refund
 
@@ -773,7 +785,7 @@ def on_add_board_tile(data):
     row = data.get("row")
     col = data.get("col")
     if not game.board.add_tile(row, col):
-        emit("error", {"message": "Tile already exists at that position."})
+        emit("error", {"message": "Cannot add tile there (occupied or out of bounds)."})
         return
     _save_board_config()
     board_data = game.board.to_list()
@@ -836,6 +848,7 @@ def _send_private_states():
                 "drafted_fuckups": [c.to_dict() for c in fuckups],
                 "year_done": player.year_done,
                 "pending_tile": player.pending_tile,
+                "pending_tile_meta": player.pending_tile_meta,
             }, room=sid)
 
 
@@ -1236,3 +1249,48 @@ def on_get_card_trees():
     result = _build_card_trees()
     result["locks"] = _get_locks_for_client(request.sid)
     emit("card_trees", result)
+
+
+# ── Parameters editor ────────────────────────────────────────
+
+@socketio.on("get_params")
+def on_get_params():
+    if not _ensure_editor(request.sid):
+        return
+    emit("params_data", load_params())
+
+@socketio.on("save_params")
+def on_save_params(data):
+    if not _ensure_editor(request.sid):
+        return
+    with open(PARAMS_FILE, "w") as f:
+        yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+    load_params()
+    game.total_users = P("total_users", 500)
+    socketio.emit("params_data", load_params(), room="editors")
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+
+
+# ── YAML sync (send values to laptop) ────────────────────────
+
+@socketio.on("send_values")
+def on_send_values():
+    if not _ensure_editor(request.sid):
+        return
+    import subprocess
+    script_path = Path(__file__).resolve().parent.parent / "sync_yaml.sh"
+    if not script_path.exists():
+        emit("error", {"message": "sync_yaml.sh not found."})
+        return
+    try:
+        result = subprocess.run(
+            ["bash", str(script_path)],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0:
+            emit("error", {"message": "YAML files synced successfully."})
+        else:
+            emit("error", {"message": f"Sync failed: {result.stderr[:200]}"})
+    except Exception as e:
+        emit("error", {"message": f"Sync error: {e}"})

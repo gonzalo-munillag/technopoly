@@ -1,0 +1,36 @@
+# ============================================================
+# GLOBAL GAME PARAMETERS
+# Edit these to tweak game balance without touching code.
+# ============================================================
+
+# ── User Economy ────────────────────────────────────────────
+total_users: 500
+money_per_users: 20          # every N users = $1/year
+
+# ── Drafting ────────────────────────────────────────────────
+projects_draw: 3             # cards drawn from Projects deck
+boosters_draw: 3             # cards drawn from Boosters deck
+draft_cost: 3                # money to keep each drafted card
+
+# ── Turns ───────────────────────────────────────────────────
+cards_per_turn: 2            # max cards playable per turn
+company_offers: 3            # company cards offered per player
+
+# ── Buy Resources ──────────────────────────────────────────
+buy_server_engineers: 1      # engineers needed to buy a server
+buy_server_money: 1          # money needed to buy a server
+buy_ad_suits: 1              # suits needed to buy an ad
+buy_ad_money: 1              # money needed to buy an ad
+
+# ── Reputation ─────────────────────────────────────────────
+reputation_max: 10
+reputation_min: -10
+reputation_thresholds:
+  - min_rep: 10
+    modifier: 2
+  - min_rep: 5
+    modifier: 1
+  - max_rep: -10
+    modifier: -2
+  - max_rep: -5
+    modifier: -1

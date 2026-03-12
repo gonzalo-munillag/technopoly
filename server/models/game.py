@@ -27,11 +27,22 @@ BOOSTERS_FILES = {
 COMPANY_FILE = "company.yaml"
 REGULATION_FILE = "regulation.yaml"
 
-CARDS_PER_TURN = 2
-DRAFT_COST = 3
-PROJECTS_DRAW = 3
-BOOSTERS_DRAW = 3
-COMPANY_OFFERS_PER_PLAYER = 2
+PARAMS_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "params.yaml"
+
+_params_cache: dict = {}
+
+def load_params() -> dict:
+    global _params_cache
+    if PARAMS_FILE.exists():
+        with open(PARAMS_FILE) as f:
+            _params_cache = yaml.safe_load(f) or {}
+    return _params_cache
+
+def P(key: str, default=None):
+    """Get a game parameter (reads from cache)."""
+    if not _params_cache:
+        load_params()
+    return _params_cache.get(key, default)
 
 
 class Phase(str, Enum):
@@ -63,8 +74,8 @@ class Game:
     company_offers: dict[str, list[Card]] = field(default_factory=dict)
     drafted_fuckups: dict[str, list[Card]] = field(default_factory=dict)
     board: Board = field(default_factory=Board)
-    total_users: int = 1000
-    user_pool: int = 1000
+    total_users: int = 0
+    user_pool: int = 0
 
     def take_users(self, amount: int) -> int:
         """Take users from the global pool. Returns actual amount taken."""
@@ -144,6 +155,9 @@ class Game:
     # ── game flow ────────────────────────────────────────────
 
     def start(self):
+        load_params()
+        self.total_users = P("total_users", 500)
+        self.user_pool = self.total_users
         self.load_all_decks()
         self.turn_order = list(self.players.keys())
         random.shuffle(self.turn_order)
@@ -152,16 +166,16 @@ class Game:
         self.year = 1
         self.started = True
         self.phase = Phase.COMPANY_PICK
-        self.user_pool = self.total_users
         self._deal_company_offers()
 
     def _deal_company_offers(self):
-        """Give each player COMPANY_OFFERS_PER_PLAYER unique company cards."""
+        """Give each player unique company cards based on params."""
         random.shuffle(self.company_cards)
         self.company_offers = {}
         for pid in self.turn_order:
-            offers = self.company_cards[:COMPANY_OFFERS_PER_PLAYER]
-            self.company_cards = self.company_cards[COMPANY_OFFERS_PER_PLAYER:]
+            n = P("company_offers", 2)
+            offers = self.company_cards[:n]
+            self.company_cards = self.company_cards[n:]
             self.company_offers[pid] = offers
 
     def pick_company(self, player_id: str, card_name: str) -> Card | None:
@@ -195,7 +209,7 @@ class Game:
             player.draft_pool = []
             player.year_done = False
             player.regulation_resolved = False
-            drawn = self._draw_projects_limited(PROJECTS_DRAW)
+            drawn = self._draw_projects_limited(P("projects_draw", 3))
             fuckups = []
             for card in drawn:
                 if card.card_type == "fuck_up":
@@ -205,7 +219,7 @@ class Game:
                     player.draft_pool.append(card)
             self.drafted_fuckups[player.player_id] = fuckups
             boosters = self.draw_from(
-                self.boosters_deck, BOOSTERS_DRAW, "boosters"
+                self.boosters_deck, P("boosters_draw", 3), "boosters"
             )
             player.draft_pool.extend(boosters)
 
@@ -239,7 +253,7 @@ class Game:
             if card.name == card_name:
                 if card.card_type == "fuck_up":
                     return False
-                if not player.spend(DRAFT_COST, "money"):
+                if not player.spend(P("draft_cost", 3), "money"):
                     return False
                 kept = player.draft_pool.pop(i)
                 player.add_to_hand(kept)
@@ -380,7 +394,7 @@ class Game:
     def end_current_year(self):
         """End this year: collect production, start next year."""
         for player in self.players.values():
-            player.collect_production()
+            player.collect_production(P("money_per_users", 20))
             player.reset_turn()
             player.year_done = False
         self.year += 1
@@ -483,4 +497,5 @@ class Game:
             "card_names": self._card_name_map(),
             "total_users": self.total_users,
             "user_pool": self.user_pool,
+            "params": _params_cache,
         }

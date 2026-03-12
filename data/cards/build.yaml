@@ -286,6 +286,8 @@
   type: power plant
   number: 1
   build: power_plant
+  factory_refund: 10
+  dc_production_bonus: 1
   costs:
     engineers: 2
     suits: 0
@@ -309,6 +311,8 @@
   type: power plant
   number: 2
   build: power_plant
+  factory_refund: 5
+  dc_production_bonus: 1
   costs:
     engineers: 1
     suits: 0

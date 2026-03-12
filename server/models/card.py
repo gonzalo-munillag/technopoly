@@ -36,6 +36,8 @@ class Card:
     image: str = ""
     payee_card_id: int | None = None
     starting_tiles: list[str] = field(default_factory=list)
+    factory_refund: int = 0          # $ refund per adjacent factory when this power plant is placed
+    dc_production_bonus: int = 0     # +N data_centers production per adjacent data center
 
     @property
     def fee(self) -> int:
@@ -74,6 +76,8 @@ class Card:
             "image": self.image,
             "payee_card_id": self.payee_card_id,
             "starting_tiles": self.starting_tiles,
+            "factory_refund": self.factory_refund,
+            "dc_production_bonus": self.dc_production_bonus,
         }
         return d
 
@@ -113,4 +117,6 @@ class Card:
             image=data.get("image", ""),
             payee_card_id=data.get("payee_card_id"),
             starting_tiles=data.get("starting_tiles") or [],
+            factory_refund=data.get("factory_refund", 0),
+            dc_production_bonus=data.get("dc_production_bonus", 0),
         )

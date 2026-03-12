@@ -23,6 +23,7 @@ class Player:
     year_done: bool = False
     hiring_done: bool = False
     pending_tile: str | None = None
+    pending_tile_meta: dict = field(default_factory=dict)
     color: str = "#c9a227"
     users: int = 0
     _remaining_starting_tiles: list = field(default_factory=list, repr=False)
@@ -63,16 +64,20 @@ class Player:
                 return self.hand.pop(i)
         return None
 
-    def reputation_modifier(self) -> int:
+    def reputation_modifier(self, thresholds=None) -> int:
+        from .game import P
         rep = self.resources.get("reputation", 0)
-        if rep >= 10:
-            return 2
-        if rep >= 5:
-            return 1
-        if rep <= -10:
-            return -2
-        if rep <= -5:
-            return -1
+        thresh = thresholds or P("reputation_thresholds", [
+            {"min_rep": 10, "modifier": 2},
+            {"min_rep": 5, "modifier": 1},
+            {"max_rep": -10, "modifier": -2},
+            {"max_rep": -5, "modifier": -1},
+        ])
+        for t in thresh:
+            if "min_rep" in t and rep >= t["min_rep"]:
+                return t["modifier"]
+            if "max_rep" in t and rep <= t["max_rep"]:
+                return t["modifier"]
         return 0
 
     def gain_users(self, amount: int, pool: "Game | None" = None) -> int:
@@ -105,14 +110,15 @@ class Player:
     _PRODUCTION_ONLY = {"HR", "data_centers", "ad_campaigns"}
     _PRODUCTION_MAP = {"data_centers": "servers", "ad_campaigns": "ads"}
 
-    def collect_production(self):
+    def collect_production(self, money_per_users: int = 20):
         for resource, amount in self.production.items():
             target = self._PRODUCTION_MAP.get(resource)
             if target:
                 self.resources[target] = self.resources.get(target, 0) + amount
             elif resource not in self._PRODUCTION_ONLY:
                 self.resources[resource] = self.resources.get(resource, 0) + amount
-        self.resources["money"] = self.resources.get("money", 0) + self.users * 5
+        if money_per_users and self.users:
+            self.resources["money"] = self.resources.get("money", 0) + self.users // money_per_users
 
     def can_afford(self, card: Card) -> bool:
         return self.resources.get("money", 0) >= card.cost
