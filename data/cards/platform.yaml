@@ -2,95 +2,315 @@
 # PLATFORM CARDS (PROJECTS deck)
 # ============================================================
 
-- name: Hostile Takeover
+- name: Online Search Engine
   id: 6
-  cost: 10
-  tag: corporate
-  description: Acquire a competitor's asset by force.
-  effect: steal_card
-- name: Hack Attack
-  id: 8
-  cost: 3
-  tag: cyber
-  description: Disrupt an opponent's production for one turn.
-  effect: disable_production
-- name: Government Grant 2
-  id: 10
-  cost: 0
-  tag: political
-  description: Receive funding from the government.
-  effect: gain_credits_5
-- name: Hack Attack 2
-  id: 11
-  cost: 3
-  tag: cyber
-  description: Disrupt an opponent's production for one turn.
-  effect: disable_production
+  image: ''
+  description: A dominant search platform generating ad revenue and attracting engineers.
+  type: search engine
+  number: 3
+  costs:
+    engineers: 1
+    suits: 1
+    ads: 1
+    money: 1
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+  effect:
+    engineers: 3
+    suits: 3
+    ads: 3
+    money: 10
+    servers: 1
+    data_centers: 0
+    ad_campaigns: 0
+  boosts:
+  - target_id:
+    - 8
+    - 9
+    bonus:
+      engineers: 2
+      suits: 2
+- name: Social Media Network
+  id: 40
+  description: Connect billions of users. Monetize attention and influence public
+    opinion.
+  type: social platform
+  number: 2
+  costs:
+    engineers: 2
+    suits: 1
+    ads: 2
+    money: 3
+    servers: 1
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+  effect:
+    users: 15
+    ads: 5
+    money: 8
+    reputation: 2
+    data_centers: 0
+    ad_campaigns: 0
+  boosts:
+  - target_id: 6
+    bonus:
+      users: 3
+      ads: 2
+- name: Cloud Computing Service
+  id: 41
+  description: Offer scalable computing to other companies. Requires heavy infrastructure.
+  type: software service provider
+  number: 2
+  costs:
+    engineers: 3
+    suits: 0
+    ads: 0
+    money: 5
+    servers: 2
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+  effect:
+    money: 12
+    servers: 4
+    data_centers: 0
+    ad_campaigns: 0
+    engineers: 2
   boosts: null
-- name: Government Grant 5
-  id: 12
-  cost: 0
-  tag: political
-  description: Receive funding from the government.
-  effect: gain_credits_5
-- name: Hack Attack 25
-  id: 13
-  cost: 3
-  tag: cyber
-  description: Disrupt an opponent's production for one turn.
-  effect: disable_production
-- name: Hack Attack 8
-  id: 15
-  cost: 3
-  tag: cyber
-  description: Disrupt an opponent's production for one turn.
-  effect: disable_production
-- name: Government Grant
-  id: 7
-  cost: 0
-  tag: political
-  description: Receive funding from the government.
-  effect: gain_credits_5
-- name: Hostile Takeover 2
-  id: 9
-  cost: 10
-  tag: corporate
-  description: Acquire a competitor's asset by force.
-  effect: steal_card
-- name: Build Power Plant
-  id: 33
-  cost: 0
-  tag: energy
-  description: Construct a power plant on the board. Generates steady income. Bonus
-    near lakes.
-  tile_type: power_plant
+- name: E-Commerce Marketplace
+  id: 42
+  image: ''
+  description: A massive online marketplace connecting buyers and sellers worldwide.
+  type: online marketplace
+  number: 2
+  costs:
+    engineers: 1
+    suits: 2
+    ads: 1
+    money: 4
+    servers: 1
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+  effect:
+    money: 15
+    users: 8
+    suits: 2
+    reputation: 1
+    data_centers: 0
+    ad_campaigns: 0
+- name: Smartphone Manufacturer
+  id: 43
+  description: Design and produce premium smartphones. Requires factories and engineers.
+  type: hardware manufacturer
+  number: 2
+  costs:
+    engineers: 3
+    suits: 1
+    ads: 0
+    money: 0
+    fee: 3
+    fee_card_id: 46
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+  effect:
+    money: 10
+    users: 6
+    reputation: 3
+    data_centers: 0
+    ad_campaigns: 0
+  boosts:
+  - target_id: 42
+    bonus:
+      money: 4
+      users: 2
+- name: Chip Fabrication Plant
+  id: 44
+  description: Produce cutting-edge microchips. Essential for all hardware manufacturers.
+  type: hardware manufacturer
+  number: 1
+  costs:
+    engineers: 4
+    suits: 0
+    ads: 0
+    money: 10
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+  effect:
+    engineers: 5
+    money: 8
+    data_centers: 0
+    ad_campaigns: 0
+  boosts:
+  - target_id: 43
+    bonus:
+      engineers: 3
+      money: 5
+      users: 0
+- name: Streaming Platform
+  id: 45
+  description: Stream entertainment to millions. High bandwidth, high reward.
+  type: social platform
+  number: 2
+  costs:
+    engineers: 1
+    suits: 1
+    ads: 1
+    money: 0
+    fee: 4
+    fee_card_id: 41
+    servers: 2
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+  effect:
+    users: 10
+    money: 6
+    ads: 2
+    reputation: 1
+    data_centers: 0
+    ad_campaigns: 0
   boosts: null
-- name: Build Data Center
-  id: 34
-  cost: 7
-  tag: computing
-  description: Establish a data center on the board. Expands server capacity. Bonus
-    near lakes.
-  tile_type: data_center
-- name: Build Factory
-  id: 35
-  cost: 4
-  tag: manufacturing
-  description: Open a hardware factory. Produces engineers and income. Bonus near
-    cities.
-  tile_type: factory
-- name: Open Store
-  id: 36
-  cost: 0
-  tag: retail
-  description: Open a retail store. Attracts users and generates income. Bonus near
-    cities.
-  tile_type: store
+- name: Enterprise Software Suite
+  id: 46
+  image: ''
+  description: Productivity tools for businesses. Recurring revenue from subscriptions.
+  type: software service provider
+  number: 2
+  costs:
+    engineers: 2
+    suits: 2
+    ads: 0
+    money: 4
+    servers: 1
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+  effect:
+    money: 10
+    suits: 3
+    engineers: 1
+    reputation: 2
+    data_centers: 0
+    ad_campaigns: 0
+- name: Factory Complex
+  id: 57
+  image: ''
+  description: Manufacture hardware components at scale. Supply the industry.
+  type: hardware manufacturer
+  number: 2
+  build: factory
+  costs:
+    engineers: 2
+    suits: 0
+    ads: 0
+    money: 7
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    engineers: 2
+    money: 4
+    data_centers: 0
+    ad_campaigns: 0
   boosts: null
-- name: Launch Ad Campaign
-  id: 37
-  cost: 2
-  tag: marketing
-  description: Deploy advertising infrastructure. Boosts visibility and users. Bonus
-    near government.
-  tile_type: ads
+- name: Mobile Phone Assembly
+  id: 68
+  image: ''
+  description: Mass-produce smartphones. Build a factory near a power plant for savings.
+  type: hardware manufacturer
+  number: 2
+  build: factory
+  costs:
+    engineers: 2
+    suits: 1
+    ads: 0
+    money: 10
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    money: 6
+    users: 3
+    data_centers: 0
+    ad_campaigns: 0
+  boosts:
+  - target_id: 43
+    bonus:
+      money: 3
+      users: 2
+- name: Rocket Launch Facility
+  id: 69
+  image: ''
+  description: Build rockets for satellite launches. Expensive but prestigious.
+  type: hardware manufacturer
+  number: 1
+  build: factory
+  costs:
+    engineers: 4
+    suits: 1
+    ads: 0
+    money: 18
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    reputation: 4
+    money: 8
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+- name: Drone Manufacturing
+  id: 70
+  image: ''
+  description: Build autonomous drones for delivery and surveillance.
+  type: hardware manufacturer
+  number: 2
+  build: factory
+  costs:
+    engineers: 3
+    suits: 0
+    ads: 0
+    money: 8
+    servers: 1
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    money: 5
+    engineers: 1
+    reputation: 1
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null

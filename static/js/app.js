@@ -38,6 +38,7 @@ const draftArea         = document.getElementById("draft-area");
 const draftContainer    = document.getElementById("draft-container");
 const draftYear         = document.getElementById("draft-year");
 const doneDraftBtn      = document.getElementById("done-draft-btn");
+const hiringArea        = document.getElementById("hiring-area");
 const regulationArea    = document.getElementById("regulation-area");
 const regulationDisplay = document.getElementById("regulation-card-display");
 const regulationAlertBox = document.getElementById("regulation-alert-box");
@@ -47,6 +48,7 @@ const regCourtBtn       = document.getElementById("reg-court-btn");
 const regulationResultBox = document.getElementById("regulation-result-box");
 const regulationWaiting = document.getElementById("regulation-waiting");
 const regProceedBtn     = document.getElementById("reg-proceed-btn");
+const regStartYearBtn  = document.getElementById("reg-start-year-btn");
 const turnsArea         = document.getElementById("turns-area");
 const fuckupAlert       = document.getElementById("fuckup-alert");
 const yearDoneWaiting   = document.getElementById("year-done-waiting");
@@ -71,6 +73,7 @@ const editorBody        = document.getElementById("editor-body");
 const PHASE_LABELS = {
   company_pick: "Company Pick",
   year_start_draft: "Draft",
+  hiring: "Hiring",
   regulation: "Regulation",
   player_turns: "Turns",
   year_end: "Year End",
@@ -83,6 +86,8 @@ const CARD_TYPE_GROUPS = [
   { key: "innovation", label: "Innovation" },
   { key: "leverage", label: "Leverage" },
   { key: "fuck_up", label: "Fuck-ups" },
+  { key: "build", label: "Build" },
+  { key: "regulation", label: "Regulation" },
 ];
 
 const DRAFT_SECTIONS = [
@@ -97,10 +102,11 @@ function showScreen(screen) {
 }
 
 function showPhaseArea(phase) {
-  [companyPickArea, draftArea, regulationArea, turnsArea].forEach(a => a.classList.add("hidden"));
+  [companyPickArea, draftArea, hiringArea, regulationArea, turnsArea].forEach(a => a.classList.add("hidden"));
   const map = {
     company_pick: companyPickArea,
     year_start_draft: draftArea,
+    hiring: hiringArea,
     regulation: regulationArea,
     player_turns: turnsArea,
   };
@@ -174,6 +180,7 @@ socket.on("game_started", (state) => {
 
 socket.on("game_state", (state) => {
   renderGameState(state);
+  renderUsersPie();
 });
 
 socket.on("your_state", (data) => {
@@ -181,6 +188,7 @@ socket.on("your_state", (data) => {
   lastPrivateState = data;
   renderResources(data.resources);
   renderProduction(data.production);
+  renderUsersPie();
   renderHand(data.hand);
   renderDraft(data.draft_pool, data.drafted_fuckups);
   cardsPlayedInfo.textContent = `(${data.cards_played_this_turn}/2 played)`;
@@ -195,8 +203,16 @@ socket.on("your_state", (data) => {
   updateTurnsUI();
   updateRegulationUI();
 
+  if (lastGameState?.phase === "hiring") {
+    renderHiringPhase();
+  }
+
   if (!hadPending && data.pending_tile) {
     socket.emit("get_board");
+  }
+
+  if (hadPending && !data.pending_tile && !boardModal.classList.contains("hidden")) {
+    renderBoard();
   }
 });
 
@@ -232,10 +248,18 @@ function updateRegulationUI() {
   if (lastPrivateState.regulation_resolved) {
     regulationActions.classList.add("hidden");
     regProceedBtn.classList.add("hidden");
-    regulationWaiting.textContent = "Waiting for others to resolve their compliance...";
-    regulationWaiting.classList.remove("hidden");
+    const allResolved = Object.values(lastGameState.players).every(p => p.regulation_resolved);
+    if (allResolved) {
+      regulationWaiting.classList.add("hidden");
+      regStartYearBtn.classList.remove("hidden");
+    } else {
+      regulationWaiting.textContent = "Waiting for others to resolve their compliance...";
+      regulationWaiting.classList.remove("hidden");
+      regStartYearBtn.classList.add("hidden");
+    }
   } else {
     regulationWaiting.classList.add("hidden");
+    regStartYearBtn.classList.add("hidden");
     if (lastPrivateState.regulation_affected) {
       regulationActions.classList.remove("hidden");
       regProceedBtn.classList.add("hidden");
@@ -258,6 +282,7 @@ socket.on("game_ended", () => {
 // ── Render game state ───────────────────────────────────────
 function renderGameState(state) {
   lastGameState = state;
+  rebuildCardIndex();
   yearBadge.textContent = `Year ${state.year}`;
   phaseBadge.textContent = PHASE_LABELS[state.phase] || state.phase;
   showPhaseArea(state.phase);
@@ -297,6 +322,10 @@ function renderGameState(state) {
         renderCompanyCards(lastPrivateState.company_offers);
       }
     }
+  }
+
+  if (state.phase === "hiring") {
+    renderHiringPhase();
   }
 
   if (state.phase === "regulation") {
@@ -353,6 +382,9 @@ function renderDraft(pool, draftedFuckups) {
 
   doneDraftBtn.classList.remove("hidden");
 
+  const draftRow = document.createElement("div");
+  draftRow.className = "draft-grid";
+
   DRAFT_SECTIONS.forEach(section => {
     const matching = pool.filter(c => section.types.includes(c.card_type));
     if (matching.length === 0) return;
@@ -379,15 +411,20 @@ function renderDraft(pool, draftedFuckups) {
       grid.appendChild(el);
     });
     sectionDiv.appendChild(grid);
-    draftContainer.appendChild(sectionDiv);
+    draftRow.appendChild(sectionDiv);
   });
+  draftContainer.appendChild(draftRow);
 
   if (draftedFuckups && draftedFuckups.length > 0) {
+    const sep = document.createElement("hr");
+    sep.className = "draft-fuckup-separator";
+    draftContainer.appendChild(sep);
+
     const sectionDiv = document.createElement("div");
-    sectionDiv.className = "draft-section";
+    sectionDiv.className = "draft-section draft-fuckup-section";
     const h3 = document.createElement("h3");
     h3.className = "draft-section-title";
-    h3.textContent = "Fuck-ups";
+    h3.textContent = "Fuck-ups (added to your hand)";
     sectionDiv.appendChild(h3);
 
     const grid = document.createElement("div");
@@ -408,6 +445,65 @@ function renderDraft(pool, draftedFuckups) {
 
 doneDraftBtn.addEventListener("click", () => socket.emit("done_drafting"));
 
+// ── Hiring Phase ────────────────────────────────────────────
+function renderHiringPhase() {
+  const hiringPrompt = document.getElementById("hiring-prompt");
+  const hiringForm = document.getElementById("hiring-form");
+  const hiringWaiting = document.getElementById("hiring-waiting");
+  const hireEng = document.getElementById("hire-engineers");
+  const hireSuit = document.getElementById("hire-suits");
+  const hiringTotal = document.getElementById("hiring-total");
+
+  if (!lastPrivateState || !lastGameState) return;
+
+  const me = lastGameState.players?.[myPlayerId];
+  if (!me) return;
+
+  if (me.hiring_done) {
+    hiringForm.classList.add("hidden");
+    hiringWaiting.classList.remove("hidden");
+    return;
+  }
+  hiringForm.classList.remove("hidden");
+  hiringWaiting.classList.add("hidden");
+
+  const hr = lastPrivateState.production?.HR || 0;
+  const rep = lastPrivateState.resources?.reputation || 0;
+  let repMod = 0;
+  if (rep >= 10) repMod = 2;
+  else if (rep >= 5) repMod = 1;
+  else if (rep <= -10) repMod = -2;
+  else if (rep <= -5) repMod = -1;
+  const effective = hr >= 0 ? Math.max(0, hr + repMod) : hr;
+  if (hr >= 0) {
+    const modStr = repMod ? ` (HR ${hr} + rep ${repMod > 0 ? "+" : ""}${repMod})` : "";
+    hiringPrompt.textContent = `You can hire ${effective} employee(s)${modStr}. Distribute between engineers and suits.`;
+  } else {
+    hiringPrompt.textContent = `You must fire ${Math.abs(effective)} employee(s). Choose how many engineers and suits to let go.`;
+  }
+
+  const updateTotal = () => {
+    const e = parseInt(hireEng.value) || 0;
+    const s = parseInt(hireSuit.value) || 0;
+    const target = Math.abs(effective);
+    hiringTotal.textContent = `Total: ${e + s} / ${target}`;
+    hiringTotal.style.color = (e + s === target) ? "var(--accent)" : "var(--danger)";
+  };
+  hireEng.onchange = updateTotal;
+  hireSuit.onchange = updateTotal;
+  hireEng.oninput = updateTotal;
+  hireSuit.oninput = updateTotal;
+  hireEng.value = 0;
+  hireSuit.value = 0;
+  updateTotal();
+}
+
+document.getElementById("conclude-hiring-btn").addEventListener("click", () => {
+  const eng = parseInt(document.getElementById("hire-engineers").value) || 0;
+  const suits = parseInt(document.getElementById("hire-suits").value) || 0;
+  socket.emit("submit_hiring", { engineers: eng, suits });
+});
+
 // ── Regulation ──────────────────────────────────────────────
 function renderRegulation(card) {
   if (!card) {
@@ -416,29 +512,43 @@ function renderRegulation(card) {
   }
   regulationDisplay.innerHTML = "";
   const el = createCardElement(card);
-  const penaltyText = Object.entries(card.penalty || {})
-    .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${k}`)
+  const compText = Object.entries(card.compliance || card.penalty || {})
+    .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`)
     .join(", ");
-  if (penaltyText) {
-    const penDiv = document.createElement("div");
-    penDiv.className = "regulation-penalty-info";
-    penDiv.innerHTML = `<strong>Penalty if accept:</strong> ${penaltyText}`;
-    el.appendChild(penDiv);
+  const courtText = Object.entries(card.court_penalty || {})
+    .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`)
+    .join(", ");
+  const threshold = card.court_threshold || 4;
+  const winPct = Math.round(((7 - threshold) / 6) * 100);
+  const losePct = 100 - winPct;
+  let infoHtml = "";
+  if (compText) infoHtml += `<p class="reg-compliance-text"><strong>Compliance:</strong> ${compText}</p>`;
+  if (courtText) infoHtml += `<p class="reg-court-text"><strong>Court penalty:</strong> ${courtText}</p>`;
+  infoHtml += `<p class="reg-court-text"><strong>Court odds:</strong> ${winPct}% win / ${losePct}% lose (>= ${threshold} on a die roll to win)</p>`;
+  if (infoHtml) {
+    const infoDiv = document.createElement("div");
+    infoDiv.className = "regulation-penalty-info";
+    infoDiv.innerHTML = infoHtml;
+    el.appendChild(infoDiv);
   }
   regulationDisplay.appendChild(el);
 }
 
 socket.on("regulation_alert", (data) => {
   if (data.affected) {
-    const penText = Object.entries(data.penalty)
-      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${k}`).join(", ");
+    const compText = Object.entries(data.compliance)
+      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(", ");
     const courtText = Object.entries(data.court_penalty)
-      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${k}`).join(", ");
-    regulationAlertBox.innerHTML = `
-      <p><strong>This regulation affects you!</strong></p>
-      <p>Accept penalty: ${penText}</p>
-      <p>Court loss penalty: ${courtText} (need ${data.court_threshold}+ on d6 to win)</p>
-    `;
+      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(", ");
+    const winPct = Math.round(((7 - data.court_threshold) / 6) * 100);
+    const losePct = 100 - winPct;
+    const targeted = (data.targeted_cards || []).map(c => c.name).join(", ");
+    let html = `<p><strong>This regulation affects you!</strong></p>`;
+    if (targeted) html += `<p>Targeted card(s): <strong>${targeted}</strong> — accepting means losing them.</p>`;
+    html += `<p class="reg-compliance-text">Accept compliance: ${compText}</p>`;
+    html += `<p class="reg-court-text">Court loss penalty: ${courtText} — ${losePct}% chance of losing (>= ${data.court_threshold} on a die roll to win)</p>`;
+    if (targeted) html += `<p class="reg-compliance-text">Win in court (${winPct}%): keep your card(s), no penalty.</p>`;
+    regulationAlertBox.innerHTML = html;
     regulationAlertBox.classList.remove("hidden");
     regulationActions.classList.remove("hidden");
     regulationResultBox.classList.add("hidden");
@@ -469,37 +579,127 @@ regProceedBtn.addEventListener("click", () => {
 socket.on("regulation_result", (data) => {
   regulationActions.classList.add("hidden");
   regulationResultBox.classList.remove("hidden");
+  const lostCards = (data.lost_cards || []);
+  const lostMsg = lostCards.length ? `<p>Lost card(s): <strong>${lostCards.join(", ")}</strong></p>` : "";
   if (data.action === "accept") {
-    const penText = Object.entries(data.penalty)
-      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${k}`).join(", ");
-    regulationResultBox.innerHTML = `<p>You accepted the penalty: ${penText}</p>`;
+    const compText = Object.entries(data.compliance || data.penalty || {})
+      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(", ");
+    regulationResultBox.innerHTML = `<p>You accepted the compliance: ${compText}</p>${lostMsg}`;
   } else {
     const result = data.won ? "Won" : "Lost";
     let msg = `<p>Court roll: <strong>${data.roll}</strong> (needed ${data.threshold}+) — <strong>${result}!</strong></p>`;
     if (!data.won) {
-      const penText = Object.entries(data.penalty)
-        .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${k}`).join(", ");
-      msg += `<p>Court penalty applied: ${penText}</p>`;
+      const courtText = Object.entries(data.penalty || {})
+        .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(", ");
+      msg += `<p>Court penalty applied: ${courtText}</p>${lostMsg}`;
     } else {
-      msg += `<p>No penalty — you beat the case!</p>`;
+      msg += `<p>No penalty — you beat the case and keep your cards!</p>`;
     }
     regulationResultBox.innerHTML = msg;
   }
   regProceedBtn.classList.add("hidden");
+  regStartYearBtn.classList.add("hidden");
   regulationWaiting.textContent = "Waiting for others to resolve their compliance...";
   regulationWaiting.classList.remove("hidden");
 });
 
+socket.on("regulation_all_resolved", () => {
+  regulationWaiting.classList.add("hidden");
+  regStartYearBtn.classList.remove("hidden");
+});
+
+regStartYearBtn.addEventListener("click", () => {
+  socket.emit("start_year_after_regulation");
+  regStartYearBtn.classList.add("hidden");
+});
+
 // ── Hand (player turns) ────────────────────────────────────
+function findPayeesForFee(feeCardId) {
+  if (!feeCardId || !lastGameState) return [];
+  const results = [];
+  for (const [pid, p] of Object.entries(lastGameState.players)) {
+    if (pid === myPlayerId) continue;
+    const has = (p.played_cards || []).some(c => c.id === feeCardId);
+    if (has) results.push({ pid, name: p.name });
+  }
+  return results;
+}
+
+function showPaymentPopup(card, useOptional, callback) {
+  const needs = [];
+  const cardCosts = card.costs || {};
+  if (cardCosts.fee && cardCosts.fee_card_id) {
+    const feePayees = findPayeesForFee(cardCosts.fee_card_id);
+    if (feePayees.length) needs.push({ res: "fee", payees: feePayees, label: `Fee (💰$${cardCosts.fee})` });
+  }
+  if (needs.length === 0) { callback({}); return; }
+
+  const overlay = document.createElement("div");
+  overlay.className = "payment-popup-overlay";
+  const popup = document.createElement("div");
+  popup.className = "payment-popup";
+  popup.innerHTML = `<h3>Choose who to pay</h3>`;
+
+  const selections = {};
+  needs.forEach(({ res, payees, label }) => {
+    const row = document.createElement("div");
+    row.className = "payment-row";
+    row.innerHTML = `<span class="payment-label">${label}:</span>`;
+    const sel = document.createElement("select");
+    sel.className = "payment-select";
+    const bankOpt = document.createElement("option");
+    bankOpt.value = ""; bankOpt.textContent = "Bank (no player)";
+    sel.appendChild(bankOpt);
+    payees.forEach(({ pid, name }) => {
+      const o = document.createElement("option");
+      o.value = pid; o.textContent = name;
+      sel.appendChild(o);
+    });
+    selections[res] = sel;
+    row.appendChild(sel);
+    popup.appendChild(row);
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "payment-actions";
+  const confirmBtn = document.createElement("button");
+  confirmBtn.className = "btn btn-sm btn-accent";
+  confirmBtn.textContent = "Confirm";
+  confirmBtn.addEventListener("click", () => {
+    const payTo = {};
+    for (const [res, sel] of Object.entries(selections)) {
+      if (sel.value) payTo[res] = sel.value;
+    }
+    overlay.remove();
+    callback(payTo);
+  });
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn btn-sm";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", () => overlay.remove());
+  actions.appendChild(confirmBtn);
+  actions.appendChild(cancelBtn);
+  popup.appendChild(actions);
+
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+}
+
 function renderHand(hand) {
   handDiv.innerHTML = "";
   hand.forEach(card => {
-    const el = createCardElement(card);
-    if (card.card_type === "fuck_up") {
-      el.classList.add("fuckup-card");
-    }
+    const el = createCardElement(card, { interactive: true });
+    const costs = card.costs || {};
+    const hasFee = costs.fee && costs.fee_card_id;
+
     el.addEventListener("click", () => {
-      socket.emit("play_card", { card_name: card.name });
+      if (hasFee) {
+        showPaymentPopup(card, {}, (payTo) => {
+          socket.emit("play_card", { card_name: card.name, use_optional: {}, pay_to: payTo });
+        });
+      } else {
+        socket.emit("play_card", { card_name: card.name, use_optional: {} });
+      }
     });
     handDiv.appendChild(el);
   });
@@ -537,8 +737,15 @@ function renderPlayedCards(cards) {
       floatingTooltip.appendChild(createCardElement(c));
       floatingTooltip.classList.remove("hidden");
       const rect = div.getBoundingClientRect();
-      floatingTooltip.style.top = rect.top + "px";
-      floatingTooltip.style.left = (rect.right + 8) + "px";
+      const ttW = 260;
+      const ttH = floatingTooltip.offsetHeight || 350;
+      let left = rect.right + 8;
+      let top = rect.top;
+      if (left + ttW > window.innerWidth) left = rect.left - ttW - 8;
+      if (top + ttH > window.innerHeight) top = Math.max(4, window.innerHeight - ttH - 4);
+      if (top < 4) top = 4;
+      floatingTooltip.style.top = top + "px";
+      floatingTooltip.style.left = left + "px";
     });
 
     div.addEventListener("mouseleave", () => {
@@ -603,50 +810,276 @@ handModal.addEventListener("click", (e) => {
 function renderResources(resources) {
   resourcesDiv.innerHTML = "";
   Object.entries(resources).forEach(([key, val]) => {
+    if (key === "reputation") {
+      updateReputationBar(val);
+      return;
+    }
+    if (key === "users") return;
     const div = document.createElement("div");
     div.className = "resource-item";
-    div.innerHTML = `<span class="label">${key}</span><span class="value">${val}</span>`;
+    div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">${key === "money" ? "$" : ""}${val}</span>`;
     resourcesDiv.appendChild(div);
   });
 }
 
+function renderUsersPie() {
+  const canvas = document.getElementById("users-pie");
+  const info = document.getElementById("users-info");
+  if (!canvas || !info || !lastGameState) return;
+
+  const total = lastGameState.total_users || 1000;
+  const pool = lastGameState.user_pool ?? total;
+  const players = lastGameState.players || {};
+  const myId = lastPrivateState?.player_id;
+
+  const slices = [];
+  let myUsers = 0;
+  for (const [pid, p] of Object.entries(players)) {
+    const u = p.users || 0;
+    if (u > 0) slices.push({ pid, name: p.name, users: u, color: p.color });
+    if (pid === myId) myUsers = u;
+  }
+  if (pool > 0) slices.push({ pid: "__pool", name: "Uncaptured", users: pool, color: "#555" });
+
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+  const cx = w / 2, cy = h / 2, r = Math.min(cx, cy) - 2;
+  ctx.clearRect(0, 0, w, h);
+
+  let startAngle = -Math.PI / 2;
+  const sliceAngles = [];
+  for (const s of slices) {
+    const angle = (s.users / total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, startAngle + angle);
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    sliceAngles.push({ ...s, start: startAngle, end: startAngle + angle });
+    startAngle += angle;
+  }
+
+  const myPct = total > 0 ? ((myUsers / total) * 100).toFixed(1) : "0.0";
+  info.innerHTML = `<strong>👥 ${myUsers}</strong> (${myPct}%)<br>💰 $${myUsers * 5}/yr`;
+
+  canvas.onmousemove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left - cx;
+    const y = e.clientY - rect.top - cy;
+    let angle = Math.atan2(y, x);
+    if (angle < -Math.PI / 2) angle += 2 * Math.PI;
+    const dist = Math.sqrt(x * x + y * y);
+    canvas.title = "";
+    if (dist <= r) {
+      for (const s of sliceAngles) {
+        if (angle >= s.start && angle < s.end) {
+          const pct = ((s.users / total) * 100).toFixed(1);
+          canvas.title = `${s.name}: ${s.users} (${pct}%)`;
+          break;
+        }
+      }
+    }
+  };
+}
+
+function updateReputationBar(val) {
+  const marker = document.getElementById("reputation-marker");
+  const valueEl = document.getElementById("reputation-value");
+  if (!marker) return;
+  const v = Math.round(val);
+  const clamped = Math.max(-10, Math.min(10, v));
+  const pct = ((clamped + 10) / 20) * 100;
+  marker.style.left = pct + "%";
+  marker.title = `Reputation: ${v}`;
+  if (valueEl) valueEl.textContent = v;
+}
+
+const VALID_PRODUCTION = ["HR", "data_centers", "ad_campaigns"];
+
 function renderProduction(production) {
   productionDiv.innerHTML = "";
-  Object.entries(production).forEach(([key, val]) => {
+  VALID_PRODUCTION.forEach(key => {
+    const val = production[key] ?? 0;
     const div = document.createElement("div");
     div.className = "resource-item";
-    div.innerHTML = `<span class="label">${key}</span><span class="value">+${val}</span>`;
+    div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">+${val}</span>`;
     productionDiv.appendChild(div);
   });
 }
 
+// ── Helpers ──────────────────────────────────────────────────
+const RES_EMOJI = {
+  money: "💰", users: "👥", engineers: "🔧", suits: "👔",
+  servers: "🖥️", ads: "📢", reputation: "⭐", HR: "🏢",
+  data_centers: "🗄️", ad_campaigns: "📣",
+};
+
+function prettyRes(name) {
+  const emoji = RES_EMOJI[name] || "";
+  if (name === "money") return emoji;
+  const label = name.replace(/_/g, " ");
+  return emoji ? `${emoji} ${label}` : label;
+}
+
+function emojiRes(name) {
+  return RES_EMOJI[name] || name.replace(/_/g, " ");
+}
+
+let cardNamesById = {};
+function rebuildCardIndex() {
+  cardNamesById = {};
+  if (lastGameState?.card_names) {
+    Object.assign(cardNamesById, lastGameState.card_names);
+  }
+  if (editorCards) {
+    for (const cards of Object.values(editorCards)) {
+      for (const card of (cards || [])) {
+        if (card && card.id) cardNamesById[card.id] = card.name;
+      }
+    }
+  }
+}
+function cardNameById(id) {
+  return cardNamesById[id] || `#${id}`;
+}
+
 // ── Card element builder ────────────────────────────────────
-function createCardElement(card) {
+const CARD_TYPE_COLORS = {
+  "social platform": "#3498db",        // blue
+  "hardware manufacturer": "#1a1a2e",  // dark navy
+  "software service provider": "#e74c3c", // red
+  "online marketplace": "#FA8072",     // salmon
+  "search engine": "#27ae60",          // green
+  "store": "#e040fb",                  // magenta
+  "power plant": "#00bcd4",            // aquamarine
+  "data center": "#9b59b6",            // violet
+  "office": "#795548",                 // brown
+};
+
+function createCardElement(card, options = {}) {
   const el = document.createElement("div");
   el.className = "game-card";
-  const prodText = Object.entries(card.production || {})
-    .filter(([, v]) => v > 0)
-    .map(([k, v]) => `+${v} ${k}`)
-    .join(", ");
-  const immText = Object.entries(card.immediate || {})
-    .filter(([, v]) => v !== 0)
-    .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${k}`)
-    .join(", ");
-  const startRes = Object.entries(card.starting_resources || {})
-    .filter(([, v]) => v !== 0)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join(", ");
+
+  const colorType = card.card_color_type || "";
+  const typeColor = CARD_TYPE_COLORS[colorType.toLowerCase()] || "";
+
+  // Fuckup styling
+  if (card.card_type === "fuck_up") el.classList.add("fuckup-card");
+
+  // Color type stripe
+  const stripe = typeColor
+    ? `<div class="card-type-stripe" style="background:${typeColor}" title="${colorType}"></div>`
+    : "";
+
+  // Image placeholder
+  const imageBlock = `<div class="card-image-placeholder">${card.image && !card.image.startsWith("<") ? `<img src="${card.image}" alt="">` : ""}</div>`;
+
+  // Description
+  const desc = card.description && !card.description.startsWith("<")
+    ? `<p class="card-desc">${card.description}</p>` : "";
+
+  // Effects (from effect dict for new cards, or immediate/production for legacy)
+  let effectsHtml = "";
+  if (card.effect && typeof card.effect === "object") {
+    const effectEntries = Object.entries(card.effect)
+      .filter(([k, v]) => v && k !== "payee_card_id");
+    if (effectEntries.length) {
+      effectsHtml = `<div class="card-effects"><span class="card-section-label">Effects</span><span class="card-effects-row">`;
+      effectsHtml += effectEntries.map(([k, v]) => `<span class="card-effect-item">+${v} ${emojiRes(k)}</span>`).join("");
+      effectsHtml += `</span></div>`;
+    }
+  } else {
+    const prodText = Object.entries(card.production || {})
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => `+${v} ${emojiRes(k)}/yr`).join(", ");
+    const immText = Object.entries(card.immediate || {})
+      .filter(([, v]) => v !== 0)
+      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(", ");
+    if (prodText) effectsHtml += `<div class="card-production">${prodText}</div>`;
+    if (immText) effectsHtml += `<div class="card-immediate">${immText}</div>`;
+  }
+
+  // Boosts
+  let boostsHtml = "";
+  if (card.boosts && card.boosts.length) {
+    boostsHtml = `<div class="card-boosts"><span class="card-section-label">Boosts</span><span class="card-effects-row">`;
+    card.boosts.forEach(b => {
+      const ids = Array.isArray(b.target_id) ? b.target_id : [b.target_id];
+      const names = ids.map(id => cardNameById(id)).join(", ");
+      const bonusEntries = Object.entries(b.bonus || {}).filter(([, v]) => v);
+      if (bonusEntries.length) {
+        boostsHtml += `<span class="card-boost-item">${names}: ${bonusEntries.map(([k, v]) => `+${v}${emojiRes(k)}`).join(" ")}</span>`;
+      }
+    });
+    boostsHtml += `</span></div>`;
+  }
+
+  // Starting resources (company cards)
+  let startHtml = "";
+  const startEntries = Object.entries(card.starting_resources || {}).filter(([, v]) => v !== 0);
+  const startProdEntries = Object.entries(card.starting_production || {}).filter(([, v]) => v !== 0);
+  if (startEntries.length || startProdEntries.length) {
+    startHtml = `<div class="card-effects"><span class="card-section-label">Starting</span><span class="card-effects-row">`;
+    startHtml += startEntries.map(([k, v]) => `<span class="card-effect-item">${v} ${emojiRes(k)}</span>`).join("");
+    startHtml += startProdEntries.map(([k, v]) => `<span class="card-effect-item">+${v} ${emojiRes(k)}/yr</span>`).join("");
+    startHtml += `</span></div>`;
+  }
+
+  // Build badge
+  let buildHtml = "";
+  if (card.build) {
+    const label = card.build.replace(/_/g, " ");
+    buildHtml = `<div class="card-build-badge">🏗️ ${label}</div>`;
+  }
+
+  // Costs section (new format)
+  let costsHtml = "";
+  const costs = card.costs || {};
+  const COST_SKIP = new Set(["fee", "fee_card_id", "payee_card_id"]);
+  const hasCosts = Object.entries(costs).some(([k, v]) =>
+    v && !COST_SKIP.has(k));
+  if (hasCosts) {
+    costsHtml = `<div class="card-costs"><span class="card-section-label">Cost</span>`;
+    for (const [res, amt] of Object.entries(costs)) {
+      if (!amt || COST_SKIP.has(res)) continue;
+      costsHtml += `<span class="card-cost-item">${amt} ${emojiRes(res)}</span>`;
+    }
+    const feeAmt = costs.fee || 0;
+    const feeTarget = costs.fee_card_id;
+    if (feeAmt && feeTarget) {
+      costsHtml += `<span class="card-cost-item card-cost-fee">💰${feeAmt} → ${cardNameById(feeTarget)}</span>`;
+    }
+    costsHtml += `</div>`;
+  } else if (card.cost) {
+    costsHtml = `<div class="card-costs"><span class="card-section-label">Cost</span><span class="card-cost-item">💰${card.cost}</span></div>`;
+  }
 
   el.innerHTML = `
-    <div class="card-cost">${card.cost}</div>
-    <div class="card-name">${card.name}</div>
-    <span class="card-tag">${card.tag}</span>
-    <span class="card-type">${card.deck || card.card_type}</span>
-    <p class="card-desc">${card.description}</p>
-    ${prodText ? `<div class="card-production">${prodText}</div>` : ""}
-    ${immText ? `<div class="card-immediate">${immText}</div>` : ""}
-    ${startRes ? `<div class="card-starting">Start: ${startRes}</div>` : ""}
+    ${stripe}
+    <div class="card-header">
+      <div class="card-name">${card.name}</div>
+      <span class="card-tag">${card.tag || card.card_color_type || ""}</span>
+    </div>
+    ${imageBlock}
+    ${desc}
+    ${effectsHtml}
+    ${boostsHtml}
+    ${buildHtml}
+    ${startHtml}
+    ${costsHtml}
   `;
+
+  // Attach hover logic for cost choices
+  if (options.interactive !== false) {
+    el.querySelectorAll(".cost-option").forEach(opt => {
+      opt.addEventListener("mouseenter", () => opt.classList.add("cost-hover"));
+      opt.addEventListener("mouseleave", () => opt.classList.remove("cost-hover"));
+    });
+  }
+
   return el;
 }
 
@@ -671,6 +1104,13 @@ endYearBtn.addEventListener("click", () => {
   }
 });
 
+document.getElementById("buy-server-btn").addEventListener("click", () => {
+  socket.emit("buy_resource", { type: "server" });
+});
+document.getElementById("buy-ad-btn").addEventListener("click", () => {
+  socket.emit("buy_resource", { type: "ad" });
+});
+
 // ── Error toast ─────────────────────────────────────────────
 function showFloatingError(msg) {
   gameError.textContent = msg;
@@ -686,15 +1126,32 @@ let editorCards = {};
 let editorLocksMap = {};
 let editingKey = null;
 let editorContext = "grid"; // "grid" | "trees"
+let editorScrollTop = 0;
 
 const DICT_FIELDS = new Set([
   "production", "immediate", "starting_resources", "starting_production",
-  "penalty", "court_penalty",
+  "compliance", "court_penalty", "costs", "effect",
 ]);
 
 const RESOURCE_OPTIONS = [
-  "users", "money", "engineers", "suits", "servers", "ads", "reputation", "hr",
+  "users", "money", "engineers", "suits", "servers", "ads", "reputation", "HR",
+  "data_centers", "ad_campaigns",
 ];
+
+const COST_KEY_OPTIONS = [
+  "engineers", "suits", "ads", "money",
+  "servers", "data_centers", "ad_campaigns",
+  "reputation", "HR", "users", "fee", "fee_card_id",
+];
+
+const DICT_KEY_OPTIONS = {
+  effect: RESOURCE_OPTIONS,
+  costs: COST_KEY_OPTIONS,
+  compliance: RESOURCE_OPTIONS,
+  court_penalty: RESOURCE_OPTIONS,
+  starting_resources: RESOURCE_OPTIONS,
+  starting_production: ["HR", "data_centers", "ad_campaigns"],
+};
 
 const EDITOR_TYPE_LABELS = {
   company: "Company",
@@ -748,6 +1205,7 @@ editorModal.addEventListener("click", (e) => {
 socket.on("all_cards", (data) => {
   editorCards = data.cards;
   editorLocksMap = data.locks || {};
+  rebuildCardIndex();
   if (!editingKey) renderEditorGrid();
   editorModal.classList.remove("hidden");
   editorTitle.textContent = "Card Editor";
@@ -780,15 +1238,39 @@ editorSearch.addEventListener("input", () => renderEditorGrid());
 function renderEditorGrid() {
   editorBody.innerHTML = "";
   editingKey = null;
+  requestAnimationFrame(() => { editorBody.scrollTop = editorScrollTop; });
   editorTitle.textContent = "Card Editor";
 
   const query = (editorSearch.value || "").toLowerCase().trim();
 
+  const DECK_MAP = {
+    platform: "Projects", cyber_attack: "Projects", fuck_up: "Projects",
+    leverage: "Boosters", innovation: "Boosters", build: "Boosters",
+  };
   let totalCards = 0;
-  for (const cards of Object.values(editorCards)) {
-    totalCards += (cards || []).length;
+  const typeCounts = {};
+  const deckCounts = {};
+  for (const [ct, cards] of Object.entries(editorCards)) {
+    if (ct === "company" || ct === "regulation") continue;
+    const n = (cards || []).length;
+    totalCards += n;
+    typeCounts[ct] = n;
+    const deck = DECK_MAP[ct] || ct;
+    deckCounts[deck] = (deckCounts[deck] || 0) + n;
   }
-  editorTotalCount.textContent = `Total cards: ${totalCards}`;
+  let statsHtml = `Total: ${totalCards} | `;
+  for (const [deck, count] of Object.entries(deckCounts)) {
+    const pct = totalCards ? Math.round(count / totalCards * 100) : 0;
+    const types = Object.entries(typeCounts)
+      .filter(([ct]) => (DECK_MAP[ct] || ct) === deck)
+      .map(([ct, n]) => {
+        const tPct = totalCards ? Math.round(n / totalCards * 100) : 0;
+        const label = CARD_TYPE_GROUPS.find(g => g.key === ct)?.label || ct;
+        return `${label}: ${n} (${tPct}%)`;
+      }).join(", ");
+    statsHtml += `<strong>${deck}</strong> ${count} (${pct}%) [${types}] `;
+  }
+  editorTotalCount.innerHTML = statsHtml;
 
   for (const [cardType, cards] of Object.entries(editorCards)) {
     const filtered = (cards || []).map((card, index) => ({ card, index }));
@@ -818,6 +1300,7 @@ function renderEditorGrid() {
     addBtn.className = "btn btn-sm editor-add-card-btn";
     addBtn.textContent = "+ Add Card";
     addBtn.addEventListener("click", () => {
+      editorContext = "grid";
       socket.emit("add_card", { card_type: cardType });
     });
     headerRow.appendChild(addBtn);
@@ -831,9 +1314,20 @@ function renderEditorGrid() {
       const key = `${cardType}:${index}`;
       const lockStatus = editorLocksMap[key];
 
-      const el = document.createElement("div");
-      el.className = "editor-card";
-      if (lockStatus === "other") el.classList.add("editor-card-locked");
+      const wrapper = document.createElement("div");
+      wrapper.className = "editor-card-wrapper";
+      if (lockStatus === "other") wrapper.classList.add("editor-card-locked");
+
+      const cardEl = createCardElement(card, { interactive: false });
+
+      const overlay = document.createElement("div");
+      overlay.className = "editor-card-overlay";
+
+      const idBadge = document.createElement("span");
+      idBadge.className = "editor-card-id-badge";
+      const numLabel = (card.number && card.number > 1) ? ` ×${card.number}` : "";
+      idBadge.textContent = `ID: ${card.id ?? "\u2014"}${numLabel}`;
+      overlay.appendChild(idBadge);
 
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "editor-card-delete";
@@ -849,31 +1343,28 @@ function renderEditorGrid() {
           socket.emit("delete_card", { card_type: cardType, index });
         }
       });
-      el.appendChild(deleteBtn);
+      overlay.appendChild(deleteBtn);
 
-      const body = document.createElement("div");
-      body.className = "editor-card-body";
-      body.innerHTML = `
-        <div class="editor-card-id">ID: ${card.id ?? "\u2014"}</div>
-        <div class="editor-card-name">${card.name || "Unnamed"}</div>
-        <div class="editor-card-meta">
-          <span class="editor-card-tag">${card.tag || ""}</span>
-          <span class="editor-card-cost">Cost: ${card.cost ?? 0}</span>
-        </div>
-        <div class="editor-card-desc">${card.description || ""}</div>
-        ${lockStatus === "other" ? '<div class="editor-lock-indicator">Locked by another editor</div>' : ""}
-      `;
-      el.appendChild(body);
+      if (lockStatus === "other") {
+        const lockLabel = document.createElement("div");
+        lockLabel.className = "editor-lock-indicator";
+        lockLabel.textContent = "Locked";
+        overlay.appendChild(lockLabel);
+      }
+
+      wrapper.appendChild(overlay);
+      wrapper.appendChild(cardEl);
 
       if (lockStatus !== "other") {
-        el.style.cursor = "pointer";
-        el.addEventListener("click", () => {
+        wrapper.style.cursor = "pointer";
+        wrapper.addEventListener("click", () => {
           editorContext = "grid";
+          editorScrollTop = editorBody.scrollTop;
           socket.emit("lock_card", { card_type: cardType, index });
         });
       }
 
-      grid.appendChild(el);
+      grid.appendChild(wrapper);
     });
 
     section.appendChild(grid);
@@ -898,7 +1389,9 @@ function renderEditorForm() {
   const fields = document.createElement("div");
   fields.className = "editor-fields";
 
+  const EDITOR_HIDDEN_FIELDS = new Set(["image", "starting_tiles"]);
   for (const [key, value] of Object.entries(card)) {
+    if (EDITOR_HIDDEN_FIELDS.has(key)) continue;
     if (key === "boosts") {
       fields.appendChild(buildBoostsField(value || []));
     } else if (DICT_FIELDS.has(key) && value && typeof value === "object") {
@@ -983,18 +1476,20 @@ function buildDictField(key, dict) {
   container.className = "editor-dict-field";
   container.dataset.dictKey = key;
 
+  const prettyLabel = key === "effect" ? "Effects" : key;
   const label = document.createElement("label");
   label.className = "editor-dict-label";
-  label.textContent = key;
+  label.textContent = prettyLabel;
   container.appendChild(label);
 
+  const opts = DICT_KEY_OPTIONS[key] || null;
   const entries = dict && typeof dict === "object" ? Object.entries(dict) : [];
-  entries.forEach(([k, v]) => container.appendChild(buildDictRow(k, v)));
+  entries.forEach(([k, v]) => container.appendChild(buildDictRow(k, v, opts)));
 
   const addBtn = document.createElement("button");
   addBtn.className = "btn btn-sm editor-add-btn";
   addBtn.textContent = "+ Add field";
-  addBtn.addEventListener("click", () => container.insertBefore(buildDictRow("", 0), addBtn));
+  addBtn.addEventListener("click", () => container.insertBefore(buildDictRow("", 0, opts), addBtn));
   container.appendChild(addBtn);
 
   return container;
@@ -1024,9 +1519,9 @@ function buildDictRow(k, v, keyOptions) {
   }
 
   const valInput = document.createElement("input");
-  valInput.type = "number";
+  valInput.type = (v === null || v === undefined) ? "text" : "number";
   valInput.className = "editor-dict-val";
-  valInput.value = v;
+  valInput.value = (v === null || v === undefined) ? "" : v;
   valInput.placeholder = "value";
 
   const removeBtn = document.createElement("button");
@@ -1130,7 +1625,8 @@ function collectFormData(fieldsEl, originalCard) {
     const dict = {};
     container.querySelectorAll(".editor-dict-row").forEach(row => {
       const k = row.querySelector(".editor-dict-key").value.trim();
-      const v = Number(row.querySelector(".editor-dict-val").value) || 0;
+      const raw = row.querySelector(".editor-dict-val").value;
+      const v = (raw === "" || raw === "null") ? null : Number(raw);
       if (k) dict[k] = v;
     });
     data[dictKey] = Object.keys(dict).length > 0 ? dict : null;
@@ -1338,7 +1834,9 @@ function renderTreeEditForm() {
   const fields = document.createElement("div");
   fields.className = "editor-fields";
 
+  const TREE_HIDDEN_FIELDS = new Set(["image"]);
   for (const [key, value] of Object.entries(card)) {
+    if (TREE_HIDDEN_FIELDS.has(key)) continue;
     if (key === "boosts") {
       fields.appendChild(buildBoostsField(value || []));
     } else if (DICT_FIELDS.has(key) && value && typeof value === "object") {
@@ -1513,6 +2011,8 @@ const TERRAIN_COLORS = {
   city: "#2a2d35",
   lake: "#2980b9",
   government: "#c0392b",
+  industrial: "#5d4037",
+  commercial: "#1565c0",
 };
 
 const TILE_COLORS = {
@@ -1536,15 +2036,34 @@ const TILE_FULL_NAMES = {
   factory:     "Hardware Factory",
   data_center: "Data Center",
   store:       "Store",
-  ads:         "Ads",
+  ads:         "Ad Campaign",
 };
 
+const TILE_ZONE = {
+  power_plant:  "industrial",
+  factory:      "industrial",
+  data_center:  "industrial",
+  store:        "commercial",
+  ad_campaign:  "commercial",
+  lobby_group:  "commercial",
+  office:       "commercial",
+};
+
+function canPlaceOn(tileType, terrain) {
+  if (terrain === "lake" || terrain === "government" || terrain === "city") return false;
+  if (terrain === "empty") return true;
+  const zone = TILE_ZONE[tileType];
+  return zone === terrain;
+}
+
 const CLIENT_TILE_BASE_BONUSES = {
-  power_plant: { production: { money: 2 } },
-  factory:     { production: { engineers: 1 }, immediate: { money: 1 } },
-  data_center: { production: { servers: 2 } },
-  store:       { immediate: { users: 3 }, production: { money: 1 } },
-  ads:         { production: { ads: 2 }, immediate: { users: 1 } },
+  power_plant:  {},
+  factory:      {},
+  data_center:  { production: { data_centers: 1 } },
+  store:        { production: { ad_campaigns: 1 } },
+  ad_campaign:  { production: { ad_campaigns: 1 } },
+  office:       { production: { HR: 1 } },
+  lobby_group:  {},
 };
 
 function previewPlacementBonuses(tile, tileType) {
@@ -1568,6 +2087,16 @@ function previewPlacementBonuses(tile, tileType) {
     if (!nb) continue;
     for (const [res, amt] of Object.entries(nb.adjacency_bonuses || {}))
       immediate[res] = (immediate[res] || 0) + amt;
+    // Power plant ↔ data center synergy
+    const pt = nb.placed_tile;
+    if (pt) {
+      if (tileType === "power_plant" && pt.type === "data_center")
+        production["data_centers"] = (production["data_centers"] || 0) + 1;
+      if (tileType === "data_center" && pt.type === "power_plant")
+        production["data_centers"] = (production["data_centers"] || 0) + 1;
+      if (tileType === "factory" && pt.type === "power_plant")
+        immediate["money"] = (immediate["money"] || 0) + 10;
+    }
   }
 
   return { immediate, production };
@@ -1601,6 +2130,7 @@ socket.on("board_update", (tiles) => {
 socket.on("tile_placed", (data) => {
   boardInfoBar.innerHTML = `<div class="board-placed-msg">Placed ${TILE_FULL_NAMES[data.tile_type] || data.tile_type}! Bonuses: ${data.bonuses}</div>`;
   setTimeout(() => { boardInfoBar.innerHTML = ""; }, 5000);
+  renderBoard();
 });
 
 function hexCenter(row, col) {
@@ -1672,7 +2202,8 @@ function renderBoard() {
 
     let fill;
     if (tile.placed_tile) {
-      fill = TILE_COLORS[tile.placed_tile.type] || "#888";
+      const owner = lastGameState?.players?.[tile.placed_tile.owner_id];
+      fill = owner?.color || TILE_COLORS[tile.placed_tile.type] || "#888";
     } else {
       fill = TERRAIN_COLORS[tile.terrain] || TERRAIN_COLORS.empty;
     }
@@ -1692,6 +2223,10 @@ function renderBoard() {
       labelSize = tile.terrain === "lake" ? "6" : "7";
     } else if (tile.terrain === "city") {
       label = "City";
+    } else if (tile.terrain === "industrial") {
+      label = "IND";
+    } else if (tile.terrain === "commercial") {
+      label = "COM";
     }
     if (label) {
       const txt = document.createElementNS(ns, "text");
@@ -1726,6 +2261,8 @@ function renderBoard() {
       if (tile.terrain === "city") info += ` — ${tile.name || "City"} (City)`;
       else if (tile.terrain === "lake") info += ` — ${tile.name || "Lake"} (cannot build)`;
       else if (tile.terrain === "government") info += ` — ${tile.name || "Gov"} (cannot build)`;
+      else if (tile.terrain === "industrial") info += ` — Industrial zone`;
+      else if (tile.terrain === "commercial") info += ` — Commercial zone`;
       else if (tile.placed_tile) {
         const owner = lastGameState?.players?.[tile.placed_tile.owner_id];
         info += ` — ${TILE_FULL_NAMES[tile.placed_tile.type] || tile.placed_tile.type}`;
@@ -1734,8 +2271,7 @@ function renderBoard() {
         info += " — Empty";
       }
 
-      const isPlaceable = pending && !tile.placed_tile &&
-        (tile.terrain === "empty" || tile.terrain === "city");
+      const isPlaceable = pending && !tile.placed_tile && canPlaceOn(pending, tile.terrain);
 
       if (isPlaceable) {
         const preview = previewPlacementBonuses(tile, pending);
@@ -1761,15 +2297,23 @@ function renderBoard() {
       tooltip.innerHTML = info;
       tooltip.classList.remove("hidden");
       const rect = boardContainer.getBoundingClientRect();
-      tooltip.style.left = (e.clientX - rect.left + 12) + "px";
-      tooltip.style.top = (e.clientY - rect.top - 10) + "px";
+      const ttW = tooltip.offsetWidth || 200;
+      const ttH = tooltip.offsetHeight || 40;
+      let left = e.clientX - rect.left + 12;
+      let top = e.clientY - rect.top - 10;
+      if (left + ttW > rect.width - 8) left = e.clientX - rect.left - ttW - 12;
+      if (top + ttH > rect.height - 8) top = e.clientY - rect.top - ttH - 8;
+      if (left < 4) left = 4;
+      if (top < 4) top = 4;
+      tooltip.style.left = left + "px";
+      tooltip.style.top = top + "px";
     });
 
     g.addEventListener("mouseleave", () => {
       tooltip.classList.add("hidden");
     });
 
-    if (pending && (tile.terrain === "empty" || tile.terrain === "city") && !tile.placed_tile) {
+    if (pending && !tile.placed_tile && canPlaceOn(pending, tile.terrain)) {
       poly.classList.add("board-hex-placeable");
       g.style.cursor = "pointer";
       g.addEventListener("click", () => {
@@ -1891,6 +2435,10 @@ function renderBoardEditor() {
       label = tile.name.length > 8 ? tile.name.slice(0, 8) : tile.name;
     } else if (tile.terrain === "city") {
       label = "City";
+    } else if (tile.terrain === "industrial") {
+      label = "IND";
+    } else if (tile.terrain === "commercial") {
+      label = "COM";
     }
     if (label) {
       const txt = document.createElementNS(ns, "text");
@@ -2030,7 +2578,7 @@ function renderBoardTileForm(tile) {
   const terrainSelect = document.createElement("select");
   terrainSelect.className = "editor-dict-key";
   terrainSelect.style.width = "100%";
-  ["empty", "city", "lake", "government"].forEach(t => {
+  ["empty", "city", "lake", "government", "industrial", "commercial"].forEach(t => {
     const o = document.createElement("option");
     o.value = t;
     o.textContent = t.charAt(0).toUpperCase() + t.slice(1);
@@ -2075,24 +2623,6 @@ function renderBoardTileForm(tile) {
   });
   buildImmContainer.appendChild(addBuildImm);
   buildSection.appendChild(buildImmContainer);
-
-  const buildProdLabel = document.createElement("span");
-  buildProdLabel.className = "board-bonus-sub";
-  buildProdLabel.textContent = "Production (per year)";
-  buildSection.appendChild(buildProdLabel);
-  const buildProdContainer = document.createElement("div");
-  buildProdContainer.className = "board-res-container";
-  Object.entries(bb.production || {}).forEach(([k, v]) => {
-    buildProdContainer.appendChild(_boardResRow(k, v));
-  });
-  const addBuildProd = document.createElement("button");
-  addBuildProd.className = "btn btn-sm";
-  addBuildProd.textContent = "+ Add";
-  addBuildProd.addEventListener("click", () => {
-    buildProdContainer.insertBefore(_boardResRow("", 0), addBuildProd);
-  });
-  buildProdContainer.appendChild(addBuildProd);
-  buildSection.appendChild(buildProdContainer);
   form.appendChild(buildSection);
 
   // --- Adjacency bonuses (for any terrain, but mainly lake/gov) ---
@@ -2175,7 +2705,7 @@ function renderBoardTileForm(tile) {
   saveBtn.addEventListener("click", () => {
     const buildBonuses = {
       immediate: _collectResRows(buildImmContainer),
-      production: _collectResRows(buildProdContainer),
+      production: {},
     };
     const adjacencyBonuses = _collectResRows(adjContainer);
     socket.emit("edit_board_tile", {

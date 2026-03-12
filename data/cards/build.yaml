@@ -1,0 +1,353 @@
+# ============================================================
+# BUILD CARDS (BOOSTERS deck)
+# Cards that allow placing tiles on the board.
+# ============================================================
+
+# ── OFFICES (commercial zone) ── increase HR production ──────
+
+- name: Headquarters
+  id: 60
+  image: ''
+  description: Establish your corporate headquarters. A hub for hiring top talent.
+  type: office
+  number: 1
+  build: office
+  costs:
+    engineers: 1
+    suits: 2
+    ads: 0
+    money: 12
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    HR: 3
+    reputation: 1
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+- name: Home Office Gear
+  id: 61
+  image: ''
+  description: Equip remote workers with everything they need. Cheap but effective.
+  type: office
+  number: 2
+  build: office
+  costs:
+    engineers: 0
+    suits: 1
+    ads: 0
+    money: 3
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    HR: 1
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+- name: Coworking Rental
+  id: 62
+  image: ''
+  description: Rent flexible workspace. Low commitment, decent capacity.
+  type: office
+  number: 2
+  build: office
+  costs:
+    engineers: 0
+    suits: 1
+    ads: 0
+    money: 4
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    HR: 1
+    suits: 1
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+- name: Buy Office Building
+  id: 63
+  image: ''
+  description: Purchase a permanent office building. High upfront cost, lasting returns.
+  type: office
+  number: 1
+  build: office
+  costs:
+    engineers: 1
+    suits: 2
+    ads: 0
+    money: 15
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    HR: 2
+    engineers: 1
+    suits: 1
+    reputation: 1
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+- name: Rent Office Building
+  id: 64
+  image: ''
+  description: Lease office space. Flexible terms but ongoing costs.
+  type: office
+  number: 2
+  build: office
+  costs:
+    engineers: 0
+    suits: 1
+    ads: 0
+    money: 6
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    HR: 2
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+# ── DATA CENTERS (industrial zone) ── increase data_centers production ──
+
+- name: Hyperscale Data Center
+  id: 49
+  image: ''
+  description: Massive server farms powering the digital economy.
+  type: data center
+  number: 1
+  build: data_center
+  costs:
+    engineers: 3
+    suits: 0
+    ads: 0
+    money: 12
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    servers: 6
+    money: 5
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+- name: Edge Computing Node
+  id: 65
+  image: ''
+  description: Smaller distributed data centers closer to users. Fast and efficient.
+  type: data center
+  number: 2
+  build: data_center
+  costs:
+    engineers: 2
+    suits: 0
+    ads: 0
+    money: 6
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    servers: 3
+    money: 2
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+# ── STORES (commercial zone) ── increase ad_campaigns production ──
+
+- name: Tech Retail Chain
+  id: 47
+  image: ''
+  description: Physical and online stores selling consumer electronics.
+  type: store
+  number: 2
+  build: store
+  costs:
+    engineers: 0
+    suits: 2
+    ads: 1
+    money: 5
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    users: 5
+    money: 4
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+- name: Retail Chain
+  id: 55
+  image: ''
+  description: Build physical stores to sell hardware and attract users.
+  type: store
+  number: 2
+  build: store
+  costs:
+    engineers: 0
+    suits: 2
+    ads: 1
+    money: 5
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    users: 4
+    money: 3
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+# ── AD CAMPAIGNS (commercial zone) ── increase ad_campaigns production ──
+
+- name: Digital Ad Network
+  id: 50
+  image: ''
+  description: Targeted advertising infrastructure reaching billions of eyeballs.
+  type: social platform
+  number: 2
+  build: ad_campaign
+  costs:
+    engineers: 1
+    suits: 1
+    ads: 0
+    money: 3
+    servers: 1
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    ads: 6
+    users: 4
+    money: 3
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+- name: Billboard Blitz
+  id: 66
+  image: ''
+  description: Plaster your brand across every surface. Old school, still works.
+  type: social platform
+  number: 2
+  build: ad_campaign
+  costs:
+    engineers: 0
+    suits: 1
+    ads: 0
+    money: 4
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    ads: 3
+    users: 2
+    money: 1
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+# ── POWER PLANTS (industrial zone) ── adjacency bonuses ──────
+
+- name: Power Grid Operator
+  id: 48
+  image: ''
+  description: Build and operate power infrastructure. Essential for data centers.
+  type: power plant
+  number: 1
+  build: power_plant
+  costs:
+    engineers: 2
+    suits: 0
+    ads: 0
+    money: 8
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    money: 3
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+- name: Solar Farm
+  id: 67
+  image: ''
+  description: Harness the sun. Clean energy and good PR.
+  type: power plant
+  number: 2
+  build: power_plant
+  costs:
+    engineers: 1
+    suits: 0
+    ads: 0
+    money: 5
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    money: 2
+    reputation: 1
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+
+# ── LOBBY GROUPS (commercial zone) ──────────────────────────
+
+- name: Lobbying Group
+  id: 56
+  image: ''
+  description: Influence government policy in your favor. Build a lobbying operation.
+  type: software service provider
+  number: 1
+  build: lobby_group
+  costs:
+    engineers: 0
+    suits: 3
+    ads: 0
+    money: 10
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    reputation: 3
+    money: 2
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null

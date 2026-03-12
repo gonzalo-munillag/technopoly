@@ -4,29 +4,99 @@
 
 - name: fuck up 1
   id: 18
-  cost: 4
-  tag: energy
-  description: A large-scale solar energy installation.
-  production:
-    energy: 2
+  image: ''
+  description: A data breach exposes user information. Reputation takes a hit.
+  type: scandal
+  number: 1
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    reputation: -3
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: []
 - name: fuck up 2
   id: 19
-  cost: 8
-  tag: computing
-  description: Bleeding-edge quantum computing hardware.
-  production:
-    data: 3
-- name: fuck up 4
-  id: 21
-  cost: 6
-  tag: biotech
-  description: Genetically engineered organisms producing raw materials.
-  production:
-    materials: 2
+  description: Executive caught in a financial scandal. Lose money and suits.
+  type: scandal
+  number: 1
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    money: -5
+    suits: -1
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
 - name: fuck up 3
   id: 20
-  cost: 6
-  tag: biotech
-  description: Genetically engineered organisms producing raw materials.
-  production:
-    materials: 2
+  image: ''
+  description: Server outage causes widespread service disruption.
+  type: scandal
+  number: 1
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    servers: -2
+    users: -3
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: []
+- name: fuck up 4
+  id: 21
+  image: ''
+  description: Product recall due to manufacturing defect.
+  type: scandal
+  number: 1
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    money: -4
+    reputation: -2
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: []

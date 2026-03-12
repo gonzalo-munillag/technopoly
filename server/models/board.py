@@ -1,22 +1,26 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 
-TILE_TYPES = {"power_plant", "factory", "data_center", "store", "ads"}
+TILE_TYPES = {"power_plant", "factory", "data_center", "store", "ad_campaign", "office", "lobby_group"}
 
 TILE_BASE_BONUSES = {
-    "power_plant": {"production": {"money": 2}},
-    "factory":     {"production": {"engineers": 1}, "immediate": {"money": 1}},
-    "data_center": {"production": {"servers": 2}},
-    "store":       {"immediate": {"users": 3}, "production": {"money": 1}},
-    "ads":         {"production": {"ads": 2}, "immediate": {"users": 1}},
+    "power_plant":  {},
+    "factory":      {},
+    "data_center":  {"production": {"data_centers": 1}},
+    "store":        {"production": {"ad_campaigns": 1}},
+    "ad_campaign":  {"production": {"ad_campaigns": 1}},
+    "office":       {"production": {"HR": 1}},
+    "lobby_group":  {},
 }
 
 TILE_LABELS = {
-    "power_plant": "PWR",
-    "factory":     "FAC",
-    "data_center": "SRV",
-    "store":       "STO",
-    "ads":         "ADS",
+    "power_plant":  "PWR",
+    "factory":      "FAC",
+    "data_center":  "DC",
+    "store":        "STO",
+    "ad_campaign":  "AD",
+    "office":       "OFC",
+    "lobby_group":  "LOB",
 }
 
 # Pointy-top, odd-r offset neighbor directions
@@ -52,7 +56,7 @@ _DEFAULT_ADJACENCY = {
     "government": {"reputation": 2},
 }
 
-VALID_TERRAINS = {"empty", "city", "lake", "government"}
+VALID_TERRAINS = {"empty", "city", "lake", "government", "industrial", "commercial"}
 
 
 def _make_tile(row: int, col: int, terrain: str = "empty",
@@ -170,11 +174,25 @@ class Board:
             if (k := (row + dr, col + dc)) in self._tiles
         ]
 
-    def can_place(self, row: int, col: int) -> bool:
+    TILE_ZONE_MAP = {
+        "power_plant": "industrial", "factory": "industrial",
+        "data_center": "industrial",
+        "store": "commercial",
+        "ad_campaign": "commercial", "lobby_group": "commercial",
+        "office": "commercial",
+    }
+
+    def can_place(self, row: int, col: int, tile_type: str = "") -> bool:
         t = self._tiles.get((row, col))
         if not t or t["placed_tile"] is not None:
             return False
-        return t["terrain"] in ("empty", "city")
+        terrain = t["terrain"]
+        if terrain in ("lake", "government", "city"):
+            return False
+        if terrain == "empty":
+            return True
+        zone = self.TILE_ZONE_MAP.get(tile_type, "")
+        return zone == terrain
 
     def left_right_slots(self, row: int, col: int) -> dict:
         """Check if the left (col-1) or right (col+1) slot is free."""
@@ -186,7 +204,7 @@ class Board:
 
     def place_tile(self, row: int, col: int,
                    tile_type: str, owner_id: str) -> dict:
-        if not self.can_place(row, col):
+        if not self.can_place(row, col, tile_type):
             return {}
         tile = self._tiles[(row, col)]
         tile["placed_tile"] = {"type": tile_type, "owner_id": owner_id}
@@ -206,7 +224,27 @@ class Board:
             for res, amt in ab.items():
                 immediate[res] = immediate.get(res, 0) + amt
 
+        # Power plant ↔ data center synergy
+        if tile_type == "power_plant":
+            for nb in self.get_neighbors(row, col):
+                pt = nb.get("placed_tile")
+                if pt and pt["type"] == "data_center":
+                    production["data_centers"] = production.get("data_centers", 0) + 1
+        elif tile_type == "data_center":
+            for nb in self.get_neighbors(row, col):
+                pt = nb.get("placed_tile")
+                if pt and pt["type"] == "power_plant":
+                    production["data_centers"] = production.get("data_centers", 0) + 1
+
         return {"immediate": immediate, "production": production}
+
+    def count_adjacent_power_plants(self, row: int, col: int) -> int:
+        count = 0
+        for nb in self.get_neighbors(row, col):
+            pt = nb.get("placed_tile")
+            if pt and pt["type"] == "power_plant":
+                count += 1
+        return count
 
     def reset(self):
         for t in self._tiles.values():

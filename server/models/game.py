@@ -21,6 +21,7 @@ PROJECTS_FILES = {
 BOOSTERS_FILES = {
     "leverage.yaml": "leverage",
     "innovation.yaml": "innovation",
+    "build.yaml": "build",
 }
 
 COMPANY_FILE = "company.yaml"
@@ -29,13 +30,14 @@ REGULATION_FILE = "regulation.yaml"
 CARDS_PER_TURN = 2
 DRAFT_COST = 3
 PROJECTS_DRAW = 3
-BOOSTERS_DRAW = 2
+BOOSTERS_DRAW = 3
 COMPANY_OFFERS_PER_PLAYER = 2
 
 
 class Phase(str, Enum):
     COMPANY_PICK = "company_pick"
     YEAR_START_DRAFT = "year_start_draft"
+    HIRING = "hiring"
     REGULATION = "regulation"
     PLAYER_TURNS = "player_turns"
     YEAR_END = "year_end"
@@ -61,6 +63,16 @@ class Game:
     company_offers: dict[str, list[Card]] = field(default_factory=dict)
     drafted_fuckups: dict[str, list[Card]] = field(default_factory=dict)
     board: Board = field(default_factory=Board)
+    total_users: int = 1000
+    user_pool: int = 1000
+
+    def take_users(self, amount: int) -> int:
+        """Take users from the global pool. Returns actual amount taken."""
+        if amount <= 0:
+            return 0
+        taken = min(amount, self.user_pool)
+        self.user_pool -= taken
+        return taken
 
     # ── deck loading ─────────────────────────────────────────
 
@@ -74,7 +86,9 @@ class Game:
             with open(filepath) as f:
                 entries = yaml.safe_load(f) or []
             for entry in entries:
-                cards.append(Card.from_yaml(entry, card_type, deck_name))
+                count = entry.get("number", 1) or 1
+                for _ in range(count):
+                    cards.append(Card.from_yaml(entry, card_type, deck_name))
         random.shuffle(cards)
         return cards
 
@@ -114,8 +128,11 @@ class Game:
 
     # ── player management ────────────────────────────────────
 
+    _PLAYER_COLORS = ["#c9a227", "#4fc3f7", "#66bb6a", "#ab47bc", "#ff8a65", "#78909c"]
+
     def add_player(self, player_id: str, name: str) -> Player:
-        player = Player(player_id=player_id, name=name)
+        idx = len(self.players) % len(self._PLAYER_COLORS)
+        player = Player(player_id=player_id, name=name, color=self._PLAYER_COLORS[idx])
         self.players[player_id] = player
         return player
 
@@ -135,6 +152,7 @@ class Game:
         self.year = 1
         self.started = True
         self.phase = Phase.COMPANY_PICK
+        self.user_pool = self.total_users
         self._deal_company_offers()
 
     def _deal_company_offers(self):
@@ -154,7 +172,7 @@ class Game:
         for i, card in enumerate(offers):
             if card.name == card_name:
                 chosen = offers.pop(i)
-                player.set_company(chosen)
+                player.set_company(chosen, self)
                 player.ready = True
                 return chosen
         return None
@@ -277,25 +295,43 @@ class Game:
         player = self.players.get(player_id)
         if not player or not self.current_regulation:
             return {}
-        penalty = self.current_regulation.penalty
-        player.apply_penalty(penalty)
+        reg = self.current_regulation
+        lost_cards = []
+        if not reg.targets_all:
+            targeted = player.find_targeted_cards(reg)
+            for c in targeted:
+                if c in player.played_cards:
+                    player.played_cards.remove(c)
+                    self.discard_pile.append(c)
+                    lost_cards.append(c.name)
+        penalty = reg.compliance
+        player.apply_penalty(penalty, self)
         player.regulation_resolved = True
-        return penalty
+        return {"penalty": penalty, "lost_cards": lost_cards}
 
     def resolve_regulation_court(self, player_id: str) -> dict:
         player = self.players.get(player_id)
         if not player or not self.current_regulation:
             return {}
+        reg = self.current_regulation
         roll = random.randint(1, 6)
-        threshold = self.current_regulation.court_threshold
+        threshold = reg.court_threshold
         won = roll >= threshold
+        lost_cards = []
         if won:
             penalty = {}
         else:
-            penalty = self.current_regulation.court_penalty
-            player.apply_penalty(penalty)
+            penalty = reg.court_penalty
+            player.apply_penalty(penalty, self)
+            if not reg.targets_all:
+                targeted = player.find_targeted_cards(reg)
+                for c in targeted:
+                    if c in player.played_cards:
+                        player.played_cards.remove(c)
+                        self.discard_pile.append(c)
+                        lost_cards.append(c.name)
         player.regulation_resolved = True
-        return {"roll": roll, "threshold": threshold, "won": won, "penalty": penalty}
+        return {"roll": roll, "threshold": threshold, "won": won, "penalty": penalty, "lost_cards": lost_cards}
 
     def all_regulation_resolved(self) -> bool:
         """Every player must acknowledge/resolve the regulation."""
@@ -386,6 +422,7 @@ class Game:
             player.pending_tile = None
             player.resources = {k: 0 for k in player.resources}
             player.production = {k: 0 for k in player.production}
+            player.users = 0
         self.board.reset()
         self.start()
 
@@ -411,6 +448,23 @@ class Game:
 
     # ── serialisation ────────────────────────────────────────
 
+    def _card_name_map(self) -> dict[int, str]:
+        """Build a map of card_id -> card_name from all known cards."""
+        m: dict[int, str] = {}
+        for deck in (self.projects_deck, self.boosters_deck,
+                     self.regulation_deck, self.company_cards,
+                     self.discard_pile, self.draft_discard):
+            for c in deck:
+                if c.id:
+                    m[c.id] = c.name
+        for p in self.players.values():
+            for c in p.hand + p.played_cards + p.draft_pool:
+                if c.id:
+                    m[c.id] = c.name
+            if p.company and p.company.id:
+                m[p.company.id] = p.company.name
+        return m
+
     def to_dict(self) -> dict:
         return {
             "started": self.started,
@@ -425,4 +479,7 @@ class Game:
             "current_regulation": self.current_regulation.to_dict() if self.current_regulation else None,
             "players": {pid: p.to_dict() for pid, p in self.players.items()},
             "board": self.board.to_list(),
+            "card_names": self._card_name_map(),
+            "total_users": self.total_users,
+            "user_pool": self.user_pool,
         }

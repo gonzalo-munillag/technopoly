@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Technopoly</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 <body>
@@ -31,7 +34,7 @@
     <section id="lobby-screen" class="screen">
       <div class="card-panel lobby-panel">
         <h2>CEO Lobby</h2>
-        <p class="lobby-info">Waiting for the game master to start...</p>
+        <p class="lobby-info">Awaiting clearance from technofeudalist lord...</p>
         <ul id="player-list"></ul>
         <button id="start-game-btn" class="btn btn-primary hidden">Start Game</button>
         <button id="edit-cards-lobby-btn" class="btn btn-sm hidden" style="margin-top:.5rem;width:100%;">Edit Cards</button>
@@ -50,8 +53,10 @@
           <span id="turn-badge" class="badge turn-badge">Turn: --</span>
           <span id="dealer-badge" class="badge dealer-badge">Start: --</span>
         </div>
-        <button id="edit-board-btn" class="btn btn-sm edit-cards-btn hidden">Edit Board</button>
-        <button id="edit-cards-btn" class="btn btn-sm edit-cards-btn hidden">Edit Cards</button>
+        <div class="header-edit-btns">
+          <button id="edit-board-btn" class="btn btn-sm edit-cards-btn hidden">Edit Board</button>
+          <button id="edit-cards-btn" class="btn btn-sm edit-cards-btn hidden">Edit Cards</button>
+        </div>
       </header>
 
       <div class="game-layout">
@@ -59,14 +64,35 @@
         <aside class="sidebar">
           <h3>Company</h3>
           <div id="company-panel" class="company-display"></div>
+          <h3>Users</h3>
+          <div id="users-section" class="users-section">
+            <div class="users-chart-row">
+              <canvas id="users-pie" width="100" height="100"></canvas>
+              <div id="users-info" class="users-info"></div>
+            </div>
+          </div>
           <h3>Resources</h3>
           <div id="resources-panel" class="resource-grid"></div>
+          <div class="buy-row">
+            <button id="buy-server-btn" class="btn btn-sm buy-btn" data-tip="1🔧 + 💰1">🖥️ Buy Server</button>
+            <button id="buy-ad-btn" class="btn btn-sm buy-btn" data-tip="1👔 + 💰1">📢 Buy Ad</button>
+          </div>
           <h3>Production</h3>
           <div id="production-panel" class="resource-grid"></div>
+          <h3>Reputation</h3>
+          <div id="reputation-bar" class="reputation-bar" data-tip-left="≤-10: -2👥/-2🔧👔 | ≤-5: -1👥/-1🔧👔" data-tip-right="≥5: +1👥/+1🔧👔 | ≥10: +2👥/+2🔧👔">
+            <div class="reputation-value" id="reputation-value">0</div>
+            <div class="reputation-track">
+              <div class="reputation-marker" id="reputation-marker"></div>
+            </div>
+            <div class="reputation-labels">
+              <span>-10</span><span>-5</span><span>0</span><span>+5</span><span>+10</span>
+            </div>
+          </div>
           <button id="open-board-btn" class="btn btn-sm board-btn">View Board</button>
           <h3>Played Cards</h3>
-          <div id="played-cards" class="played-list"></div>
           <button id="show-hand-btn" class="btn btn-sm show-hand-btn">Show All Cards</button>
+          <div id="played-cards" class="played-list"></div>
         </aside>
 
         <!-- MAIN AREA -->
@@ -83,11 +109,30 @@
           <!-- DRAFT PHASE -->
           <div id="draft-area" class="phase-area hidden">
             <h2>Draft Phase — Year <span id="draft-year">1</span></h2>
-            <p class="phase-hint">You drew 3 Projects + 2 Boosters. Pay 3 money to keep each card. Fuck-up cards are free and go straight to your hand.</p>
-            <div id="draft-container" class="draft-grid"></div>
+            <p class="phase-hint">You drew 3 Projects + 3 Boosters. Pay 3 money to keep each card. Fuck-up cards are free and go straight to your hand.</p>
+            <div id="draft-container"></div>
             <div class="action-btns draft-actions">
               <button id="done-draft-btn" class="btn btn-sm btn-accent">Done Drafting</button>
             </div>
+          </div>
+
+          <!-- HIRING PHASE -->
+          <div id="hiring-area" class="phase-area hidden">
+            <h2>Hiring Phase</h2>
+            <p id="hiring-prompt" class="phase-hint"></p>
+            <div id="hiring-form" class="hiring-form">
+              <div class="hiring-row">
+                <label>🔧 Engineers</label>
+                <input type="number" id="hire-engineers" min="0" value="0" class="board-form-input" style="width:80px;" />
+              </div>
+              <div class="hiring-row">
+                <label>👔 Suits</label>
+                <input type="number" id="hire-suits" min="0" value="0" class="board-form-input" style="width:80px;" />
+              </div>
+              <p id="hiring-total" class="hiring-total"></p>
+              <button id="conclude-hiring-btn" class="btn btn-sm btn-accent">Conclude Hiring</button>
+            </div>
+            <div id="hiring-waiting" class="waiting-msg hidden">Hiring concluded. Waiting for other players...</div>
           </div>
 
           <!-- REGULATION PHASE -->
@@ -97,12 +142,13 @@
             <div id="regulation-card-display" class="regulation-display"></div>
             <div id="regulation-alert-box" class="regulation-alert hidden"></div>
             <div id="regulation-actions" class="action-btns hidden">
-              <button id="reg-accept-btn" class="btn btn-sm btn-accent">Accept Penalty</button>
+              <button id="reg-accept-btn" class="btn btn-sm btn-accent">Accept Compliance</button>
               <button id="reg-court-btn" class="btn btn-sm btn-danger-sm">Go to Court</button>
             </div>
             <div id="regulation-result-box" class="regulation-result hidden"></div>
             <div id="regulation-waiting" class="waiting-msg hidden">Waiting for others to resolve their compliance...</div>
             <button id="reg-proceed-btn" class="btn btn-sm btn-accent hidden" style="margin-top:1rem;">Proceed</button>
+            <button id="reg-start-year-btn" class="btn btn-sm btn-accent hidden" style="margin-top:1rem;">Start Year</button>
           </div>
 
           <!-- PLAYER TURNS PHASE -->

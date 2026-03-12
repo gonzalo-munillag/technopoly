@@ -44,6 +44,7 @@ CARD_TYPE_FILES = {
     "fuck_up": "fuck_ups.yaml",
     "leverage": "leverage.yaml",
     "innovation": "innovation.yaml",
+    "build": "build.yaml",
     "regulation": "regulation.yaml",
 }
 
@@ -184,13 +185,20 @@ def on_pick_company(data):
         emit("error", {"message": f"Could not pick company '{card_name}'."})
         return
 
+    if card.starting_tiles:
+        player._remaining_starting_tiles = list(card.starting_tiles)
+        player.pending_tile = player._remaining_starting_tiles.pop(0)
+
     _send_private_states()
     socketio.emit("game_state", game.to_dict(), room="game")
 
     if game.all_players_ready():
-        game.begin_year_draft()
-        socketio.emit("game_state", game.to_dict(), room="game")
-        _send_private_states()
+        if any(p.pending_tile for p in game.players.values()):
+            pass
+        else:
+            game.begin_year_draft()
+            socketio.emit("game_state", game.to_dict(), room="game")
+            _send_private_states()
 
 
 # ── Draft phase ──────────────────────────────────────────────
@@ -233,7 +241,64 @@ def _finish_player_draft(player_id: str):
 
     if game.all_drafts_done():
         game.finalize_draft()
-        _begin_player_turns()
+        _begin_hiring()
+
+
+def _begin_hiring():
+    game.phase = Phase.HIRING
+    game.clear_ready()
+    for player in game.players.values():
+        player.hiring_done = False
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+
+
+@socketio.on("submit_hiring")
+def on_submit_hiring(data):
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.HIRING:
+        return
+    player = game.players.get(player_id)
+    if not player or player.hiring_done:
+        return
+
+    engineers = int(data.get("engineers", 0))
+    suits = int(data.get("suits", 0))
+    hr = player.production.get("HR", 0)
+
+    rep_mod = player.reputation_modifier()
+
+    if hr >= 0:
+        total_to_hire = max(0, hr + rep_mod)
+        if engineers < 0 or suits < 0:
+            emit("error", {"message": "Cannot hire negative employees."})
+            return
+        if engineers + suits != total_to_hire:
+            emit("error", {"message": f"Must hire exactly {total_to_hire} employees (HR {hr} + rep modifier {rep_mod:+d})."})
+            return
+        player.resources["engineers"] = player.resources.get("engineers", 0) + engineers
+        player.resources["suits"] = player.resources.get("suits", 0) + suits
+    else:
+        total_fire = abs(hr)
+        if engineers < 0 or suits < 0:
+            emit("error", {"message": "Fire counts must be non-negative."})
+            return
+        if engineers + suits != total_fire:
+            emit("error", {"message": f"Must fire exactly {total_fire} employees."})
+            return
+        player.resources["engineers"] = max(0, player.resources.get("engineers", 0) - engineers)
+        player.resources["suits"] = max(0, player.resources.get("suits", 0) - suits)
+
+    player.hiring_done = True
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+
+    if all(p.hiring_done for p in game.players.values()):
+        _after_hiring()
+
+
+def _after_hiring():
+    _begin_player_turns()
 
 
 def _begin_player_turns():
@@ -266,10 +331,11 @@ def on_regulation_accept():
     if not player or player.regulation_resolved:
         return
 
-    penalty = game.resolve_regulation_accept(player_id)
+    result = game.resolve_regulation_accept(player_id)
     emit("regulation_result", {
         "action": "accept",
-        "penalty": penalty,
+        "compliance": result.get("penalty", {}),
+        "lost_cards": result.get("lost_cards", []),
     })
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
@@ -313,9 +379,20 @@ def on_proceed_regulation():
 
 def _check_regulation_done():
     if game.all_regulation_resolved():
-        game.advance_past_regulation()
+        socketio.emit("regulation_all_resolved", {}, room="game")
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
+
+
+@socketio.on("start_year_after_regulation")
+def on_start_year_after_regulation():
+    if game.phase != Phase.REGULATION:
+        return
+    if not game.all_regulation_resolved():
+        return
+    game.advance_past_regulation()
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
 
 
 def _send_regulation_alerts():
@@ -328,13 +405,15 @@ def _send_regulation_alerts():
         if not player:
             continue
         affected = player.is_affected_by_regulation(reg)
+        targeted_cards = player.find_targeted_cards(reg) if affected and not reg.targets_all else []
         socketio.emit("regulation_alert", {
             "affected": affected,
             "any_affected": anyone_affected,
             "regulation": reg.to_dict(),
-            "penalty": reg.penalty if affected else {},
+            "compliance": reg.compliance if affected else {},
             "court_penalty": reg.court_penalty if affected else {},
             "court_threshold": reg.court_threshold,
+            "targeted_cards": [c.to_dict() for c in targeted_cards],
         }, room=sid)
 
 
@@ -369,7 +448,7 @@ def on_play_card(data):
             return
         removed = player.remove_from_hand(card_name)
         if removed:
-            player.apply_card_effects(removed)
+            player.apply_card_effects(removed, game)
             game.discard_pile.append(removed)
 
         if player.has_pending_fuckups():
@@ -384,11 +463,22 @@ def on_play_card(data):
     if player.cards_played_this_turn >= CARDS_PER_TURN:
         emit("error", {"message": f"You can only play {CARDS_PER_TURN} cards per turn."})
         return
-    if not player.can_afford(card):
-        emit("error", {"message": f"Not enough money to play '{card_name}'."})
+
+    use_optional = data.get("use_optional") or {}
+    pay_to = data.get("pay_to") or {}
+    err = player.can_afford_costs(card, use_optional)
+    if err:
+        emit("error", {"message": err})
         return
-    player.spend(card.cost)
-    player.play_card(card_name)
+    player.pay_costs(card, use_optional)
+
+    if card.fee and card.fee_card_id:
+        fee_target = pay_to.get("fee")
+        if fee_target and fee_target in game.players:
+            game.players[fee_target].resources["money"] = \
+                game.players[fee_target].resources.get("money", 0) + card.fee
+
+    player.play_card(card_name, game)
 
     if card.tile_type:
         player.pending_tile = card.tile_type
@@ -402,6 +492,43 @@ def on_play_card(data):
     else:
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
+
+
+@socketio.on("buy_resource")
+def on_buy_resource(data):
+    player_id = connected_players.get(request.sid)
+    if not player_id or not game.started:
+        return
+    player = game.players.get(player_id)
+    if not player:
+        return
+    buy_type = data.get("type")
+    if buy_type == "server":
+        eng_cost, money_cost = 1, 1
+        if player.resources.get("engineers", 0) < eng_cost:
+            emit("error", {"message": f"Need {eng_cost} engineer(s)."})
+            return
+        if player.resources.get("money", 0) < money_cost:
+            emit("error", {"message": f"Need ${money_cost}."})
+            return
+        player.resources["engineers"] -= eng_cost
+        player.resources["money"] -= money_cost
+        player.resources["servers"] = player.resources.get("servers", 0) + 1
+    elif buy_type == "ad":
+        suit_cost, money_cost = 1, 1
+        if player.resources.get("suits", 0) < suit_cost:
+            emit("error", {"message": f"Need {suit_cost} suit(s)."})
+            return
+        if player.resources.get("money", 0) < money_cost:
+            emit("error", {"message": f"Need ${money_cost}."})
+            return
+        player.resources["suits"] -= suit_cost
+        player.resources["money"] -= money_cost
+        player.resources["ads"] = player.resources.get("ads", 0) + 1
+    else:
+        return
+    socketio.emit("game_state", game.to_dict())
+    _send_private_states()
 
 
 @socketio.on("end_turn")
@@ -473,11 +600,18 @@ def on_get_board():
 @socketio.on("place_tile")
 def on_place_tile(data):
     player_id = connected_players.get(request.sid)
-    if not player_id or game.phase != Phase.PLAYER_TURNS:
+    if not player_id:
         return
-    if player_id != game.current_player_id:
+
+    is_company_phase = game.phase == Phase.COMPANY_PICK
+    is_turns_phase = game.phase == Phase.PLAYER_TURNS
+
+    if not is_company_phase and not is_turns_phase:
+        return
+    if is_turns_phase and player_id != game.current_player_id:
         emit("error", {"message": "It's not your turn."})
         return
+
     player = game.players.get(player_id)
     if not player or not player.pending_tile:
         emit("error", {"message": "You don't have a tile to place."})
@@ -490,18 +624,34 @@ def on_place_tile(data):
         return
 
     for res, amt in bonuses.get("immediate", {}).items():
-        player.resources[res] = player.resources.get(res, 0) + amt
+        if res == "users":
+            player.gain_users(amt, game)
+        else:
+            player.resources[res] = player.resources.get(res, 0) + amt
     for res, amt in bonuses.get("production", {}).items():
         player.production[res] = player.production.get(res, 0) + amt
 
     tile_type = player.pending_tile
     player.pending_tile = None
 
+    # Factory cost reduction: $10 refund per adjacent power plant
+    factory_refund = 0
+    if tile_type == "factory":
+        adj_pwr = game.board.count_adjacent_power_plants(row, col)
+        factory_refund = adj_pwr * 10
+        if factory_refund > 0:
+            player.resources["money"] = player.resources.get("money", 0) + factory_refund
+
+    if player._remaining_starting_tiles:
+        player.pending_tile = player._remaining_starting_tiles.pop(0)
+
     bonus_text = []
     for res, amt in bonuses.get("immediate", {}).items():
         bonus_text.append(f"+{amt} {res}")
     for res, amt in bonuses.get("production", {}).items():
         bonus_text.append(f"+{amt} {res}/yr")
+    if factory_refund > 0:
+        bonus_text.append(f"+${factory_refund} factory discount")
 
     socketio.emit("board_update", game.board.to_list(), room="game")
     emit("tile_placed", {
@@ -510,12 +660,20 @@ def on_place_tile(data):
         "bonuses": ", ".join(bonus_text) if bonus_text else "no bonuses",
     })
 
-    if len(player.hand) == 0:
-        player.year_done = True
-        _advance_to_next_or_end_year()
-    else:
+    if is_company_phase:
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
+        if game.all_players_ready() and not any(p.pending_tile for p in game.players.values()):
+            game.begin_year_draft()
+            socketio.emit("game_state", game.to_dict(), room="game")
+            _send_private_states()
+    elif is_turns_phase:
+        if len(player.hand) == 0:
+            player.year_done = True
+            _advance_to_next_or_end_year()
+        else:
+            socketio.emit("game_state", game.to_dict(), room="game")
+            _send_private_states()
 
 
 # ── Board Editor (master / editors only) ─────────────────────
@@ -618,10 +776,12 @@ def _send_private_states():
                 if game.current_regulation else False
             )
             socketio.emit("your_state", {
+                "player_id": player_id,
                 "hand": [c.to_dict() for c in player.hand],
                 "draft_pool": [c.to_dict() for c in player.draft_pool],
                 "resources": player.resources,
                 "production": player.production,
+                "users": player.users,
                 "cards_played_this_turn": player.cards_played_this_turn,
                 "ready": player.ready,
                 "has_fuckups": player.has_pending_fuckups(),
@@ -710,15 +870,17 @@ def _build_card_trees() -> dict:
         for card in cards:
             cid = card.get("id", 0)
             for boost in card.get("boosts") or []:
-                tid = boost.get("target_id", 0)
-                if tid and tid in card_by_id:
-                    target_to_boosters.setdefault(tid, []).append({
-                        "card": card,
-                        "card_type": card_type,
-                        "bonus": boost.get("bonus", {}),
-                    })
-                    booster_ids_with_connections.add(cid)
-                    platform_ids_with_connections.add(tid)
+                raw_tid = boost.get("target_id", 0)
+                tids = raw_tid if isinstance(raw_tid, list) else ([raw_tid] if raw_tid else [])
+                for tid in tids:
+                    if tid and tid in card_by_id:
+                        target_to_boosters.setdefault(tid, []).append({
+                            "card": card,
+                            "card_type": card_type,
+                            "bonus": boost.get("bonus", {}),
+                        })
+                        booster_ids_with_connections.add(cid)
+                        platform_ids_with_connections.add(tid)
 
     trees = []
     for tid, boosters in target_to_boosters.items():
@@ -841,9 +1003,37 @@ def on_add_card(data):
 
     filepath = CARDS_DIR / filename
     header, entries = _read_yaml_file(filepath)
-    new_card = {"name": "New Card", "id": _next_card_id(), "cost": 0, "tag": "", "description": ""}
+
+    _COSTS_TEMPLATE = {
+        "engineers": 0, "suits": 0, "ads": 0,
+        "money": 0, "servers": 0, "data_centers": 0, "ad_campaigns": 0,
+        "reputation": 0, "HR": 0, "users": 0,
+        "fee": 0, "fee_card_id": None,
+    }
+    _CATEGORY_TEMPLATES = {
+        "company": {"name": "New Company", "id": _next_card_id(), "tag": "",
+                     "description": "", "image": None,
+                     "starting_resources": {k: 0 for k in ["engineers", "suits", "ads", "money", "servers", "reputation", "users"]},
+                     "starting_production": {"HR": 0, "data_centers": 0, "ad_campaigns": 0},
+                     "starting_tiles": []},
+        "regulation": {"name": "New Regulation", "id": _next_card_id(), "tag": "",
+                        "description": "", "image": None, "targets_all": 1, "target_id": None,
+                        "target_type": None, "compliance": {}, "court_penalty": {}, "court_threshold": 4},
+    }
+    _DEFAULT = {"name": "New Card", "id": _next_card_id(), "image": "", "description": "",
+                "type": "", "number": 1, "build": None, "costs": dict(_COSTS_TEMPLATE),
+                "effect": {}, "boosts": []}
+
+    new_card = _CATEGORY_TEMPLATES.get(card_type, dict(_DEFAULT))
+    if "id" not in new_card or new_card["id"] == 0:
+        new_card["id"] = _next_card_id()
+
     entries.append(new_card)
+    new_index = len(entries) - 1
     _write_yaml_file(filepath, header, entries)
+
+    key = f"{card_type}:{new_index}"
+    locked_cards[key] = request.sid
 
     cards = _read_all_cards_yaml()
     for sid in editor_sids:
@@ -851,6 +1041,12 @@ def on_add_card(data):
             "cards": cards,
             "locks": _get_locks_for_client(sid),
         }, room=sid)
+        socketio.emit("card_locked", {
+            "key": key,
+            "who": "me" if sid == request.sid else "other",
+        }, room=sid)
+
+    emit("lock_result", {"success": True, "key": key})
 
 
 GRAVEYARD_FILE = CARDS_DIR / "graveyard.yaml"

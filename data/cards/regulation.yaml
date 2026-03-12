@@ -2,55 +2,60 @@
 # REGULATION CARDS
 # ============================================================
 
-- name: Data Privacy Act
-  id: 29
-  cost: 0
-  tag: privacy
-  description: Companies handling user data must comply with strict rules or face fines.
-  targets: platform
-  penalty:
-    money: -5
-  court_penalty:
-    money: -10
-    reputation: -2
-  court_threshold: 4
-
 - name: Anti-Monopoly Ruling
   id: 30
-  cost: 0
-  tag: antitrust
   description: Large companies are fined for anti-competitive practices.
-  targets: all
-  penalty:
+  tag: antitrust
+  image: null
+  targets_all: 1
+  target_id: null
+  target_type: null
+  compliance:
     money: -3
   court_penalty:
     money: -8
     reputation: -3
   court_threshold: 4
-
-- name: Anti-Monopoly Ruling 4
+- name: Anti-Monopoly Ruling 2
   id: 31
-  cost: 0
-  tag: antitrust
   description: Large companies are fined for anti-competitive practices.
-  targets: all
-  penalty:
+  tag: antitrust
+  targets_all: 1
+  target_id: null
+  target_type: null
+  court_threshold: 4
+  compliance:
     money: -3
   court_penalty:
     money: -8
     reputation: -3
-  court_threshold: 4
-
+  boosts: null
 - name: Cybersecurity Mandate
   id: 32
-  cost: 0
-  tag: security
   description: All companies must meet minimum cybersecurity standards.
-  targets: all
-  penalty:
+  tag: security
+  image: null
+  targets_all: 1
+  target_id: null
+  target_type: null
+  compliance:
     money: -4
     reputation: -1
   court_penalty:
     money: -12
     reputation: -4
   court_threshold: 5
+- name: Platform Licensing Act
+  id: 53
+  description: Search engines must acquire a government license or shut down.
+  tag: licensing
+  image: null
+  targets_all: 0
+  target_id: null
+  target_type: search engine
+  compliance:
+    money: -5
+  court_penalty:
+    money: -10
+    reputation: -2
+  court_threshold: 4

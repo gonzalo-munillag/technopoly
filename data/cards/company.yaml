@@ -4,63 +4,101 @@
 
 - name: NovaTech
   id: 1
-  cost: 0
   tag: startup
   description: A scrappy tech startup with big ambitions and a garage full of energy
     drinks.
+  image: null
   starting_resources:
-    users: 0
-    money: 20
-    engineers: 3
-    suits: 0
+    engineers: 2
+    suits: 1
+    ads: 2
+    money: 3
     servers: 1
-    ads: 0
-    reputation: 5
+    reputation: 0
+    users: 0
   starting_production:
-    hr: 1
+    HR: 1
+    data_centers: 1
+    ad_campaigns: 0
+  starting_tiles:
+  - data_center
 - name: OmniCorp
   id: 2
-  cost: 0
   tag: megacorp
   description: An established corporation with deep pockets and deeper bureaucracy.
+  image: null
   starting_resources:
-    users: 5
-    money: 30
     engineers: 1
     suits: 2
-    servers: 2
     ads: 1
+    money: 30
+    servers: 2
     reputation: 3
+    users: 5
   starting_production:
-    hr: 2
+    HR: 2
+    data_centers: 1
+    ad_campaigns: 1
+  starting_tiles:
+  - data_center
+  - store
 - name: ViralWave
   id: 4
-  cost: 0
   tag: social
   description: Social media disruptor. Engagement is their drug, attention their currency.
+  image: null
   starting_resources:
-    users: 8
-    money: 12
     engineers: 1
     suits: 1
-    servers: 1
     ads: 3
+    money: 12
+    servers: 1
     reputation: 2
+    users: 8
   starting_production:
-    hr: 1
+    HR: 1
+    data_centers: 0
+    ad_campaigns: 2
+  starting_tiles:
+  - ad_campaign
+  - ad_campaign
 - name: IronGate
   id: 5
-  cost: 0
   tag: cybersec
   description: Cybersecurity firm forged in paranoia. Trust no one, encrypt everything.
+  image: null
   starting_resources:
-    users: 1
-    money: 18
     engineers: 2
     suits: 2
-    servers: 2
     ads: 0
+    money: 18
+    servers: 2
     reputation: 6
+    users: 1
   starting_production:
-    hr: 1
-  boosts: null
+    HR: 1
+    data_centers: 1
+    ad_campaigns: 0
+  starting_tiles:
+  - data_center
+  - power_plant
+- name: GreenByte
+  id: 3
+  tag: cleantech
+  description: Sustainable tech venture turning sunlight into server uptime and good
+    PR.
+  image: null
+  starting_resources:
+    engineers: 2
+    suits: 1
+    ads: 1
+    money: 15
+    servers: 0
+    reputation: 7
+    users: 3
+  starting_production:
+    HR: 2
+    data_centers: 0
+    ad_campaigns: 1
+  starting_tiles:
+  - ad_campaign
