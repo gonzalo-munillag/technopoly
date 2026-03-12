@@ -196,6 +196,7 @@ body::after {
   padding: .75rem 1.5rem;
   background: var(--surface);
   border-bottom: 2px solid var(--primary);
+  width: 100%;
 }
 
 .logo-sm {
@@ -240,11 +241,12 @@ body::after {
 }
 
 .sidebar {
-  width: 260px;
+  width: 300px;
   padding: 1.2rem;
   background: var(--surface);
   border-right: 2px solid var(--border);
   overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .sidebar h3 {
@@ -259,21 +261,27 @@ body::after {
 .resource-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: .4rem;
+  gap: .3rem;
 }
 
 .resource-item {
-  padding: .4rem .6rem;
+  padding: .3rem .5rem;
   background: var(--bg);
   border-radius: 2px;
-  font-size: .8rem;
+  font-size: .75rem;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   border-left: 2px solid var(--border);
+  min-height: 0;
 }
 
-.resource-item .label { color: var(--text-dim); text-transform: capitalize; }
-.resource-item .value { font-weight: 700; color: var(--accent); }
+.resource-wide {
+  grid-column: 1 / -1;
+}
+
+.resource-item .label { color: var(--text-dim); text-transform: capitalize; white-space: nowrap; font-size: .7rem; }
+.resource-item .value { font-weight: 700; color: var(--accent); white-space: nowrap; }
 
 .buy-row {
   display: flex;
@@ -413,13 +421,13 @@ body::after {
 }
 
 .draft-section .hand-container {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 
 .draft-section .hand-container > .game-card {
-  width: auto;
+  width: 238px;
 }
 
 #hand-container {
@@ -429,7 +437,7 @@ body::after {
 }
 
 #hand-container > .game-card {
-  width: auto;
+  width: 238px;
 }
 
 /* ── Game cards ──────────────────────────────────────────── */
@@ -438,7 +446,8 @@ body::after {
   border: 1px solid var(--border);
   border-radius: 2px;
   width: 238px;
-  min-height: 333px;
+  max-width: 238px;
+  aspect-ratio: 63 / 88;
   padding: 0;
   cursor: pointer;
   transition: border-color .2s, transform .15s;
@@ -447,6 +456,7 @@ body::after {
   display: flex;
   flex-direction: column;
   font-size: .8rem;
+  flex-shrink: 0;
 }
 
 .game-card:hover {
@@ -455,12 +465,13 @@ body::after {
   box-shadow: 0 0 12px rgba(183,28,28,.25);
 }
 
-.card-type-stripe {
+.card-type-emoji {
   position: absolute;
-  top: 0; right: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 0 2px 0 4px;
+  top: 8px; right: 6px;
+  font-size: 1.1rem;
+  line-height: 1;
+  z-index: 2;
+  cursor: default;
 }
 
 .card-header {
@@ -798,16 +809,6 @@ body::after {
   color: #e57373;
 }
 
-/* ── End game bar ────────────────────────────────────────── */
-.end-game-bar {
-  padding: .6rem 1.5rem;
-  background: var(--surface);
-  border-top: 2px solid var(--primary);
-  display: flex;
-  justify-content: flex-end;
-  gap: .6rem;
-}
-
 /* ── Floating error ──────────────────────────────────────── */
 .floating-error {
   position: fixed;
@@ -1096,22 +1097,22 @@ body::after {
 /* ── Editor toolbar (count + search) ─────────────────────── */
 .editor-toolbar {
   display: flex;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
+  gap: .4rem;
   padding: .5rem 1.5rem;
   border-bottom: 1px solid var(--border);
 }
 
 .editor-total-count {
-  font-size: .85rem;
+  font-size: .78rem;
   color: var(--text-dim);
   font-weight: 600;
-  white-space: nowrap;
+  line-height: 1.5;
 }
 
 .editor-search {
-  flex: 1;
-  max-width: 320px;
+  width: 100%;
+  max-width: 400px;
   padding: .4rem .7rem;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -1234,23 +1235,26 @@ body::after {
 
 .tree-layout {
   display: flex;
-  align-items: flex-start;
-  gap: .5rem;
+  align-items: center;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: .5rem;
 }
 
 .tree-boosters-col {
   display: flex;
   flex-direction: column;
+  gap: .8rem;
+}
+
+.tree-booster-row {
+  display: flex;
+  align-items: center;
   gap: .6rem;
-  flex: 1;
 }
 
 .tree-arrow-col {
-  display: flex;
-  flex-direction: column;
-  gap: .6rem;
-  align-items: center;
-  justify-content: center;
+  display: none;
   min-width: 30px;
 }
 
@@ -1264,10 +1268,24 @@ body::after {
   min-height: 80px;
 }
 
-.tree-target-col {
-  flex: 1;
-  display: flex;
-  align-items: center;
+.tree-target-wrapper {
+  align-self: center;
+}
+
+.tree-card-wrapper {
+  position: relative;
+}
+
+.tree-card-wrapper .game-card {
+  width: 238px;
+}
+
+.tree-bonus-tag {
+  text-align: center;
+  font-size: .7rem;
+  color: var(--accent);
+  font-weight: 600;
+  padding: .3rem 0;
 }
 
 .tree-card {
@@ -1289,7 +1307,6 @@ body::after {
 
 .tree-target-card {
   border-left: 3px solid var(--accent);
-  width: 100%;
 }
 
 .tree-bonus {
@@ -1343,18 +1360,47 @@ select.editor-dict-key:focus {
 }
 
 /* ── Reputation bar ──────────────────────────────────────── */
-.users-section { margin: .4rem 0; }
-.users-chart-row { display: flex; align-items: center; gap: .6rem; }
-#users-pie { width: 80px; height: 80px; flex-shrink: 0; }
-.users-info { font-size: .7rem; line-height: 1.4; }
-.users-info strong { color: var(--accent); }
+.users-section {
+  margin: .5rem 0;
+  padding: .5rem .6rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.users-chart-row { display: flex; align-items: center; gap: .8rem; }
+#users-pie {
+  width: 110px;
+  height: 110px;
+  flex-shrink: 0;
+  cursor: crosshair;
+  filter: drop-shadow(0 0 6px rgba(201,162,39,.15));
+}
+.users-info { font-size: .72rem; line-height: 1.5; }
+.users-info strong { color: var(--accent); font-size: .85rem; }
+.pie-pct { color: var(--text-dim); font-size: .68rem; }
+.pie-income { color: var(--text-dim); font-size: .62rem; letter-spacing: .5px; }
+
+.pie-tooltip {
+  display: none;
+  position: absolute;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  padding: .25rem .6rem;
+  font-size: .68rem;
+  white-space: nowrap;
+  letter-spacing: .3px;
+  border-radius: 2px;
+  z-index: 20;
+  pointer-events: none;
+}
 
 .reputation-bar {
   margin: .6rem 0 .8rem;
   position: relative;
 }
 .reputation-bar:hover::before {
-  content: attr(data-tip-left) " | " attr(data-tip-right);
+  content: attr(data-tip);
   position: absolute;
   bottom: 110%;
   left: 0; right: 0;
@@ -1422,6 +1468,7 @@ select.editor-dict-key:focus {
   width: 95%;
   max-width: 900px;
   max-height: 92vh;
+  position: relative;
 }
 
 .board-container {
@@ -1646,6 +1693,89 @@ select.editor-dict-key:focus {
   gap: .5rem;
   margin-top: .8rem;
   justify-content: flex-end;
+}
+
+/* ── Confirm Dialog ──────────────────────────────────────── */
+.confirm-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2rem;
+  z-index: 3000;
+  animation: fadeIn .15s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.confirm-dialog {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-top: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1.5rem 2rem;
+  min-width: 300px;
+  max-width: 420px;
+  text-align: center;
+  animation: slideUp .2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.confirm-dialog-msg {
+  margin: 0 0 .4rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.confirm-dialog-detail {
+  margin: 0 0 1rem;
+  font-size: .82rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  gap: .6rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.confirm-dialog-actions .btn {
+  min-width: 90px;
+}
+
+.confirm-dialog-inline {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 50;
+}
+
+.confirm-dialog-inline .confirm-dialog {
+  position: absolute;
+  top: .5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 260px;
+  max-width: 380px;
+  padding: .8rem 1.2rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
+}
+
+.board-hex-selected {
+  fill: var(--accent) !important;
+  stroke: var(--accent) !important;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px rgba(201,162,39,.6));
 }
 
 /* ── Responsive ──────────────────────────────────────────── */

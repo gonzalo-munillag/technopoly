@@ -57,7 +57,6 @@ const handDiv           = document.getElementById("hand-container");
 const endTurnBtn        = document.getElementById("end-turn-btn");
 const endYearBtn        = document.getElementById("end-year-btn");
 const cardsPlayedInfo   = document.getElementById("cards-played-info");
-const endGameBar        = document.getElementById("end-game-bar");
 const endGameBtn        = document.getElementById("end-game-btn");
 const restartGameBtn    = document.getElementById("restart-game-btn");
 const showHandBtn       = document.getElementById("show-hand-btn");
@@ -92,8 +91,61 @@ const CARD_TYPE_GROUPS = [
 
 const DRAFT_SECTIONS = [
   { deck: "projects", label: "Projects", types: ["platform", "cyber_attack"] },
-  { deck: "boosters", label: "Boosters", types: ["leverage", "innovation"] },
+  { deck: "boosters", label: "Boosters", types: ["leverage", "innovation", "build"] },
 ];
+
+// ── In-game confirm dialog ──────────────────────────────────
+function showConfirmDialog(message, onConfirm, opts = {}) {
+  const existing = document.querySelector(".confirm-dialog-overlay");
+  if (existing) existing.remove();
+
+  const dismiss = () => {
+    overlay.remove();
+    if (opts.onDismiss) opts.onDismiss();
+  };
+
+  const overlay = document.createElement("div");
+  overlay.className = opts.parent ? "confirm-dialog-overlay confirm-dialog-inline" : "confirm-dialog-overlay";
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) dismiss();
+  });
+
+  const box = document.createElement("div");
+  box.className = "confirm-dialog";
+
+  const msg = document.createElement("p");
+  msg.className = "confirm-dialog-msg";
+  msg.textContent = message;
+  box.appendChild(msg);
+
+  if (opts.detail) {
+    const det = document.createElement("p");
+    det.className = "confirm-dialog-detail";
+    det.textContent = opts.detail;
+    box.appendChild(det);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "confirm-dialog-actions";
+
+  const yesBtn = document.createElement("button");
+  yesBtn.className = "btn btn-sm btn-accent";
+  yesBtn.textContent = opts.confirmText || "Confirm";
+  yesBtn.addEventListener("click", () => { overlay.remove(); onConfirm(); });
+
+  const noBtn = document.createElement("button");
+  noBtn.className = "btn btn-sm";
+  noBtn.textContent = opts.cancelText || "Cancel";
+  noBtn.addEventListener("click", () => dismiss());
+
+  actions.appendChild(yesBtn);
+  actions.appendChild(noBtn);
+  box.appendChild(actions);
+  overlay.appendChild(box);
+  (opts.parent || document.body).appendChild(overlay);
+  yesBtn.focus();
+}
 
 // ── Screen switching ────────────────────────────────────────
 function showScreen(screen) {
@@ -114,15 +166,24 @@ function showPhaseArea(phase) {
 }
 
 // ── Login ───────────────────────────────────────────────────
+let _savedCredentials = null;
+
 loginBtn.addEventListener("click", () => {
   const name = playerNameIn.value.trim();
   const password = passwordIn.value;
   if (!name) { loginError.textContent = "Enter your name."; return; }
+  _savedCredentials = { name, password };
   socket.emit("login", { name, password });
 });
 
 passwordIn.addEventListener("keydown", (e) => {
   if (e.key === "Enter") loginBtn.click();
+});
+
+socket.on("connect", () => {
+  if (_savedCredentials) {
+    socket.emit("login", _savedCredentials);
+  }
 });
 
 socket.on("login_success", (data) => {
@@ -131,7 +192,12 @@ socket.on("login_success", (data) => {
   myName = data.name;
   isEditor = !!data.is_editor;
   loginError.textContent = "";
-  showScreen(lobbyScreen);
+
+  if (lastGameState && lastGameState.started) {
+    _applyGameScreenUI();
+  } else {
+    showScreen(lobbyScreen);
+  }
   if (myRole === "master") {
     startGameBtn.classList.remove("hidden");
   }
@@ -166,19 +232,25 @@ socket.on("error", (data) => {
 });
 
 // ── Game events ─────────────────────────────────────────────
-socket.on("game_started", (state) => {
+function _applyGameScreenUI() {
   showScreen(gameScreen);
   if (myRole === "master") {
-    endGameBar.classList.remove("hidden");
+    restartGameBtn.classList.remove("hidden");
+    endGameBtn.classList.remove("hidden");
   }
   if (isEditor) {
     editCardsBtn.classList.remove("hidden");
     document.getElementById("edit-board-btn").classList.remove("hidden");
   }
+}
+
+socket.on("game_started", (state) => {
+  _applyGameScreenUI();
   renderGameState(state);
 });
 
 socket.on("game_state", (state) => {
+  if (state.started) _applyGameScreenUI();
   renderGameState(state);
   renderUsersPie();
 });
@@ -807,16 +879,17 @@ handModal.addEventListener("click", (e) => {
 });
 
 // ── Sidebar renders ─────────────────────────────────────────
+const RESOURCE_ORDER = ["money", "engineers", "suits", "servers", "ads"];
+const RESOURCE_WIDE = new Set(["money"]);
+
 function renderResources(resources) {
   resourcesDiv.innerHTML = "";
-  Object.entries(resources).forEach(([key, val]) => {
-    if (key === "reputation") {
-      updateReputationBar(val);
-      return;
-    }
-    if (key === "users") return;
+  if (resources.reputation !== undefined) updateReputationBar(resources.reputation);
+  RESOURCE_ORDER.forEach(key => {
+    const val = resources[key] ?? 0;
     const div = document.createElement("div");
     div.className = "resource-item";
+    if (RESOURCE_WIDE.has(key)) div.classList.add("resource-wide");
     div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">${key === "money" ? "$" : ""}${val}</span>`;
     resourcesDiv.appendChild(div);
   });
@@ -839,55 +912,119 @@ function renderUsersPie() {
     if (u > 0) slices.push({ pid, name: p.name, users: u, color: p.color });
     if (pid === myId) myUsers = u;
   }
-  if (pool > 0) slices.push({ pid: "__pool", name: "Uncaptured", users: pool, color: "#555" });
+  if (pool > 0) slices.push({ pid: "__pool", name: "Uncaptured", users: pool, color: "#2a2a2a" });
+
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || 100;
+  const cssH = canvas.clientHeight || 100;
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
 
   const ctx = canvas.getContext("2d");
-  const w = canvas.width, h = canvas.height;
-  const cx = w / 2, cy = h / 2, r = Math.min(cx, cy) - 2;
-  ctx.clearRect(0, 0, w, h);
+  ctx.scale(dpr, dpr);
+  const cx = cssW / 2, cy = cssH / 2;
+  const outerR = Math.min(cx, cy) - 2;
+  const innerR = outerR * 0.52;
+  const segGap = slices.length > 1 ? 0.02 : 0;
+
+  ctx.clearRect(0, 0, cssW, cssH);
 
   let startAngle = -Math.PI / 2;
   const sliceAngles = [];
   for (const s of slices) {
-    const angle = (s.users / total) * 2 * Math.PI;
+    const sweep = (s.users / total) * 2 * Math.PI;
+    const a0 = startAngle + segGap / 2;
+    const a1 = startAngle + sweep - segGap / 2;
+
     ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r, startAngle, startAngle + angle);
-    ctx.fillStyle = s.color;
+    ctx.arc(cx, cy, outerR, a0, a1);
+    ctx.arc(cx, cy, innerR, a1, a0, true);
+    ctx.closePath();
+
+    const grad = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+    const base = s.color;
+    grad.addColorStop(0, base);
+    grad.addColorStop(1, darkenColor(base, 0.25));
+    ctx.fillStyle = grad;
     ctx.fill();
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 1;
+
+    ctx.strokeStyle = "#0a0a0a";
+    ctx.lineWidth = 1.5;
     ctx.stroke();
-    sliceAngles.push({ ...s, start: startAngle, end: startAngle + angle });
-    startAngle += angle;
+
+    sliceAngles.push({ ...s, start: startAngle, end: startAngle + sweep });
+    startAngle += sweep;
   }
 
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR + 2, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(201,162,39,0.12)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.font = `bold ${Math.round(outerR * 0.28)}px 'Share Tech Mono', monospace`;
+  ctx.fillStyle = "#7a7260";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("USERS", cx, cy);
+
   const myPct = total > 0 ? ((myUsers / total) * 100).toFixed(1) : "0.0";
-  info.innerHTML = `<strong>👥 ${myUsers}</strong> (${myPct}%)<br>💰 $${myUsers * 5}/yr`;
+  info.innerHTML = `<strong>👥 ${myUsers}</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${myUsers * 5}/yr</span>`;
+
+  let pieTip = document.getElementById("pie-tooltip");
+  if (!pieTip) {
+    pieTip = document.createElement("div");
+    pieTip.id = "pie-tooltip";
+    pieTip.className = "pie-tooltip";
+    canvas.parentElement.style.position = "relative";
+    canvas.parentElement.appendChild(pieTip);
+  }
 
   canvas.onmousemove = (e) => {
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left - cx;
-    const y = e.clientY - rect.top - cy;
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const x = mx - cx, y = my - cy;
     let angle = Math.atan2(y, x);
     if (angle < -Math.PI / 2) angle += 2 * Math.PI;
     const dist = Math.sqrt(x * x + y * y);
-    canvas.title = "";
-    if (dist <= r) {
+    pieTip.style.display = "none";
+    if (dist >= innerR && dist <= outerR) {
       for (const s of sliceAngles) {
-        if (angle >= s.start && angle < s.end) {
+        let start = s.start, end = s.end;
+        if (start < -Math.PI / 2) start += 2 * Math.PI;
+        if (end < -Math.PI / 2) end += 2 * Math.PI;
+        const a = angle >= 0 ? angle : angle + 2 * Math.PI;
+        const sa = start >= 0 ? start : start + 2 * Math.PI;
+        const ea = end >= 0 ? end : end + 2 * Math.PI;
+        if ((sa <= ea && a >= sa && a < ea) || (sa > ea && (a >= sa || a < ea))) {
           const pct = ((s.users / total) * 100).toFixed(1);
-          canvas.title = `${s.name}: ${s.users} (${pct}%)`;
+          pieTip.textContent = `${s.name}: ${s.users} (${pct}%)`;
+          pieTip.style.display = "block";
+          pieTip.style.left = mx + 10 + "px";
+          pieTip.style.top = my - 10 + "px";
           break;
         }
       }
     }
   };
+  canvas.onmouseleave = () => { pieTip.style.display = "none"; };
+}
+
+function darkenColor(hex, amount) {
+  let c = hex.replace("#", "");
+  if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  const n = parseInt(c, 16);
+  const r = Math.max(0, Math.round(((n >> 16) & 0xff) * (1 - amount)));
+  const g = Math.max(0, Math.round(((n >> 8) & 0xff) * (1 - amount)));
+  const b = Math.max(0, Math.round((n & 0xff) * (1 - amount)));
+  return `rgb(${r},${g},${b})`;
 }
 
 function updateReputationBar(val) {
   const marker = document.getElementById("reputation-marker");
   const valueEl = document.getElementById("reputation-value");
+  const bar = document.getElementById("reputation-bar");
   if (!marker) return;
   const v = Math.round(val);
   const clamped = Math.max(-10, Math.min(10, v));
@@ -895,9 +1032,19 @@ function updateReputationBar(val) {
   marker.style.left = pct + "%";
   marker.title = `Reputation: ${v}`;
   if (valueEl) valueEl.textContent = v;
+  if (bar) {
+    let status;
+    if (v >= 10)       status = "⭐ +2👥 per gain, +2🔧👔 per hire";
+    else if (v >= 5)   status = "⭐ +1👥 per gain, +1🔧👔 per hire";
+    else if (v <= -10) status = "⚠️ -2👥 per gain, -2🔧👔 per hire";
+    else if (v <= -5)  status = "⚠️ -1👥 per gain, -1🔧👔 per hire";
+    else               status = "No bonus or penalty";
+    bar.setAttribute("data-tip", `Rep ${v}: ${status}\n≥10: +2 | ≥5: +1 | ≤-5: -1 | ≤-10: -2`);
+  }
 }
 
 const VALID_PRODUCTION = ["HR", "data_centers", "ad_campaigns"];
+const PRODUCTION_WIDE = new Set(["HR"]);
 
 function renderProduction(production) {
   productionDiv.innerHTML = "";
@@ -905,6 +1052,7 @@ function renderProduction(production) {
     const val = production[key] ?? 0;
     const div = document.createElement("div");
     div.className = "resource-item";
+    if (PRODUCTION_WIDE.has(key)) div.classList.add("resource-wide");
     div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">+${val}</span>`;
     productionDiv.appendChild(div);
   });
@@ -947,31 +1095,42 @@ function cardNameById(id) {
 }
 
 // ── Card element builder ────────────────────────────────────
-const CARD_TYPE_COLORS = {
-  "social platform": "#3498db",        // blue
-  "hardware manufacturer": "#1a1a2e",  // dark navy
-  "software service provider": "#e74c3c", // red
-  "online marketplace": "#FA8072",     // salmon
-  "search engine": "#27ae60",          // green
-  "store": "#e040fb",                  // magenta
-  "power plant": "#00bcd4",            // aquamarine
-  "data center": "#9b59b6",            // violet
-  "office": "#795548",                 // brown
+const CARD_SUBTYPE_EMOJIS = {
+  "social platform":          "📱",
+  "hardware manufacturer":    "🏭",
+  "software service provider":"💻",
+  "online marketplace":       "🛒",
+  "search engine":            "🔍",
+  "store":                    "🏪",
+  "power plant":              "⚡",
+  "data center":              "🖥️",
+  "office":                   "🏢",
+  "ad campaign":              "📢",
+};
+
+const CARD_DECK_EMOJIS = {
+  "cyber_attack":  "🕵️",
+  "fuck_up":       "💀",
+  "innovation":    "💡",
+  "leverage":      "📈",
+  "company":       "🏦",
+  "regulation":    "⚖️",
 };
 
 function createCardElement(card, options = {}) {
   const el = document.createElement("div");
   el.className = "game-card";
 
-  const colorType = card.card_color_type || "";
-  const typeColor = CARD_TYPE_COLORS[colorType.toLowerCase()] || "";
+  const colorType = card.card_color_type || card.type || "";
+  const deckType = card.card_type || options.deckType || "";
+  const typeEmoji = CARD_SUBTYPE_EMOJIS[colorType.toLowerCase()]
+    || CARD_DECK_EMOJIS[deckType]
+    || "";
 
-  // Fuckup styling
-  if (card.card_type === "fuck_up") el.classList.add("fuckup-card");
+  if (deckType === "fuck_up") el.classList.add("fuckup-card");
 
-  // Color type stripe
-  const stripe = typeColor
-    ? `<div class="card-type-stripe" style="background:${typeColor}" title="${colorType}"></div>`
+  const stripe = typeEmoji
+    ? `<div class="card-type-emoji" title="${colorType || deckType}">${typeEmoji}</div>`
     : "";
 
   // Image placeholder
@@ -988,7 +1147,7 @@ function createCardElement(card, options = {}) {
       .filter(([k, v]) => v && k !== "payee_card_id");
     if (effectEntries.length) {
       effectsHtml = `<div class="card-effects"><span class="card-section-label">Effects</span><span class="card-effects-row">`;
-      effectsHtml += effectEntries.map(([k, v]) => `<span class="card-effect-item">+${v} ${emojiRes(k)}</span>`).join("");
+      effectsHtml += effectEntries.map(([k, v]) => `<span class="card-effect-item">${v > 0 ? "+" : ""}${v} ${emojiRes(k)}</span>`).join("");
       effectsHtml += `</span></div>`;
     }
   } else {
@@ -1011,7 +1170,7 @@ function createCardElement(card, options = {}) {
       const names = ids.map(id => cardNameById(id)).join(", ");
       const bonusEntries = Object.entries(b.bonus || {}).filter(([, v]) => v);
       if (bonusEntries.length) {
-        boostsHtml += `<span class="card-boost-item">${names}: ${bonusEntries.map(([k, v]) => `+${v}${emojiRes(k)}`).join(" ")}</span>`;
+        boostsHtml += `<span class="card-boost-item">${names}: ${bonusEntries.map(([k, v]) => `${v > 0 ? "+" : ""}${v}${emojiRes(k)}`).join(" ")}</span>`;
       }
     });
     boostsHtml += `</span></div>`;
@@ -1024,7 +1183,7 @@ function createCardElement(card, options = {}) {
   if (startEntries.length || startProdEntries.length) {
     startHtml = `<div class="card-effects"><span class="card-section-label">Starting</span><span class="card-effects-row">`;
     startHtml += startEntries.map(([k, v]) => `<span class="card-effect-item">${v} ${emojiRes(k)}</span>`).join("");
-    startHtml += startProdEntries.map(([k, v]) => `<span class="card-effect-item">+${v} ${emojiRes(k)}/yr</span>`).join("");
+    startHtml += startProdEntries.map(([k, v]) => `<span class="card-effect-item">${v > 0 ? "+" : ""}${v} ${emojiRes(k)}/yr</span>`).join("");
     startHtml += `</span></div>`;
   }
 
@@ -1061,7 +1220,6 @@ function createCardElement(card, options = {}) {
     ${stripe}
     <div class="card-header">
       <div class="card-name">${card.name}</div>
-      <span class="card-tag">${card.tag || card.card_color_type || ""}</span>
     </div>
     ${imageBlock}
     ${desc}
@@ -1085,23 +1243,29 @@ function createCardElement(card, options = {}) {
 
 // ── End / Restart game ──────────────────────────────────────
 endGameBtn.addEventListener("click", () => {
-  if (confirm("Are you sure you want to end the game? All players will be logged out.")) {
-    socket.emit("end_game");
-  }
+  showConfirmDialog(
+    "Are you sure you want to end the game?",
+    () => socket.emit("end_game"),
+    { detail: "All players will be logged out.", confirmText: "End Game" }
+  );
 });
 
 restartGameBtn.addEventListener("click", () => {
-  if (confirm("Restart the game? Everything resets to company pick.")) {
-    socket.emit("restart_game");
-  }
+  showConfirmDialog(
+    "Restart the game?",
+    () => socket.emit("restart_game"),
+    { detail: "Everything resets to company pick.", confirmText: "Restart" }
+  );
 });
 
 // ── Actions ─────────────────────────────────────────────────
 endTurnBtn.addEventListener("click", () => socket.emit("end_turn"));
 endYearBtn.addEventListener("click", () => {
-  if (confirm("End your fiscal year? You won't play any more cards this year.")) {
-    socket.emit("end_year");
-  }
+  showConfirmDialog(
+    "End your fiscal year?",
+    () => socket.emit("end_year"),
+    { detail: "You won't play any more cards this year.", confirmText: "End Year" }
+  );
 });
 
 document.getElementById("buy-server-btn").addEventListener("click", () => {
@@ -1160,6 +1324,7 @@ const EDITOR_TYPE_LABELS = {
   fuck_up: "Fuck-ups",
   leverage: "Leverage",
   innovation: "Innovation",
+  build: "Build",
   regulation: "Regulation",
 };
 
@@ -1180,6 +1345,10 @@ editCardsBtn.addEventListener("click", () => {
 document.getElementById("edit-cards-lobby-btn").addEventListener("click", () => {
   editorContext = "grid";
   socket.emit("get_all_cards");
+});
+
+socket.on("editor_error", (data) => {
+  showFloatingError(data.message);
 });
 
 closeEditorModal.addEventListener("click", () => {
@@ -1258,18 +1427,31 @@ function renderEditorGrid() {
     const deck = DECK_MAP[ct] || ct;
     deckCounts[deck] = (deckCounts[deck] || 0) + n;
   }
-  let statsHtml = `Total: ${totalCards} | `;
-  for (const [deck, count] of Object.entries(deckCounts)) {
-    const pct = totalCards ? Math.round(count / totalCards * 100) : 0;
-    const types = Object.entries(typeCounts)
-      .filter(([ct]) => (DECK_MAP[ct] || ct) === deck)
-      .map(([ct, n]) => {
-        const tPct = totalCards ? Math.round(n / totalCards * 100) : 0;
-        const label = CARD_TYPE_GROUPS.find(g => g.key === ct)?.label || ct;
-        return `${label}: ${n} (${tPct}%)`;
-      }).join(", ");
-    statsHtml += `<strong>${deck}</strong> ${count} (${pct}%) [${types}] `;
+  function roundedPcts(items, total) {
+    const t = total || items.reduce((a, b) => a + b, 0);
+    if (!t) return items.map(() => 0);
+    const raw = items.map(n => (n / t) * 100);
+    const floored = raw.map(r => Math.floor(r));
+    let remainder = 100 - floored.reduce((a, b) => a + b, 0);
+    const fracs = raw.map((r, i) => ({ i, frac: r - floored[i] }));
+    fracs.sort((a, b) => b.frac - a.frac);
+    for (let j = 0; j < remainder && j < fracs.length; j++) floored[fracs[j].i]++;
+    return floored;
   }
+
+  const deckEntries = Object.entries(deckCounts);
+  const deckPcts = roundedPcts(deckEntries.map(([, c]) => c), totalCards);
+  let statsHtml = `Total: ${totalCards} | `;
+  deckEntries.forEach(([deck, count], di) => {
+    const typeEntries = Object.entries(typeCounts)
+      .filter(([ct]) => (DECK_MAP[ct] || ct) === deck);
+    const typePcts = roundedPcts(typeEntries.map(([, n]) => n), count);
+    const types = typeEntries.map(([ct, n], ti) => {
+      const label = CARD_TYPE_GROUPS.find(g => g.key === ct)?.label || ct;
+      return `${label}: ${n} (${typePcts[ti]}%)`;
+    }).join(", ");
+    statsHtml += `<strong>${deck}</strong> ${count} (${deckPcts[di]}%) [${types}] `;
+  });
   editorTotalCount.innerHTML = statsHtml;
 
   for (const [cardType, cards] of Object.entries(editorCards)) {
@@ -1318,7 +1500,7 @@ function renderEditorGrid() {
       wrapper.className = "editor-card-wrapper";
       if (lockStatus === "other") wrapper.classList.add("editor-card-locked");
 
-      const cardEl = createCardElement(card, { interactive: false });
+      const cardEl = createCardElement(card, { interactive: false, deckType: cardType });
 
       const overlay = document.createElement("div");
       overlay.className = "editor-card-overlay";
@@ -1339,9 +1521,12 @@ function renderEditorGrid() {
           showFloatingError("Card is locked by another editor.");
           return;
         }
-        if (confirm(`Delete "${card.name || "Unnamed"}"? It will be moved to the Graveyard.`)) {
-          socket.emit("delete_card", { card_type: cardType, index });
-        }
+        editorScrollTop = editorBody.scrollTop;
+        showConfirmDialog(
+          `Delete "${card.name || "Unnamed"}"?`,
+          () => socket.emit("delete_card", { card_type: cardType, index }),
+          { detail: "It will be moved to the Graveyard.", confirmText: "Delete" }
+        );
       });
       overlay.appendChild(deleteBtn);
 
@@ -1739,73 +1924,80 @@ function renderTreesView() {
     boostersCol.className = "tree-boosters-col";
 
     tree.boosters.forEach(b => {
-      const boosterCard = document.createElement("div");
-      boosterCard.className = "tree-card tree-booster-card";
+      const row = document.createElement("div");
+      row.className = "tree-booster-row";
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "tree-card-wrapper";
 
       const boosterLockKey = findEditorKeyForId(b.card.id, b.card_type);
       const lockStatus = boosterLockKey ? (treesLocksMap[boosterLockKey] || null) : null;
-      if (lockStatus === "other") boosterCard.classList.add("editor-card-locked");
+      if (lockStatus === "other") wrapper.classList.add("editor-card-locked");
 
-      boosterCard.innerHTML = `
-        <div class="editor-card-id">ID: ${b.card.id ?? "—"}</div>
-        <div class="editor-card-name">${b.card.name}</div>
-        <div class="editor-card-tag">${b.card.tag || b.card_type}</div>
-        <div class="tree-bonus">Bonus: ${Object.entries(b.bonus).map(([k,v]) => `+${v} ${k}`).join(", ") || "none"}</div>
-        ${lockStatus === "other" ? '<div class="editor-lock-indicator">Locked</div>' : ""}
-      `;
+      const cardEl = createCardElement(b.card, { interactive: false, deckType: b.card_type });
+
+      const bonusTag = document.createElement("div");
+      bonusTag.className = "tree-bonus-tag";
+      bonusTag.textContent = `Boost: ${Object.entries(b.bonus).map(([k,v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(" ") || "none"}`;
+
+      if (lockStatus === "other") {
+        const lockLabel = document.createElement("div");
+        lockLabel.className = "editor-lock-indicator";
+        lockLabel.textContent = "Locked";
+        wrapper.appendChild(lockLabel);
+      }
+
+      wrapper.appendChild(cardEl);
+      wrapper.appendChild(bonusTag);
 
       if (lockStatus !== "other" && boosterLockKey) {
-        boosterCard.style.cursor = "pointer";
-        boosterCard.addEventListener("click", () => {
+        wrapper.style.cursor = "pointer";
+        wrapper.addEventListener("click", () => {
           editorContext = "trees";
           const [ct, idx] = boosterLockKey.split(":");
           socket.emit("lock_card", { card_type: ct, index: parseInt(idx) });
         });
       }
 
-      boostersCol.appendChild(boosterCard);
+      const arrow = document.createElement("div");
+      arrow.className = "tree-arrow";
+      arrow.textContent = "\u2192";
+
+      row.appendChild(wrapper);
+      row.appendChild(arrow);
+      boostersCol.appendChild(row);
     });
 
     treeLayout.appendChild(boostersCol);
 
-    const arrowCol = document.createElement("div");
-    arrowCol.className = "tree-arrow-col";
-    for (let i = 0; i < tree.boosters.length; i++) {
-      const arrow = document.createElement("div");
-      arrow.className = "tree-arrow";
-      arrow.textContent = "\u2192";
-      arrowCol.appendChild(arrow);
-    }
-    treeLayout.appendChild(arrowCol);
-
-    const targetCol = document.createElement("div");
-    targetCol.className = "tree-target-col";
-    const targetCard = document.createElement("div");
-    targetCard.className = "tree-card tree-target-card";
+    const targetWrapper = document.createElement("div");
+    targetWrapper.className = "tree-card-wrapper tree-target-wrapper";
 
     const targetLockKey = findEditorKeyForId(tree.target.id, tree.target_type);
     const targetLock = targetLockKey ? (treesLocksMap[targetLockKey] || null) : null;
-    if (targetLock === "other") targetCard.classList.add("editor-card-locked");
+    if (targetLock === "other") targetWrapper.classList.add("editor-card-locked");
 
-    targetCard.innerHTML = `
-      <div class="editor-card-id">ID: ${tree.target.id ?? "—"}</div>
-      <div class="editor-card-name">${tree.target.name}</div>
-      <div class="editor-card-tag">${tree.target.tag || tree.target_type}</div>
-      <div class="editor-card-desc">${tree.target.description || ""}</div>
-      ${targetLock === "other" ? '<div class="editor-lock-indicator">Locked</div>' : ""}
-    `;
+    const targetCardEl = createCardElement(tree.target, { interactive: false, deckType: tree.target_type });
+
+    if (targetLock === "other") {
+      const lockLabel = document.createElement("div");
+      lockLabel.className = "editor-lock-indicator";
+      lockLabel.textContent = "Locked";
+      targetWrapper.appendChild(lockLabel);
+    }
+
+    targetWrapper.appendChild(targetCardEl);
 
     if (targetLock !== "other" && targetLockKey) {
-      targetCard.style.cursor = "pointer";
-      targetCard.addEventListener("click", () => {
+      targetWrapper.style.cursor = "pointer";
+      targetWrapper.addEventListener("click", () => {
         editorContext = "trees";
         const [ct, idx] = targetLockKey.split(":");
         socket.emit("lock_card", { card_type: ct, index: parseInt(idx) });
       });
     }
 
-    targetCol.appendChild(targetCard);
-    treeLayout.appendChild(targetCol);
+    treeLayout.appendChild(targetWrapper);
 
     treeEl.appendChild(treeLayout);
     treesBody.appendChild(treeEl);
@@ -1978,9 +2170,11 @@ function renderGraveyard(cards) {
       });
 
       el.querySelector(".graveyard-perma-btn").addEventListener("click", () => {
-        if (confirm(`Permanently delete "${card.name || "Unnamed"}"? This cannot be undone.`)) {
-          socket.emit("permanent_delete_card", { index: entry.graveyardIndex });
-        }
+        showConfirmDialog(
+          `Permanently delete "${card.name || "Unnamed"}"?`,
+          () => socket.emit("permanent_delete_card", { index: entry.graveyardIndex }),
+          { detail: "This cannot be undone.", confirmText: "Delete Forever" }
+        );
       });
 
       grid.appendChild(el);
@@ -2024,19 +2218,23 @@ const TILE_COLORS = {
 };
 
 const TILE_LABELS = {
-  power_plant: "PWR",
-  factory:     "FAC",
-  data_center: "SRV",
-  store:       "STO",
-  ads:         "ADS",
+  power_plant:  "PWR",
+  factory:      "FAC",
+  data_center:  "DC",
+  store:        "STO",
+  ad_campaign:  "AD",
+  office:       "OFC",
+  lobby_group:  "LOB",
 };
 
 const TILE_FULL_NAMES = {
-  power_plant: "Power Plant",
-  factory:     "Hardware Factory",
-  data_center: "Data Center",
-  store:       "Store",
-  ads:         "Ad Campaign",
+  power_plant:  "Power Plant",
+  factory:      "Hardware Factory",
+  data_center:  "Data Center",
+  store:        "Store",
+  ad_campaign:  "Ad Campaign",
+  office:       "Office",
+  lobby_group:  "Lobby Group",
 };
 
 const TILE_ZONE = {
@@ -2317,6 +2515,9 @@ function renderBoard() {
       poly.classList.add("board-hex-placeable");
       g.style.cursor = "pointer";
       g.addEventListener("click", () => {
+        document.querySelectorAll(".board-hex-selected").forEach(el => el.classList.remove("board-hex-selected"));
+        poly.classList.add("board-hex-selected");
+
         const preview = previewPlacementBonuses(tile, pending);
         const parts = [];
         for (const [res, amt] of Object.entries(preview.immediate))
@@ -2324,9 +2525,15 @@ function renderBoard() {
         for (const [res, amt] of Object.entries(preview.production))
           if (amt) parts.push(`+${amt} ${res}/yr`);
         const bonusStr = parts.length ? parts.join(", ") : "no bonuses";
-        if (confirm(`Place ${TILE_FULL_NAMES[pending]} at (${tile.row}, ${tile.col})?\n\nYou will get: ${bonusStr}`)) {
-          socket.emit("place_tile", { row: tile.row, col: tile.col });
-        }
+        showConfirmDialog(
+          `Place ${TILE_FULL_NAMES[pending]} here?`,
+          () => socket.emit("place_tile", { row: tile.row, col: tile.col }),
+          {
+            detail: `You will get: ${bonusStr}`,
+            confirmText: "Place",
+            onDismiss: () => poly.classList.remove("board-hex-selected"),
+          }
+        );
       });
     }
 
@@ -2734,11 +2941,15 @@ function renderBoardTileForm(tile) {
   deleteBtn.textContent = "Delete Tile";
   deleteBtn.addEventListener("click", () => {
     const label = tile.name ? `"${tile.name}" at` : "";
-    if (confirm(`Delete tile ${label} (${tile.row}, ${tile.col})? This removes it from the board.`)) {
-      socket.emit("remove_board_tile", { row: tile.row, col: tile.col });
-      selectedEditorTile = null;
-      boardTileForm.classList.add("hidden");
-    }
+    showConfirmDialog(
+      `Delete tile ${label} (${tile.row}, ${tile.col})?`,
+      () => {
+        socket.emit("remove_board_tile", { row: tile.row, col: tile.col });
+        selectedEditorTile = null;
+        boardTileForm.classList.add("hidden");
+      },
+      { detail: "This removes it from the board.", confirmText: "Delete" }
+    );
   });
 
   actions.appendChild(saveBtn);

@@ -19,6 +19,14 @@ app = Flask(
     static_folder="../static",
 )
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+
+@app.after_request
+def _no_cache(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -28,6 +36,7 @@ MASTER_PASSWORD = os.environ["MASTER_PASSWORD"]
 game = Game()
 connected_players: dict[str, str] = {}  # sid -> player_id
 editor_sids: set[str] = set()
+editor_player_ids: set[str] = set()
 locked_cards: dict[str, str] = {}  # "card_type:index" -> sid
 
 BOARD_CONFIG_FILE = CARDS_DIR / "board_config.yaml"
@@ -87,6 +96,40 @@ def on_login(data):
         emit("login_error", {"message": "Please enter a name."})
         return
 
+    # ── Reconnection: re-bind existing player to new sid ─────
+    existing_pid = None
+    for pid, player in game.players.items():
+        if player.name == name:
+            existing_pid = pid
+            break
+
+    if existing_pid and request.sid not in connected_players:
+        old_sids = [s for s, p in connected_players.items() if p == existing_pid]
+        for s in old_sids:
+            del connected_players[s]
+        connected_players[request.sid] = existing_pid
+        join_room("game")
+        is_ed = existing_pid in editor_player_ids
+        if is_ed:
+            editor_sids.add(request.sid)
+            join_room("editors")
+        role = "master" if existing_pid.startswith("master-") else "player"
+        if role == "master":
+            game.game_master_id = request.sid
+        emit("login_success", {
+            "role": role,
+            "player_id": existing_pid,
+            "name": name,
+            "is_editor": is_ed,
+        })
+        if game.started:
+            socketio.emit("game_state", game.to_dict(), room="game")
+            _send_private_states()
+        else:
+            _broadcast_lobby()
+        return
+
+    # ── Fresh login ──────────────────────────────────────────
     if password == MASTER_PASSWORD:
         master_connected = (
             game.game_master_id is not None
@@ -101,6 +144,7 @@ def on_login(data):
             player_id = f"player-{uuid.uuid4().hex[:8]}"
             player = game.add_player(player_id, name)
             connected_players[request.sid] = player_id
+            editor_player_ids.add(player_id)
             join_room("game")
             emit("login_success", {"role": "player", "player_id": player_id, "name": name, "is_editor": True})
             _broadcast_lobby()
@@ -109,6 +153,7 @@ def on_login(data):
             game.game_master_id = request.sid
             player = game.add_player(player_id, name)
             connected_players[request.sid] = player_id
+            editor_player_ids.add(player_id)
             join_room("game")
             emit("login_success", {"role": "master", "player_id": player_id, "name": name, "is_editor": True})
             _broadcast_lobby()
@@ -871,7 +916,12 @@ def _build_card_trees() -> dict:
             cid = card.get("id", 0)
             for boost in card.get("boosts") or []:
                 raw_tid = boost.get("target_id", 0)
-                tids = raw_tid if isinstance(raw_tid, list) else ([raw_tid] if raw_tid else [])
+                if isinstance(raw_tid, list):
+                    tids = [t for t in raw_tid if isinstance(t, (int, float))]
+                elif raw_tid:
+                    tids = [raw_tid]
+                else:
+                    tids = []
                 for tid in tids:
                     if tid and tid in card_by_id:
                         target_to_boosters.setdefault(tid, []).append({
@@ -917,9 +967,27 @@ def _build_card_trees() -> dict:
     }
 
 
+def _is_editor(sid: str) -> bool:
+    """Check if a sid belongs to an editor (master password user)."""
+    if sid in editor_sids:
+        return True
+    player_id = connected_players.get(sid)
+    return player_id is not None and player_id in editor_player_ids
+
+def _ensure_editor(sid: str) -> bool:
+    """Ensure sid is in editor_sids if they have editor rights. Returns True if editor."""
+    if sid in editor_sids:
+        return True
+    if _is_editor(sid):
+        editor_sids.add(sid)
+        join_room("editors")
+        return True
+    return False
+
 @socketio.on("get_all_cards")
 def on_get_all_cards():
-    if request.sid not in editor_sids:
+    if not _ensure_editor(request.sid):
+        emit("editor_error", {"message": "Not authorized as editor."})
         return
     cards = _read_all_cards_yaml()
     emit("all_cards", {

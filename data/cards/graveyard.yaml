@@ -1,3 +1,48 @@
 # Card graveyard — deleted cards are stored here
 
-[]
+- card_type: cyber_attack
+  card_data:
+    name: New Card
+    id: 71
+    image: ''
+    description: ''
+    type: ''
+    number: 1
+    build: null
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+    effect: {}
+    boosts: []
+- card_type: cyber_attack
+  card_data:
+    name: New Card
+    id: 54
+    description: null
+    type: null
+    number: 1
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+    effect: null
+    boosts: null

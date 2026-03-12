@@ -128,7 +128,7 @@ class Game:
 
     # ── player management ────────────────────────────────────
 
-    _PLAYER_COLORS = ["#c9a227", "#4fc3f7", "#66bb6a", "#ab47bc", "#ff8a65", "#78909c"]
+    _PLAYER_COLORS = ["#e6c040", "#29b6f6", "#66bb6a", "#ce93d8", "#ff7043", "#26c6da", "#ffa726", "#ef5350"]
 
     def add_player(self, player_id: str, name: str) -> Player:
         idx = len(self.players) % len(self._PLAYER_COLORS)
@@ -210,8 +210,9 @@ class Game:
             player.draft_pool.extend(boosters)
 
     def _draw_projects_limited(self, n: int) -> list[Card]:
-        """Draw n cards from projects deck. Max 1 fuck-up; if a 2nd
-        is drawn, discard it silently and draw again."""
+        """Draw n cards from the projects deck. At most 1 fuck-up allowed;
+        if a 2nd is drawn it is silently discarded and replaced.
+        A fuck-up DOES consume one of the n slots."""
         drawn: list[Card] = []
         fuckup_count = 0
         safety = 50

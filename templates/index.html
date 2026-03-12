@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/style.css?v={{ range(1,999999) | random }}" />
 </head>
 <body>
   <div id="app">
@@ -56,6 +56,8 @@
         <div class="header-edit-btns">
           <button id="edit-board-btn" class="btn btn-sm edit-cards-btn hidden">Edit Board</button>
           <button id="edit-cards-btn" class="btn btn-sm edit-cards-btn hidden">Edit Cards</button>
+          <button id="restart-game-btn" class="btn btn-sm btn-accent hidden">Restart</button>
+          <button id="end-game-btn" class="btn btn-sm btn-danger-sm hidden">End Game</button>
         </div>
       </header>
 
@@ -64,10 +66,9 @@
         <aside class="sidebar">
           <h3>Company</h3>
           <div id="company-panel" class="company-display"></div>
-          <h3>Users</h3>
           <div id="users-section" class="users-section">
             <div class="users-chart-row">
-              <canvas id="users-pie" width="100" height="100"></canvas>
+              <canvas id="users-pie" width="120" height="120"></canvas>
               <div id="users-info" class="users-info"></div>
             </div>
           </div>
@@ -80,7 +81,7 @@
           <h3>Production</h3>
           <div id="production-panel" class="resource-grid"></div>
           <h3>Reputation</h3>
-          <div id="reputation-bar" class="reputation-bar" data-tip-left="≤-10: -2👥/-2🔧👔 | ≤-5: -1👥/-1🔧👔" data-tip-right="≥5: +1👥/+1🔧👔 | ≥10: +2👥/+2🔧👔">
+          <div id="reputation-bar" class="reputation-bar" data-tip="">
             <div class="reputation-value" id="reputation-value">0</div>
             <div class="reputation-track">
               <div class="reputation-marker" id="reputation-marker"></div>
@@ -170,14 +171,10 @@
         </main>
       </div>
 
-      <!-- MASTER CONTROLS (master only) -->
-      <div id="end-game-bar" class="end-game-bar hidden">
-        <button id="restart-game-btn" class="btn btn-sm btn-accent">Restart Game</button>
-        <button id="end-game-btn" class="btn btn-danger">End Game</button>
-      </div>
-
       <div id="game-error" class="error-msg floating-error"></div>
     </section>
+
+    <!-- end-game-bar removed; master controls now in header -->
 
     <!-- BOARD MODAL (game play) -->
     <div id="board-modal" class="modal-overlay hidden">
@@ -262,6 +259,6 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v={{ range(1,999999) | random }}"></script>
 </body>
 </html>

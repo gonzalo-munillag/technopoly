@@ -52,10 +52,12 @@
     ad_campaigns: 0
   boosts: []
 - name: New Card
-  id: 54
-  description: null
-  type: null
+  id: 71
+  image: ''
+  description: ''
+  type: ''
   number: 1
+  build: null
   costs:
     engineers: 0
     suits: 0
@@ -69,5 +71,5 @@
     users: 0
     fee: 0
     fee_card_id: null
-  effect: null
-  boosts: null
+  effect: {}
+  boosts: []

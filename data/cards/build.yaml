@@ -231,7 +231,7 @@
   id: 50
   image: ''
   description: Targeted advertising infrastructure reaching billions of eyeballs.
-  type: social platform
+  type: ad campaign
   number: 2
   build: ad_campaign
   costs:
@@ -256,7 +256,7 @@
   id: 66
   image: ''
   description: Plaster your brand across every surface. Old school, still works.
-  type: social platform
+  type: ad campaign
   number: 2
   build: ad_campaign
   costs:
