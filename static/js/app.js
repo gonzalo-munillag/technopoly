@@ -1000,7 +1000,7 @@ function renderUsersPie() {
   const mpu = lastGameState?.params?.money_per_users ?? 20;
   const income = mpu > 0 ? Math.floor(myUsers / mpu) : 0;
   const nextThreshold = mpu > 0 ? (Math.floor(myUsers / mpu) + 1) * mpu : 0;
-  const hint = income === 0 ? `need ${mpu}👥 for $1` : `${nextThreshold}👥 → $${income + 1}`;
+  const hint = income === 0 ? `Need ${mpu}👥 for $1` : `${nextThreshold}👥 → $${income + 1}`;
   info.innerHTML = `<strong>👥 ${myUsers}</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${income}/yr</span><br><span class="pie-hint">${hint}</span>`;
 
   let pieTip = document.getElementById("pie-tooltip");

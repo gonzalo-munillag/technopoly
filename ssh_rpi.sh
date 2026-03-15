@@ -1,2 +1,2 @@
 #!/bin/bash
-ssh gon.munillag@192.168.129.22
+ssh pi-ssh.gonzalo-mg.com

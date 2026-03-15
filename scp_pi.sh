@@ -2,3 +2,4 @@
 
 # to send a file to the rpi
 scp docker-compose.yml .env sync_yaml.sh gon.munillag@192.168.129.22:/var/www/technopoly/
+scp -r data gon.munillag@192.168.129.22:/var/www/technopoly/

@@ -8,4 +8,10 @@ __pycache__/
 README.md
 ssh_rpi.sh
 start_py_env.sh
+scp_pi.sh
+deploy_rpi.sh
+build.log
 rpi_commands.txt
+scp_to_laptop.sh
+docs/CLOUDFLARE_SSH.md
+SSH_SETUP.md

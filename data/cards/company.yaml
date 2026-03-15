@@ -2,12 +2,11 @@
 # COMPANY CARDS
 # ============================================================
 
-- name: NovaTech
+- name: NovaTech TEST
   id: 1
   tag: startup
   description: A scrappy tech startup with big ambitions and a garage full of energy
     drinks.
-  image: null
   starting_resources:
     engineers: 2
     suits: 1
@@ -20,8 +19,7 @@
     HR: 1
     data_centers: 1
     ad_campaigns: 0
-  starting_tiles:
-  - data_center
+  boosts: null
 - name: OmniCorp
   id: 2
   tag: megacorp
@@ -65,8 +63,8 @@
 - name: DeepMind Industries
   id: 6
   tag: ai
-  description: An AI research lab turned corporate juggernaut. Their algorithms know you
-    better than you know yourself.
+  description: An AI research lab turned corporate juggernaut. Their algorithms know
+    you better than you know yourself.
   image: null
   starting_resources:
     engineers: 3

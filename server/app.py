@@ -1,6 +1,8 @@
 from __future__ import annotations
 import os
+import time
 import uuid
+import threading
 from pathlib import Path
 
 import yaml
@@ -38,6 +40,34 @@ connected_players: dict[str, str] = {}  # sid -> player_id
 editor_sids: set[str] = set()
 editor_player_ids: set[str] = set()
 locked_cards: dict[str, str] = {}  # "card_type:index" -> sid
+
+INACTIVITY_TIMEOUT = 3 * 3600  # 3 hours in seconds
+_last_activity: float = time.time()
+_inactivity_lock = threading.Lock()
+
+
+def _touch_activity():
+    global _last_activity
+    with _inactivity_lock:
+        _last_activity = time.time()
+
+
+def _inactivity_watchdog():
+    """Background thread that ends the game after INACTIVITY_TIMEOUT of no player actions."""
+    while True:
+        time.sleep(1800)
+        if not game.started:
+            continue
+        with _inactivity_lock:
+            elapsed = time.time() - _last_activity
+        if elapsed >= INACTIVITY_TIMEOUT:
+            game.end_game()
+            connected_players.clear()
+            socketio.emit("game_ended", {}, room="game")
+
+
+_watchdog_thread = threading.Thread(target=_inactivity_watchdog, daemon=True)
+_watchdog_thread.start()
 
 BOARD_CONFIG_FILE = CARDS_DIR / "board_config.yaml"
 
@@ -89,6 +119,7 @@ def on_disconnect():
 
 @socketio.on("login")
 def on_login(data):
+    _touch_activity()
     password = data.get("password", "")
     name = data.get("name", "").strip()
 
@@ -177,6 +208,7 @@ def on_login(data):
 
 @socketio.on("start_game")
 def on_start_game():
+    _touch_activity()
     if request.sid != game.game_master_id:
         emit("error", {"message": "Only the game master can start the game."})
         return
@@ -215,6 +247,7 @@ def on_end_game():
 
 @socketio.on("pick_company")
 def on_pick_company(data):
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or game.phase != Phase.COMPANY_PICK:
         return
@@ -250,6 +283,7 @@ def on_pick_company(data):
 
 @socketio.on("keep_card")
 def on_keep_card(data):
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or game.phase != Phase.YEAR_START_DRAFT:
         return
@@ -273,6 +307,7 @@ def on_keep_card(data):
 
 @socketio.on("done_drafting")
 def on_done_drafting():
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or game.phase != Phase.YEAR_START_DRAFT:
         return
@@ -300,6 +335,7 @@ def _begin_hiring():
 
 @socketio.on("submit_hiring")
 def on_submit_hiring(data):
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or game.phase != Phase.HIRING:
         return
@@ -368,6 +404,7 @@ def _begin_player_turns():
 
 @socketio.on("regulation_accept")
 def on_regulation_accept():
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or game.phase != Phase.REGULATION:
         return
@@ -389,6 +426,7 @@ def on_regulation_accept():
 
 @socketio.on("regulation_court")
 def on_regulation_court():
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or game.phase != Phase.REGULATION:
         return
@@ -466,6 +504,7 @@ def _send_regulation_alerts():
 
 @socketio.on("play_card")
 def on_play_card(data):
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or game.phase != Phase.PLAYER_TURNS:
         return
@@ -546,6 +585,7 @@ def on_play_card(data):
 
 @socketio.on("buy_resource")
 def on_buy_resource(data):
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or not game.started:
         return
@@ -585,6 +625,7 @@ def on_buy_resource(data):
 
 @socketio.on("end_turn")
 def on_end_turn():
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or game.phase != Phase.PLAYER_TURNS:
         return
@@ -605,6 +646,7 @@ def on_end_turn():
 
 @socketio.on("end_year")
 def on_end_year():
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or game.phase != Phase.PLAYER_TURNS:
         return
@@ -651,6 +693,7 @@ def on_get_board():
 
 @socketio.on("place_tile")
 def on_place_tile(data):
+    _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id:
         return
@@ -1278,19 +1321,9 @@ def on_save_params(data):
 def on_send_values():
     if not _ensure_editor(request.sid):
         return
-    import subprocess
-    script_path = Path(__file__).resolve().parent.parent / "sync_yaml.sh"
-    if not script_path.exists():
-        emit("error", {"message": "sync_yaml.sh not found."})
-        return
+    trigger = CARDS_DIR / ".sync_trigger"
     try:
-        result = subprocess.run(
-            ["bash", str(script_path)],
-            capture_output=True, text=True, timeout=30
-        )
-        if result.returncode == 0:
-            emit("error", {"message": "YAML files synced successfully."})
-        else:
-            emit("error", {"message": f"Sync failed: {result.stderr[:200]}"})
+        trigger.write_text("sync")
+        emit("error", {"message": "Sync requested. Waiting for host to process..."})
     except Exception as e:
         emit("error", {"message": f"Sync error: {e}"})

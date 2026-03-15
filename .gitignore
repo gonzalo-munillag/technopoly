@@ -5,3 +5,10 @@ __pycache__/
 rpi_commands.txt
 sync_yaml.sh
 scp_to_laptop.sh
+scp_pi.sh
+ssh_rpi.sh
+start_py_env.sh
+deploy_rpi.sh
+build.log
+docs/CLOUDFLARE_SSH.md
+SSH_SETUP.md
