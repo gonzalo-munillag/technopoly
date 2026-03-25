@@ -21,7 +21,7 @@ class Card:
     # Regulation-specific fields
     targets_all: int = 1                # 1 = affects all players, 0 = targeted
     target_id: int | list | None = None # specific card ID(s) that are targeted
-    target_type: str | None = None      # card type(s) targeted (e.g. "search engine")
+    target_type: str | None = None      # card type(s) targeted (e.g. "search service")
     compliance: dict[str, int] = field(default_factory=dict)
     court_penalty: dict[str, int] = field(default_factory=dict)
     court_threshold: int = 4            # roll >= this to win in court

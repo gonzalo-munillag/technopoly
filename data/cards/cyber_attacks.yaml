@@ -4,7 +4,6 @@
 
 - name: DDoS Storm
   id: 16
-  image: ''
   description: Overwhelm a competitor's servers, reducing their uptime.
   type: network
   number: 2
@@ -25,7 +24,7 @@
     reputation: 1
     data_centers: 0
     ad_campaigns: 0
-  boosts: []
+  boosts: null
 - name: Ransomware
   id: 17
   image: ''
@@ -79,6 +78,7 @@
   type: null
   number: 1
   build: null
+  effect: null
   costs:
     engineers: 0
     suits: 0
@@ -92,5 +92,4 @@
     users: 0
     fee: 0
     fee_card_id: null
-  effect: null
   boosts: null

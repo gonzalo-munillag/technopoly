@@ -20,11 +20,10 @@
     data_centers: 1
     ad_campaigns: 0
   boosts: null
-- name: OmniCorp
+- name: OmniCorp NEW TEST
   id: 2
   tag: megacorp
   description: An established corporation with deep pockets and deeper bureaucracy.
-  image: null
   starting_resources:
     engineers: 1
     suits: 2
@@ -37,14 +36,11 @@
     HR: 2
     data_centers: 1
     ad_campaigns: 1
-  starting_tiles:
-  - data_center
-  - store
+  boosts: null
 - name: ViralWave
   id: 4
   tag: social
   description: Social media disruptor. Engagement is their drug, attention their currency.
-  image: null
   starting_resources:
     engineers: 1
     suits: 1
@@ -57,9 +53,7 @@
     HR: 1
     data_centers: 0
     ad_campaigns: 2
-  starting_tiles:
-  - ad_campaign
-  - ad_campaign
+  boosts: null
 - name: DeepMind Industries
   id: 6
   tag: ai
@@ -85,7 +79,6 @@
   id: 5
   tag: cybersec
   description: Cybersecurity firm forged in paranoia. Trust no one, encrypt everything.
-  image: null
   starting_resources:
     engineers: 2
     suits: 2
@@ -98,15 +91,12 @@
     HR: 1
     data_centers: 1
     ad_campaigns: 0
-  starting_tiles:
-  - data_center
-  - power_plant
+  boosts: null
 - name: GreenByte
   id: 3
   tag: cleantech
   description: Sustainable tech venture turning sunlight into server uptime and good
     PR.
-  image: null
   starting_resources:
     engineers: 2
     suits: 1
@@ -119,5 +109,4 @@
     HR: 2
     data_centers: 0
     ad_campaigns: 1
-  starting_tiles:
-  - ad_campaign
+  boosts: null

@@ -40,6 +40,7 @@
         <button id="edit-cards-lobby-btn" class="btn btn-sm hidden" style="margin-top:.5rem;width:100%;">Edit Cards</button>
         <button id="edit-board-lobby-btn" class="btn btn-sm hidden" style="margin-top:.3rem;width:100%;">Edit Board</button>
         <button id="edit-params-lobby-btn" class="btn btn-sm hidden" style="margin-top:.3rem;width:100%;">Edit Parameters</button>
+        <button id="fetch-data-lobby-btn" class="btn btn-sm hidden" style="margin-top:.3rem;width:100%;">Fetch Data</button>
         <p id="lobby-error" class="error-msg"></p>
       </div>
     </section>
@@ -58,7 +59,7 @@
           <button id="edit-board-btn" class="btn btn-sm edit-cards-btn hidden">Edit Board</button>
           <button id="edit-cards-btn" class="btn btn-sm edit-cards-btn hidden">Edit Cards</button>
           <button id="edit-params-btn" class="btn btn-sm edit-cards-btn hidden">Edit Params</button>
-          <button id="send-values-btn" class="btn btn-sm edit-cards-btn hidden">Send Values</button>
+          <button id="fetch-data-btn" class="btn btn-sm edit-cards-btn hidden">Fetch Data</button>
           <button id="restart-game-btn" class="btn btn-sm btn-accent hidden">Restart</button>
           <button id="end-game-btn" class="btn btn-sm btn-danger-sm hidden">End Game</button>
         </div>
@@ -97,6 +98,9 @@
           <h3>Played Cards</h3>
           <button id="show-hand-btn" class="btn btn-sm show-hand-btn">Show All Cards</button>
           <div id="played-cards" class="played-list"></div>
+
+          <h3 style="margin-top:1rem;">Players' Cards</h3>
+          <div id="players-cards-list"></div>
         </aside>
 
         <!-- MAIN AREA -->
@@ -127,11 +131,19 @@
             <div id="hiring-form" class="hiring-form">
               <div class="hiring-row">
                 <label>🔧 Engineers</label>
-                <input type="number" id="hire-engineers" min="0" value="0" class="board-form-input" style="width:80px;" />
+                <div class="hiring-spinner">
+                  <button type="button" class="hire-arrow hire-dec" data-target="hire-engineers">▼</button>
+                  <input type="number" id="hire-engineers" min="0" value="0" class="board-form-input hiring-input" readonly />
+                  <button type="button" class="hire-arrow hire-inc" data-target="hire-engineers">▲</button>
+                </div>
               </div>
               <div class="hiring-row">
                 <label>👔 Suits</label>
-                <input type="number" id="hire-suits" min="0" value="0" class="board-form-input" style="width:80px;" />
+                <div class="hiring-spinner">
+                  <button type="button" class="hire-arrow hire-dec" data-target="hire-suits">▼</button>
+                  <input type="number" id="hire-suits" min="0" value="0" class="board-form-input hiring-input" readonly />
+                  <button type="button" class="hire-arrow hire-inc" data-target="hire-suits">▲</button>
+                </div>
               </div>
               <p id="hiring-total" class="hiring-total"></p>
               <button id="conclude-hiring-btn" class="btn btn-sm btn-accent">Conclude Hiring</button>
@@ -174,7 +186,6 @@
         </main>
       </div>
 
-      <div id="game-error" class="error-msg floating-error"></div>
     </section>
 
     <!-- end-game-bar removed; master controls now in header -->
@@ -197,6 +208,7 @@
       <div class="modal-content board-modal-content">
         <div class="modal-header">
           <h2 id="board-editor-title">Board Editor</h2>
+          <button id="fetch-data-board-editor" class="btn btn-sm edit-cards-btn">Fetch Data</button>
           <button id="close-board-editor" class="btn btn-sm">&times;</button>
         </div>
         <p class="phase-hint" style="padding:0 1rem .5rem;">Click any tile to edit its terrain and properties.</p>
@@ -216,6 +228,17 @@
       </div>
     </div>
 
+    <!-- PLAYER CARDS MODAL -->
+    <div id="player-cards-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="player-cards-modal-title">Player's Cards</h2>
+          <button id="close-player-cards-modal" class="btn btn-sm">&times;</button>
+        </div>
+        <div id="player-cards-modal-body" class="modal-body"></div>
+      </div>
+    </div>
+
     <!-- CARD EDITOR MODAL -->
     <div id="editor-modal" class="modal-overlay hidden">
       <div class="modal-content editor-modal-content">
@@ -224,6 +247,7 @@
           <div class="editor-header-actions">
             <button id="card-trees-btn" class="btn btn-sm">Card Trees</button>
             <button id="graveyard-btn" class="btn btn-sm">Graveyard</button>
+            <button id="fetch-data-card-editor" class="btn btn-sm edit-cards-btn">Fetch Data</button>
             <button id="close-editor-modal" class="btn btn-sm">&times;</button>
           </div>
         </div>
@@ -264,6 +288,7 @@
       <div class="modal-content" style="max-width:500px;">
         <div class="modal-header">
           <h2>Game Parameters</h2>
+          <button id="fetch-data-params-editor" class="btn btn-sm edit-cards-btn">Fetch Data</button>
           <button id="close-params-modal" class="btn btn-sm">&times;</button>
         </div>
         <div id="params-body" class="modal-body editor-body" style="padding:1rem;"></div>
@@ -271,6 +296,8 @@
     </div>
 
   </div>
+
+  <div id="game-error" class="error-msg floating-error"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
   <script src="/static/js/app.js?v={{ range(1,999999) | random }}"></script>

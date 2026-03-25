@@ -142,6 +142,12 @@ class Player:
 
     _COST_SKIP = {"fee", "fee_card_id", "payee_card_id"}
 
+    def _owns_fee_card(self, card: Card) -> bool:
+        """True if this player has already played the card referenced by fee_card_id."""
+        if not card.fee or not card.fee_card_id:
+            return False
+        return any(c.id == card.fee_card_id for c in self.played_cards)
+
     def can_afford_costs(self, card: Card, use_optional: dict | None = None) -> str | None:
         costs = card.costs
         if not costs:
@@ -159,7 +165,7 @@ class Player:
             if self._get_amount(res) < amt:
                 return f"Not enough {res} (need {amt}, have {self._get_amount(res)})."
 
-        if card.fee:
+        if card.fee and not self._owns_fee_card(card):
             total_money += card.fee
 
         if total_money > self.resources.get("money", 0):
@@ -169,7 +175,8 @@ class Player:
     def pay_costs(self, card: Card, use_optional: dict | None = None):
         costs = card.costs
         if not costs:
-            total = card.cost + (card.fee or 0)
+            fee = 0 if self._owns_fee_card(card) else (card.fee or 0)
+            total = card.cost + fee
             self.resources["money"] = self.resources.get("money", 0) - total
             return
 
@@ -182,7 +189,7 @@ class Player:
                 continue
             self._deduct(res, amt)
 
-        if card.fee:
+        if card.fee and not self._owns_fee_card(card):
             total_money += card.fee
 
         self.resources["money"] = self.resources.get("money", 0) - total_money

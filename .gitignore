@@ -12,3 +12,4 @@ deploy_rpi.sh
 build.log
 docs/CLOUDFLARE_SSH.md
 SSH_SETUP.md
+.sync_trigger

@@ -557,8 +557,13 @@ def on_play_card(data):
         return
     player.pay_costs(card, use_optional)
 
-    if card.fee and card.fee_card_id:
-        fee_target = pay_to.get("fee")
+    if card.fee and card.fee_card_id and not player._owns_fee_card(card):
+        # Find all other players who have played the fee card
+        payees = [
+            pid for pid, p in game.players.items()
+            if pid != player_id and any(c.id == card.fee_card_id for c in p.played_cards)
+        ]
+        fee_target = pay_to.get("fee") if len(payees) > 1 else (payees[0] if payees else None)
         if fee_target and fee_target in game.players:
             game.players[fee_target].resources["money"] = \
                 game.players[fee_target].resources.get("money", 0) + card.fee
@@ -735,12 +740,12 @@ def on_place_tile(data):
     player.pending_tile = None
     player.pending_tile_meta = {}
 
-    # Factory cost reduction: per-card refund from adjacent power plants
+    # Factory money production: per-card refund from adjacent power plants, added as yearly income
     factory_refund = 0
     if tile_type == "factory":
         factory_refund = game.board.get_adjacent_factory_refund(row, col)
         if factory_refund > 0:
-            player.resources["money"] = player.resources.get("money", 0) + factory_refund
+            player.production["money"] = player.production.get("money", 0) + factory_refund
 
     if player._remaining_starting_tiles:
         player.pending_tile = player._remaining_starting_tiles.pop(0)
@@ -751,7 +756,7 @@ def on_place_tile(data):
     for res, amt in bonuses.get("production", {}).items():
         bonus_text.append(f"+{amt} {res}/yr")
     if factory_refund > 0:
-        bonus_text.append(f"+${factory_refund} factory discount")
+        bonus_text.append(f"+${factory_refund}M/yr factory income")
 
     socketio.emit("board_update", game.board.to_list(), room="game")
     emit("tile_placed", {
@@ -1144,9 +1149,10 @@ def on_add_card(data):
                         "description": "", "image": None, "targets_all": 1, "target_id": None,
                         "target_type": None, "compliance": {}, "court_penalty": {}, "court_threshold": 4},
     }
-    _DEFAULT = {"name": "New Card", "id": _next_card_id(), "image": "", "description": "",
+    _DEFAULT = {"name": "New Card", "id": _next_card_id(), "image": None, "description": "",
                 "type": "", "number": 1, "build": None, "costs": dict(_COSTS_TEMPLATE),
-                "effect": {}, "boosts": []}
+                "effect": {}, "boosts": [],
+                "factory_refund": None, "dc_production_bonus": None}
 
     new_card = _CATEGORY_TEMPLATES.get(card_type, dict(_DEFAULT))
     if "id" not in new_card or new_card["id"] == 0:
@@ -1315,15 +1321,20 @@ def on_save_params(data):
     _send_private_states()
 
 
-# ── YAML sync (send values to laptop) ────────────────────────
+# ── Fetch Data (browser pulls YAML via HTTP) ─────────────────
 
-@socketio.on("send_values")
-def on_send_values():
-    if not _ensure_editor(request.sid):
-        return
-    trigger = CARDS_DIR / ".sync_trigger"
-    try:
-        trigger.write_text("sync")
-        emit("error", {"message": "Sync requested. Waiting for host to process..."})
-    except Exception as e:
-        emit("error", {"message": f"Sync error: {e}"})
+@app.route("/api/fetch_data", methods=["POST"])
+def api_fetch_data():
+    from flask import jsonify, request as flask_req
+    password = flask_req.json.get("password", "") if flask_req.is_json else ""
+    if password != MASTER_PASSWORD:
+        return jsonify({"error": "Unauthorized"}), 403
+    data_dir = CARDS_DIR.parent
+    result = {"cards": {}, "params": None}
+    for f in sorted(CARDS_DIR.iterdir()):
+        if f.suffix in (".yaml", ".yml") and f.is_file():
+            result["cards"][f.name] = f.read_text(encoding="utf-8")
+    params_file = data_dir / "params.yaml"
+    if params_file.exists():
+        result["params"] = params_file.read_text(encoding="utf-8")
+    return jsonify(result)

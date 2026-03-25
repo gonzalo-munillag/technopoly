@@ -1,316 +1,123 @@
 # ============================================================
-# PLATFORM CARDS (PROJECTS deck)
+# PLATFORM CARDS (PROJECTS deck — card_type is always "platform")
 # ============================================================
+#
+# ---- TEMPLATE (copy, uncomment, and fill in) ---------------
+#
+# - name: Card Name
+#   id: 99                  # unique across ALL card files
+#   description: null       # flavour text shown on the card
+#   # social platform | hardware manufacturer | software service | online marketplace | search service | store | power plant | data center | office | ad campaign
+#   type: social platform
+#   number: 1               # copies in the shuffled projects deck
+#   # ad_campaign | data_center | factory | lobby_group | office | power_plant | store — or null
+#   build: null
+#   # effect — resource/production deltas when the card resolves (omit zero keys in real cards if you prefer)
+#   effect:
+#     users: 0
+#     money: 0
+#     engineers: 0
+#     suits: 0
+#     servers: 0
+#     ads: 0
+#     reputation: 0
+#     HR: 0
+#     data_centers: 0
+#     ad_campaigns: 0
+#   # costs — to play the card; if fee > 0, keep money at 0 (game rule)
+#   costs:
+#     users: 0
+#     money: 0
+#     engineers: 0
+#     suits: 0
+#     servers: 0
+#     ads: 0
+#     reputation: 0
+#     HR: 0
+#     data_centers: 0
+#     ad_campaigns: 0
+#     fee: 0              # if > 0, set money above to 0; paid to another player's card
+#     fee_card_id: null   # ID of the card whose owner receives the fee
+#   # boosts — list of synergies; target_id may be one id OR a list [1, 2, 3]
+#   boosts:
+#     - target_id: null
+#       bonus:
+#         users: 0
+#         money: 0
+#         engineers: 0
+#         suits: 0
+#         servers: 0
+#         ads: 0
+#         reputation: 0
+#         HR: 0
+#         data_centers: 0
+#         ad_campaigns: 0
+#     # - target_id: [1, 2, 3]
+#     #   bonus:
+#     #     users: 1
+#   # power_plant only: +X $M/yr money production per adjacent factory
+#   factory_refund: null
+#   # power_plant only: +X data_centers production per adjacent data center
+#   dc_production_bonus: null
+#   # artwork path/URL — not editable in the in-game card editor
+#   image: null
+#
+# ---- CARDS -------------------------------------------------
 
-- name: Online Search Engine
-  id: 6
-  image: ''
-  description: A dominant search platform generating ad revenue and attracting engineers.
-  type: search engine
-  number: 3
-  costs:
-    engineers: 1
-    suits: 1
-    ads: 1
-    money: 1
+- name: Metaverse
+  id: 1
+  description: null
+  type: social platform
+  number: 1
+  build: null
+  factory_refund: null
+  dc_production_bonus: null
+  effect:
+    users: 100
+    money: 0
+    engineers: 0
+    suits: null
     servers: 0
-    data_centers: 0
-    ad_campaigns: 0
+    ads: 0
     reputation: 0
     HR: 0
+    data_centers: 0
+    ad_campaigns: 0
+  costs:
     users: 0
-  effect:
+    money: 50
     engineers: 3
     suits: 3
+    servers: 3
     ads: 3
-    money: 10
-    servers: 1
+    reputation: 0
+    HR: 0
     data_centers: 0
     ad_campaigns: 0
-  boosts:
-  - target_id:
-    - 8
-    - 9
-    bonus:
-      engineers: 2
-      suits: 2
-- name: Social Media Network
-  id: 40
-  description: Connect billions of users. Monetize attention and influence public
-    opinion.
-  type: social platform
-  number: 2
+    fee: 0
+    fee_card_id: null
+  boosts: null
+- name: Machine Learning Service
+  id: 2
+  description: null
+  type: software service
+  number: 1
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
     engineers: 2
-    suits: 1
-    ads: 2
-    money: 3
-    servers: 1
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-  effect:
-    users: 15
-    ads: 5
-    money: 8
-    reputation: 2
-    data_centers: 0
-    ad_campaigns: 0
-  boosts:
-  - target_id: 6
-    bonus:
-      users: 3
-      ads: 2
-- name: Cloud Computing Service
-  id: 41
-  description: Offer scalable computing to other companies. Requires heavy infrastructure.
-  type: software service provider
-  number: 2
-  costs:
-    engineers: 3
     suits: 0
-    ads: 0
-    money: 5
-    servers: 2
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-  effect:
-    money: 12
+    ads: 3
+    money: 25
     servers: 4
     data_centers: 0
     ad_campaigns: 0
-    engineers: 2
-  boosts: null
-- name: E-Commerce Marketplace
-  id: 42
-  image: ''
-  description: A massive online marketplace connecting buyers and sellers worldwide.
-  type: online marketplace
-  number: 2
-  costs:
-    engineers: 1
-    suits: 2
-    ads: 1
-    money: 4
-    servers: 1
-    data_centers: 0
-    ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-  effect:
-    money: 15
-    users: 8
-    suits: 2
-    reputation: 1
-    data_centers: 0
-    ad_campaigns: 0
-- name: Smartphone Manufacturer
-  id: 43
-  description: Design and produce premium smartphones. Requires factories and engineers.
-  type: hardware manufacturer
-  number: 2
-  costs:
-    engineers: 3
-    suits: 1
-    ads: 0
-    money: 0
-    fee: 3
-    fee_card_id: 46
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-  effect:
-    money: 10
-    users: 6
-    reputation: 3
-    data_centers: 0
-    ad_campaigns: 0
-  boosts:
-  - target_id: 42
-    bonus:
-      money: 4
-      users: 2
-- name: Chip Fabrication Plant
-  id: 44
-  description: Produce cutting-edge microchips. Essential for all hardware manufacturers.
-  type: hardware manufacturer
-  number: 1
-  costs:
-    engineers: 4
-    suits: 0
-    ads: 0
-    money: 10
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-  effect:
-    engineers: 5
-    money: 8
-    data_centers: 0
-    ad_campaigns: 0
-  boosts:
-  - target_id: 43
-    bonus:
-      engineers: 3
-      money: 5
-      users: 0
-- name: Streaming Platform
-  id: 45
-  description: Stream entertainment to millions. High bandwidth, high reward.
-  type: social platform
-  number: 2
-  costs:
-    engineers: 1
-    suits: 1
-    ads: 1
-    money: 0
-    fee: 4
-    fee_card_id: 41
-    servers: 2
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-  effect:
-    users: 10
-    money: 6
-    ads: 2
-    reputation: 1
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: null
-- name: Enterprise Software Suite
-  id: 46
-  image: ''
-  description: Productivity tools for businesses. Recurring revenue from subscriptions.
-  type: software service provider
-  number: 2
-  costs:
-    engineers: 2
-    suits: 2
-    ads: 0
-    money: 4
-    servers: 1
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-  effect:
-    money: 10
-    suits: 3
-    engineers: 1
-    reputation: 2
-    data_centers: 0
-    ad_campaigns: 0
-- name: Factory Complex
-  id: 57
-  image: ''
-  description: Manufacture hardware components at scale. Supply the industry.
-  type: hardware manufacturer
-  number: 2
-  build: factory
-  costs:
-    engineers: 2
-    suits: 0
-    ads: 0
-    money: 7
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
     fee: 0
     fee_card_id: null
   effect:
-    engineers: 2
-    money: 4
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: null
-- name: Mobile Phone Assembly
-  id: 68
-  image: ''
-  description: Mass-produce smartphones. Build a factory near a power plant for savings.
-  type: hardware manufacturer
-  number: 2
-  build: factory
-  costs:
-    engineers: 2
-    suits: 1
-    ads: 0
-    money: 10
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    money: 6
-    users: 3
-    data_centers: 0
-    ad_campaigns: 0
-  boosts:
-  - target_id: 43
-    bonus:
-      money: 3
-      users: 2
-- name: Rocket Launch Facility
-  id: 69
-  image: ''
-  description: Build rockets for satellite launches. Expensive but prestigious.
-  type: hardware manufacturer
-  number: 1
-  build: factory
-  costs:
-    engineers: 4
-    suits: 1
-    ads: 0
-    money: 18
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    reputation: 4
-    money: 8
-    servers: 3
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: null
-- name: Drone Manufacturing
-  id: 70
-  image: ''
-  description: Build autonomous drones for delivery and surveillance.
-  type: hardware manufacturer
-  number: 2
-  build: factory
-  costs:
-    engineers: 3
-    suits: 0
-    ads: 0
-    money: 8
-    servers: 1
-    data_centers: 0
-    ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    money: 5
-    engineers: 1
-    reputation: 1
-    data_centers: 0
-    ad_campaigns: 0
+    users: 60
   boosts: null

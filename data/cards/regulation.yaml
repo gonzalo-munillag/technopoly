@@ -52,7 +52,7 @@
   image: null
   targets_all: 0
   target_id: null
-  target_type: search engine
+  target_type: search service
   compliance:
     money: -5
   court_penalty:

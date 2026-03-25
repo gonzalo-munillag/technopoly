@@ -336,7 +336,7 @@
   id: 56
   image: ''
   description: Influence government policy in your favor. Build a lobbying operation.
-  type: software service provider
+  type: software service
   number: 1
   build: lobby_group
   costs:

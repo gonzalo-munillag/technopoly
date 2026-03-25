@@ -243,7 +243,8 @@ body::after {
 }
 
 .sidebar {
-  width: 300px;
+  width: 340px;
+  min-width: 340px;
   padding: 1.2rem;
   background: var(--surface);
   border-right: 2px solid var(--border);
@@ -267,23 +268,24 @@ body::after {
 }
 
 .resource-item {
-  padding: .3rem .5rem;
+  padding: .4rem .6rem;
   background: var(--bg);
   border-radius: 2px;
-  font-size: .75rem;
+  font-size: .9rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-left: 2px solid var(--border);
   min-height: 0;
+  gap: .5rem;
 }
 
 .resource-wide {
   grid-column: 1 / -1;
 }
 
-.resource-item .label { color: var(--text-dim); text-transform: capitalize; white-space: nowrap; font-size: .7rem; }
-.resource-item .value { font-weight: 700; color: var(--accent); white-space: nowrap; }
+.resource-item .label { color: var(--text-dim); text-transform: capitalize; white-space: nowrap; font-size: .85rem; }
+.resource-item .value { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: .95rem; }
 
 .buy-row {
   display: flex;
@@ -348,6 +350,17 @@ body::after {
   letter-spacing: .5px;
   flex-shrink: 0;
   margin-left: .3rem;
+}
+
+/* Players' Cards section */
+.player-cards-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin-bottom: .3rem;
+  padding: .4rem .6rem;
+  font-size: .8rem;
+  cursor: pointer;
 }
 
 /* ── Floating card tooltip (body-level, not clipped) ─────── */
@@ -470,7 +483,7 @@ body::after {
 .card-type-emoji {
   position: absolute;
   top: 8px; right: 6px;
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   line-height: 1;
   z-index: 2;
   cursor: default;
@@ -551,10 +564,10 @@ body::after {
 
 .card-effect-item {
   display: inline-block;
-  padding: .1rem .25rem;
+  padding: .18rem .35rem;
   background: rgba(201,162,39,.12);
   border-radius: 2px;
-  font-size: .6rem;
+  font-size: .82rem;
   color: var(--accent);
   font-weight: 600;
 }
@@ -565,9 +578,9 @@ body::after {
 
 .card-boost-item {
   display: inline-block;
-  font-size: .55rem;
+  font-size: .78rem;
   color: #64b5f6;
-  padding: .1rem .25rem;
+  padding: .15rem .3rem;
   background: rgba(100,181,246,.1);
   border-radius: 2px;
   margin: .05rem .15rem .05rem 0;
@@ -587,7 +600,35 @@ body::after {
 .game-card .card-production { font-size: .7rem; color: var(--accent); padding: .1rem .6rem; }
 .game-card .card-immediate { font-size: .7rem; color: var(--warning); padding: .1rem .6rem; }
 .game-card .card-starting { font-size: .65rem; color: var(--text-dim); padding: .2rem .6rem; font-style: italic; }
-.card-cost-fee { color: #e67e22 !important; }
+.card-cost-fee {
+  color: #e67e22 !important;
+  font-style: italic;
+  display: block;
+  margin-top: .2rem;
+  font-size: .8rem;
+}
+
+/* Fee status badge shown on playable cards in hand */
+.card-fee-status {
+  margin: .3rem .5rem .2rem;
+  padding: .2rem .5rem;
+  border-radius: 3px;
+  font-size: .72rem;
+  font-weight: 700;
+  text-align: center;
+}
+.card-fee-status.fee-waived { background: rgba(46,125,50,.25); color: #81c784; }
+.card-fee-status.fee-free   { background: rgba(100,100,100,.2); color: var(--text-dim); }
+.card-fee-status.fee-due    { background: rgba(230,126,34,.18); color: #e67e22; }
+
+/* Fee payment popup */
+.payment-info {
+  font-size: .88rem;
+  margin: .6rem 0 1rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+.payment-info strong { color: var(--accent); }
 
 .card-costs {
   margin-top: auto;
@@ -598,10 +639,10 @@ body::after {
 
 .card-cost-item {
   display: inline-block;
-  font-size: .6rem;
+  font-size: .82rem;
   color: #e74c3c;
   font-weight: 600;
-  margin: .1rem .3rem .1rem 0;
+  margin: .1rem .35rem .1rem 0;
   padding: .1rem .25rem;
   background: rgba(231,76,60,.08);
   border-radius: 2px;
@@ -785,6 +826,77 @@ body::after {
   font-weight: 700;
 }
 
+.hiring-spinner {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+}
+.hiring-input {
+  width: 50px !important;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.hiring-input::-webkit-outer-spin-button,
+.hiring-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.hire-arrow {
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--accent);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+  user-select: none;
+}
+.hire-arrow:hover {
+  background: var(--border);
+}
+.hire-arrow:active {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* Universal number spinner (params / card editor / board editor) */
+.num-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+}
+.num-spinner input {
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.num-spinner input::-webkit-outer-spin-button,
+.num-spinner input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.spin-arrow {
+  width: 26px;
+  height: 26px;
+  font-size: .85rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--accent);
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s;
+  user-select: none;
+  flex-shrink: 0;
+}
+.spin-arrow:hover { background: var(--border); }
+.spin-arrow:active { background: var(--accent); color: var(--bg); }
+
 .hiring-total {
   font-size: .85rem;
   font-weight: 700;
@@ -825,10 +937,18 @@ body::after {
   pointer-events: none;
   opacity: 0;
   transition: opacity .3s;
+  z-index: 9999;
   z-index: 200;
   border: 1px solid #e57373;
 }
 .floating-error.visible { opacity: 1; }
+.floating-error.floating-success {
+  background: #2e7d32;
+  color: #e0e0e0;
+  font-size: 1rem;
+  padding: .8rem 1.6rem;
+  font-weight: 700;
+}
 
 /* ── Modal ───────────────────────────────────────────────── */
 .modal-overlay {
@@ -1379,9 +1499,9 @@ select.editor-dict-key:focus {
 }
 .users-info { font-size: .72rem; line-height: 1.5; }
 .users-info strong { color: var(--accent); font-size: .85rem; }
-.pie-pct { color: var(--text-dim); font-size: .68rem; }
-.pie-income { color: var(--text-dim); font-size: .62rem; letter-spacing: .5px; }
-.pie-hint { color: var(--text-dim); font-size: .58rem; opacity: .7; }
+.pie-pct { color: var(--text-dim); font-size: .75rem; }
+.pie-income { color: var(--accent); font-size: .85rem; letter-spacing: .5px; font-weight: 600; }
+.pie-hint { color: var(--text-dim); font-size: .78rem; font-weight: 600; }
 
 .pie-tooltip {
   display: none;

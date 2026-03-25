@@ -205,6 +205,7 @@ socket.on("login_success", (data) => {
     document.getElementById("edit-cards-lobby-btn").classList.remove("hidden");
     document.getElementById("edit-board-lobby-btn").classList.remove("hidden");
     document.getElementById("edit-params-lobby-btn").classList.remove("hidden");
+    document.getElementById("fetch-data-lobby-btn").classList.remove("hidden");
   }
 });
 
@@ -243,7 +244,7 @@ function _applyGameScreenUI() {
     editCardsBtn.classList.remove("hidden");
     document.getElementById("edit-board-btn").classList.remove("hidden");
     document.getElementById("edit-params-btn").classList.remove("hidden");
-    document.getElementById("send-values-btn").classList.remove("hidden");
+    document.getElementById("fetch-data-btn").classList.remove("hidden");
   }
 }
 
@@ -377,8 +378,8 @@ function renderGameState(state) {
     const p = state.params;
     const bs = document.getElementById("buy-server-btn");
     const ba = document.getElementById("buy-ad-btn");
-    if (bs) bs.setAttribute("data-tip", `${p.buy_server_engineers ?? 1}🔧 + 💰${p.buy_server_money ?? 1}`);
-    if (ba) ba.setAttribute("data-tip", `${p.buy_ad_suits ?? 1}👔 + 💰${p.buy_ad_money ?? 1}`);
+    if (bs) bs.setAttribute("data-tip", `${p.buy_server_engineers ?? 1}🔧 + 💰$${p.buy_server_money ?? 1}M`);
+    if (ba) ba.setAttribute("data-tip", `${p.buy_ad_suits ?? 1}👔 + 💰$${p.buy_ad_money ?? 1}M`);
   }
   showPhaseArea(state.phase);
 
@@ -431,6 +432,8 @@ function renderGameState(state) {
   updateRegulationUI();
 
   draftYear.textContent = state.year;
+
+  renderPlayersCards(state);
 
   const me = state.players[myPlayerId];
   if (me) {
@@ -598,6 +601,60 @@ function renderHiringPhase() {
   updateTotal();
 }
 
+document.querySelectorAll(".hire-arrow").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const input = document.getElementById(btn.dataset.target);
+    if (!input) return;
+    let val = parseInt(input.value) || 0;
+    if (btn.classList.contains("hire-inc")) val++;
+    else val = Math.max(0, val - 1);
+    input.value = val;
+    input.dispatchEvent(new Event("input"));
+  });
+});
+
+// ── Universal number spinner ──────────────────────────────────
+// Wraps any <input type="number"> with ▲/▼ buttons in-place.
+// opts.min defaults to -Infinity (no floor); opts.step defaults to 1.
+function makeNumSpinner(input, opts = {}) {
+  const min = opts.min ?? -Infinity;
+  const step = opts.step ?? 1;
+
+  const wrap = document.createElement("div");
+  wrap.className = "num-spinner";
+
+  const dec = document.createElement("button");
+  dec.type = "button";
+  dec.className = "spin-arrow spin-dec";
+  dec.textContent = "▼";
+  dec.addEventListener("click", () => {
+    const nv = (parseFloat(input.value) || 0) - step;
+    if (nv >= min) {
+      input.value = nv;
+      input.dispatchEvent(new Event("input"));
+      input.dispatchEvent(new Event("change"));
+    }
+  });
+
+  const inc = document.createElement("button");
+  inc.type = "button";
+  inc.className = "spin-arrow spin-inc";
+  inc.textContent = "▲";
+  inc.addEventListener("click", () => {
+    input.value = (parseFloat(input.value) || 0) + step;
+    input.dispatchEvent(new Event("input"));
+    input.dispatchEvent(new Event("change"));
+  });
+
+  if (input.parentNode) {
+    input.parentNode.insertBefore(wrap, input);
+  }
+  wrap.appendChild(dec);
+  wrap.appendChild(input);
+  wrap.appendChild(inc);
+  return wrap;
+}
+
 document.getElementById("conclude-hiring-btn").addEventListener("click", () => {
   const eng = parseInt(document.getElementById("hire-engineers").value) || 0;
   const suits = parseInt(document.getElementById("hire-suits").value) || 0;
@@ -725,51 +782,70 @@ function findPayeesForFee(feeCardId) {
   return results;
 }
 
+function iOwnFeeCard(feeCardId) {
+  if (!feeCardId || !lastGameState) return false;
+  const me = lastGameState.players[myPlayerId];
+  return (me?.played_cards || []).some(c => c.id === feeCardId);
+}
+
 function showPaymentPopup(card, useOptional, callback) {
-  const needs = [];
   const cardCosts = card.costs || {};
-  if (cardCosts.fee && cardCosts.fee_card_id) {
-    const feePayees = findPayeesForFee(cardCosts.fee_card_id);
-    if (feePayees.length) needs.push({ res: "fee", payees: feePayees, label: `Fee (💰$${cardCosts.fee})` });
+  const hasFee = cardCosts.fee && cardCosts.fee_card_id;
+
+  // No fee needed: player owns the fee card, or nobody else has played it
+  if (hasFee && iOwnFeeCard(cardCosts.fee_card_id)) {
+    callback({});
+    return;
   }
-  if (needs.length === 0) { callback({}); return; }
+
+  const feePayees = hasFee ? findPayeesForFee(cardCosts.fee_card_id) : [];
+
+  // No payees at all — play for free (no one to pay)
+  if (!feePayees.length) { callback({}); return; }
 
   const overlay = document.createElement("div");
   overlay.className = "payment-popup-overlay";
   const popup = document.createElement("div");
   popup.className = "payment-popup";
-  popup.innerHTML = `<h3>Choose who to pay</h3>`;
 
-  const selections = {};
-  needs.forEach(({ res, payees, label }) => {
+  let payTo = {};
+
+  if (feePayees.length === 1) {
+    // Auto-select the single payee — just confirm
+    const { pid, name } = feePayees[0];
+    payTo = { fee: pid };
+    popup.innerHTML = `<h3>Fee payment</h3>
+      <p class="payment-info">You must pay <strong>💰$${cardCosts.fee}M</strong> to <strong>${name}</strong><br>
+      (they have played <em>${cardNameById(cardCosts.fee_card_id)}</em>).</p>`;
+  } else {
+    // Multiple payees — show dropdown
+    popup.innerHTML = `<h3>Choose who to pay the fee</h3>`;
     const row = document.createElement("div");
     row.className = "payment-row";
-    row.innerHTML = `<span class="payment-label">${label}:</span>`;
+    row.innerHTML = `<span class="payment-label">Fee (💰$${cardCosts.fee}M) → ${cardNameById(cardCosts.fee_card_id)}:</span>`;
     const sel = document.createElement("select");
     sel.className = "payment-select";
-    const bankOpt = document.createElement("option");
-    bankOpt.value = ""; bankOpt.textContent = "Bank (no player)";
-    sel.appendChild(bankOpt);
-    payees.forEach(({ pid, name }) => {
+    feePayees.forEach(({ pid, name }) => {
       const o = document.createElement("option");
       o.value = pid; o.textContent = name;
       sel.appendChild(o);
     });
-    selections[res] = sel;
     row.appendChild(sel);
     popup.appendChild(row);
-  });
+
+    // Override payTo on confirm
+    const origConfirm = () => { if (sel.value) payTo = { fee: sel.value }; };
+    sel.addEventListener("change", origConfirm);
+    payTo = { fee: feePayees[0].pid }; // default first
+    sel.addEventListener("change", () => { payTo = { fee: sel.value }; });
+  }
 
   const actions = document.createElement("div");
   actions.className = "payment-actions";
   const confirmBtn = document.createElement("button");
   confirmBtn.className = "btn btn-sm btn-accent";
-  confirmBtn.textContent = "Confirm";
+  confirmBtn.textContent = "Confirm & Play";
   confirmBtn.addEventListener("click", () => {
-    const payTo = {};
-    for (const [res, sel] of Object.entries(selections)) {
-      if (sel.value) payTo[res] = sel.value;
-    }
     overlay.remove();
     callback(payTo);
   });
@@ -801,6 +877,28 @@ function renderHand(hand) {
         socket.emit("play_card", { card_name: card.name, use_optional: {} });
       }
     });
+    // Show fee status hint on the card itself
+    if (hasFee) {
+      const feeCardId = costs.fee_card_id;
+      const owns = iOwnFeeCard(feeCardId);
+      const payees = findPayeesForFee(feeCardId);
+      const badge = document.createElement("div");
+      badge.className = "card-fee-status";
+      if (owns) {
+        badge.textContent = "💸 Fee waived (you own it)";
+        badge.classList.add("fee-waived");
+      } else if (payees.length === 0) {
+        badge.textContent = "💸 Fee: no one to pay";
+        badge.classList.add("fee-free");
+      } else if (payees.length === 1) {
+        badge.textContent = `💸 Fee → ${payees[0].name}`;
+        badge.classList.add("fee-due");
+      } else {
+        badge.textContent = `💸 Fee → choose player`;
+        badge.classList.add("fee-due");
+      }
+      el.appendChild(badge);
+    }
     handDiv.appendChild(el);
   });
 }
@@ -854,6 +952,67 @@ function renderPlayedCards(cards) {
 
     playedDiv.appendChild(div);
   });
+}
+
+// ── Players' Cards (other players' played cards) ────────────
+const playersCardsListDiv = document.getElementById("players-cards-list");
+const playerCardsModal = document.getElementById("player-cards-modal");
+const playerCardsModalTitle = document.getElementById("player-cards-modal-title");
+const playerCardsModalBody = document.getElementById("player-cards-modal-body");
+
+document.getElementById("close-player-cards-modal").addEventListener("click", () => playerCardsModal.classList.add("hidden"));
+playerCardsModal.addEventListener("click", (e) => { if (e.target === playerCardsModal) playerCardsModal.classList.add("hidden"); });
+
+function openPlayerCardsModal(pid) {
+  const state = lastGameState;
+  if (!state || !state.players || !state.players[pid]) return;
+  const p = state.players[pid];
+  const played = p.played_cards || [];
+
+  playerCardsModalTitle.textContent = `${p.name}'s Cards`;
+  playerCardsModalBody.innerHTML = "";
+
+  if (played.length === 0) {
+    playerCardsModalBody.innerHTML = '<div class="text-dim" style="padding:1rem;">No cards played yet.</div>';
+    playerCardsModal.classList.remove("hidden");
+    return;
+  }
+
+  CARD_TYPE_GROUPS.forEach(group => {
+    const matching = played.filter(c => c.card_type === group.key);
+    if (matching.length === 0) return;
+    const section = document.createElement("div");
+    section.className = "modal-section";
+    const h3 = document.createElement("h3");
+    h3.textContent = group.label;
+    section.appendChild(h3);
+    const grid = document.createElement("div");
+    grid.className = "hand-container";
+    matching.forEach(card => {
+      grid.appendChild(createCardElement(card));
+    });
+    section.appendChild(grid);
+    playerCardsModalBody.appendChild(section);
+  });
+
+  playerCardsModal.classList.remove("hidden");
+}
+
+function renderPlayersCards(state) {
+  if (!playersCardsListDiv) return;
+  playersCardsListDiv.innerHTML = "";
+  if (!state || !state.players) return;
+
+  for (const [pid, p] of Object.entries(state.players)) {
+    if (pid === myPlayerId) continue;
+    const played = p.played_cards || [];
+    const btn = document.createElement("button");
+    btn.className = "btn btn-sm player-cards-btn";
+    btn.style.borderLeft = `4px solid ${p.color || 'var(--text)'}`;
+    btn.textContent = `${p.name} (${played.length} cards)`;
+    btn.addEventListener("click", () => openPlayerCardsModal(pid));
+    playersCardsListDiv.appendChild(btn);
+  }
 }
 
 // ── Show Hand modal ─────────────────────────────────────────
@@ -918,7 +1077,7 @@ function renderResources(resources) {
     const div = document.createElement("div");
     div.className = "resource-item";
     if (RESOURCE_WIDE.has(key)) div.classList.add("resource-wide");
-    div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">${key === "money" ? "$" : ""}${val}</span>`;
+    div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">${key === "money" ? `$${val}M` : val}</span>`;
     resourcesDiv.appendChild(div);
   });
 }
@@ -1000,8 +1159,8 @@ function renderUsersPie() {
   const mpu = lastGameState?.params?.money_per_users ?? 20;
   const income = mpu > 0 ? Math.floor(myUsers / mpu) : 0;
   const nextThreshold = mpu > 0 ? (Math.floor(myUsers / mpu) + 1) * mpu : 0;
-  const hint = income === 0 ? `Need ${mpu}👥 for $1` : `${nextThreshold}👥 → $${income + 1}`;
-  info.innerHTML = `<strong>👥 ${myUsers}</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${income}/yr</span><br><span class="pie-hint">${hint}</span>`;
+  const hint = `${mpu * 10}M👥 → $1M/yr`;
+  info.innerHTML = `<strong>👥 ${myUsers * 10}M</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${income}M/yr</span><br><span class="pie-hint">${hint}</span>`;
 
   let pieTip = document.getElementById("pie-tooltip");
   if (!pieTip) {
@@ -1031,7 +1190,7 @@ function renderUsersPie() {
         const ea = end >= 0 ? end : end + 2 * Math.PI;
         if ((sa <= ea && a >= sa && a < ea) || (sa > ea && (a >= sa || a < ea))) {
           const pct = ((s.users / total) * 100).toFixed(1);
-          pieTip.textContent = `${s.name}: ${s.users} (${pct}%)`;
+          pieTip.textContent = `${s.name}: ${s.users * 10}M (${pct}%)`;
           pieTip.style.display = "block";
           pieTip.style.left = mx + 10 + "px";
           pieTip.style.top = my - 10 + "px";
@@ -1092,9 +1251,20 @@ function renderProduction(production) {
     const div = document.createElement("div");
     div.className = "resource-item";
     if (PRODUCTION_WIDE.has(key)) div.classList.add("resource-wide");
-    div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">+${val}</span>`;
+    const prefix = key === "HR" ? "+" : "";
+    div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">${prefix}${val}</span>`;
+
     productionDiv.appendChild(div);
   });
+
+  // Show money production only when non-zero (from factory_refund)
+  const moneyProd = production["money"] ?? 0;
+  if (moneyProd > 0) {
+    const div = document.createElement("div");
+    div.className = "resource-item resource-wide";
+    div.innerHTML = `<span class="label">💰 Factory income</span><span class="value">$${moneyProd}M/yr</span>`;
+    productionDiv.appendChild(div);
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -1137,9 +1307,9 @@ function cardNameById(id) {
 const CARD_SUBTYPE_EMOJIS = {
   "social platform":          "📱",
   "hardware manufacturer":    "🏭",
-  "software service provider":"💻",
+  "software service":         "💻",
   "online marketplace":       "🛒",
-  "search engine":            "🔍",
+  "search service":           "🔍",
   "store":                    "🏪",
   "power plant":              "⚡",
   "data center":              "🖥️",
@@ -1248,7 +1418,7 @@ function createCardElement(card, options = {}) {
     const feeAmt = costs.fee || 0;
     const feeTarget = costs.fee_card_id;
     if (feeAmt && feeTarget) {
-      costsHtml += `<span class="card-cost-item card-cost-fee">💰${feeAmt} → ${cardNameById(feeTarget)}</span>`;
+      costsHtml += `<span class="card-cost-item card-cost-fee">💸 $${feeAmt}M → <em>${cardNameById(feeTarget)}</em> owner</span>`;
     }
     costsHtml += `</div>`;
   } else if (card.cost) {
@@ -1285,17 +1455,17 @@ const paramsModal = document.getElementById("params-modal");
 const paramsBody = document.getElementById("params-body");
 
 const PARAM_LABELS = {
-  total_users: "Total Users in Pool",
-  money_per_users: "Users per $1/year",
+  total_users: "Total Users in Pool (×10M)",
+  money_per_users: "Users per $1M/year",
   projects_draw: "Cards from Projects Deck",
   boosters_draw: "Cards from Boosters Deck",
   draft_cost: "Cost to Keep a Card ($)",
   cards_per_turn: "Cards Playable per Turn",
   company_offers: "Company Cards per Player",
   buy_server_engineers: "Buy Server: Engineers",
-  buy_server_money: "Buy Server: Money",
+  buy_server_money: "Buy Server: Money ($M)",
   buy_ad_suits: "Buy Ad: Suits",
-  buy_ad_money: "Buy Ad: Money",
+  buy_ad_money: "Buy Ad: Money ($M)",
   reputation_max: "Reputation Max",
   reputation_min: "Reputation Min",
 };
@@ -1323,7 +1493,7 @@ function renderParamsForm(params) {
       currentParams[key] = Number(input.value);
     });
     row.appendChild(label);
-    row.appendChild(input);
+    row.appendChild(makeNumSpinner(input, { min: 0 }));
     form.appendChild(row);
   }
 
@@ -1355,8 +1525,8 @@ function renderParamsForm(params) {
       currentParams.reputation_thresholds[i].modifier = Number(modInput.value);
     });
     row.appendChild(label);
-    row.appendChild(repInput);
-    row.appendChild(modInput);
+    row.appendChild(makeNumSpinner(repInput));
+    row.appendChild(makeNumSpinner(modInput));
     form.appendChild(row);
   });
 
@@ -1390,13 +1560,91 @@ socket.on("params_data", (data) => {
   paramsModal.classList.remove("hidden");
 });
 
-document.getElementById("send-values-btn").addEventListener("click", () => {
-  showConfirmDialog(
-    "Send all YAML files to your laptop?",
-    () => socket.emit("send_values"),
-    { detail: "This will run the sync script.", confirmText: "Send" }
-  );
-});
+// ── Fetch Data (browser writes to local filesystem) ─────────
+let _fetchDataDirHandle = null;
+const _IDB_NAME = "technopoly";
+const _IDB_STORE = "handles";
+
+function _openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(_IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(_IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function _saveHandle(handle) {
+  const db = await _openIDB();
+  const tx = db.transaction(_IDB_STORE, "readwrite");
+  tx.objectStore(_IDB_STORE).put(handle, "dataDir");
+  return new Promise(r => { tx.oncomplete = r; });
+}
+async function _loadHandle() {
+  const db = await _openIDB();
+  const tx = db.transaction(_IDB_STORE, "readonly");
+  const req = tx.objectStore(_IDB_STORE).get("dataDir");
+  return new Promise(r => { req.onsuccess = () => r(req.result || null); });
+}
+
+async function _getDirHandle() {
+  if (_fetchDataDirHandle) {
+    const perm = await _fetchDataDirHandle.queryPermission({ mode: "readwrite" });
+    if (perm === "granted") return _fetchDataDirHandle;
+    const req = await _fetchDataDirHandle.requestPermission({ mode: "readwrite" });
+    if (req === "granted") return _fetchDataDirHandle;
+  }
+  const saved = await _loadHandle();
+  if (saved) {
+    const perm = await saved.requestPermission({ mode: "readwrite" });
+    if (perm === "granted") { _fetchDataDirHandle = saved; return saved; }
+  }
+  const picked = await window.showDirectoryPicker({ mode: "readwrite" });
+  _fetchDataDirHandle = picked;
+  await _saveHandle(picked);
+  return picked;
+}
+
+async function _doFetchData() {
+  if (!window.showDirectoryPicker) {
+    showFloatingError("This browser does not support direct file writing. Use Chrome or Edge.");
+    return;
+  }
+  try {
+    const dirHandle = await _getDirHandle();
+    const password = _savedCredentials?.password || "";
+    const resp = await fetch("/api/fetch_data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password })
+    });
+    if (!resp.ok) { showFloatingError("Fetch failed: unauthorized or server error."); return; }
+    const data = await resp.json();
+
+    const cardsDir = await dirHandle.getDirectoryHandle("cards", { create: true });
+    for (const [name, content] of Object.entries(data.cards || {})) {
+      const fh = await cardsDir.getFileHandle(name, { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(content);
+      await writable.close();
+    }
+    if (data.params) {
+      const fh = await dirHandle.getFileHandle("params.yaml", { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(data.params);
+      await writable.close();
+    }
+    showFloatingSuccess("✓ Data fetched and saved locally.");
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    showFloatingError(`Fetch error: ${e.message}`);
+  }
+}
+
+document.getElementById("fetch-data-btn").addEventListener("click", _doFetchData);
+document.getElementById("fetch-data-lobby-btn").addEventListener("click", _doFetchData);
+document.getElementById("fetch-data-card-editor").addEventListener("click", _doFetchData);
+document.getElementById("fetch-data-board-editor").addEventListener("click", _doFetchData);
+document.getElementById("fetch-data-params-editor").addEventListener("click", _doFetchData);
 
 // ── End / Restart game ──────────────────────────────────────
 endGameBtn.addEventListener("click", () => {
@@ -1435,8 +1683,14 @@ document.getElementById("buy-ad-btn").addEventListener("click", () => {
 // ── Error toast ─────────────────────────────────────────────
 function showFloatingError(msg) {
   gameError.textContent = msg;
+  gameError.classList.remove("floating-success");
   gameError.classList.add("visible");
   setTimeout(() => gameError.classList.remove("visible"), 3000);
+}
+function showFloatingSuccess(msg) {
+  gameError.textContent = msg;
+  gameError.classList.add("floating-success", "visible");
+  setTimeout(() => { gameError.classList.remove("visible", "floating-success"); }, 4000);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1732,14 +1986,25 @@ function renderEditorForm() {
   fields.className = "editor-fields";
 
   const EDITOR_HIDDEN_FIELDS = new Set(["image", "starting_tiles"]);
+  const ALWAYS_SHOW_FIELDS = ["factory_refund", "dc_production_bonus"];
+  const renderedKeys = new Set();
+
   for (const [key, value] of Object.entries(card)) {
     if (EDITOR_HIDDEN_FIELDS.has(key)) continue;
+    renderedKeys.add(key);
     if (key === "boosts") {
       fields.appendChild(buildBoostsField(value || []));
     } else if (DICT_FIELDS.has(key) && value && typeof value === "object") {
       fields.appendChild(buildDictField(key, value));
     } else {
       fields.appendChild(buildSimpleField(key, value));
+    }
+  }
+
+  // Always show these fields even if absent from the card data
+  for (const key of ALWAYS_SHOW_FIELDS) {
+    if (!renderedKeys.has(key)) {
+      fields.appendChild(buildSimpleField(key, null));
     }
   }
 
@@ -1751,6 +2016,7 @@ function renderEditorForm() {
     const cardData = collectFormData(fields, card);
     socket.emit("save_card", { card_type: cardType, index, card_data: cardData });
     editingKey = null;
+    setTimeout(() => socket.emit("get_all_cards"), 300);
   }
 
   const backBtn = document.createElement("button");
@@ -1787,6 +2053,19 @@ function renderEditorForm() {
   editorBody.appendChild(form);
 }
 
+const FIELD_OPTIONS = {
+  build: [null, "ad_campaign", "data_center", "factory", "lobby_group", "office", "power_plant", "store"],
+  type: [
+    null,
+    "social platform", "hardware manufacturer", "software service",
+    "online marketplace", "search service", "store", "power plant",
+    "data center", "office", "ad campaign",
+  ],
+};
+
+// Fields that are always numeric (even when their current value is null)
+const NUMERIC_FIELDS = new Set(["factory_refund", "dc_production_bonus"]);
+
 function buildSimpleField(key, value) {
   const row = document.createElement("div");
   row.className = "editor-field";
@@ -1795,7 +2074,18 @@ function buildSimpleField(key, value) {
   label.textContent = key;
   row.appendChild(label);
 
-  if (key === "description") {
+  if (FIELD_OPTIONS[key]) {
+    const sel = document.createElement("select");
+    sel.dataset.fieldKey = key;
+    FIELD_OPTIONS[key].forEach(opt => {
+      const o = document.createElement("option");
+      o.value = opt ?? "";
+      o.textContent = opt ?? "(none)";
+      if ((value ?? null) === opt) o.selected = true;
+      sel.appendChild(o);
+    });
+    row.appendChild(sel);
+  } else if (key === "description") {
     const ta = document.createElement("textarea");
     ta.dataset.fieldKey = key;
     ta.value = value ?? "";
@@ -1804,9 +2094,9 @@ function buildSimpleField(key, value) {
   } else {
     const input = document.createElement("input");
     input.dataset.fieldKey = key;
-    input.type = typeof value === "number" ? "number" : "text";
+    const isNum = typeof value === "number" || NUMERIC_FIELDS.has(key) || key === "id";
+    input.type = isNum ? "number" : "text";
     input.value = value ?? "";
-    if (key === "id") input.readOnly = true;
     row.appendChild(input);
   }
 
@@ -1872,7 +2162,11 @@ function buildDictRow(k, v, keyOptions) {
   removeBtn.addEventListener("click", () => row.remove());
 
   row.appendChild(keyEl);
-  row.appendChild(valInput);
+  if (valInput.type === "number") {
+    row.appendChild(makeNumSpinner(valInput));
+  } else {
+    row.appendChild(valInput);
+  }
   row.appendChild(removeBtn);
   return row;
 }
@@ -1919,7 +2213,7 @@ function buildBoostEntry(boost) {
   removeEntry.textContent = "\u00d7";
   removeEntry.addEventListener("click", () => entry.remove());
   tidRow.appendChild(tidLabel);
-  tidRow.appendChild(tidInput);
+  tidRow.appendChild(makeNumSpinner(tidInput, { min: 0 }));
   tidRow.appendChild(removeEntry);
   entry.appendChild(tidRow);
 
@@ -1950,11 +2244,13 @@ function collectFormData(fieldsEl, originalCard) {
   const data = {};
 
   fieldsEl.querySelectorAll(":scope > .editor-field").forEach(row => {
-    const input = row.querySelector("input, textarea");
-    if (!input) return;
-    const key = input.dataset.fieldKey;
-    let val = input.value;
-    if (input.type === "number") {
+    const el = row.querySelector("input, textarea, select");
+    if (!el) return;
+    const key = el.dataset.fieldKey;
+    let val = el.value;
+    if (el.tagName === "SELECT") {
+      val = val === "" ? null : val;
+    } else if (el.type === "number") {
       val = val === "" ? 0 : Number(val);
     } else if (val === "" || val === "null") {
       val = null;
@@ -2904,7 +3200,7 @@ function _boardResRow(key, value) {
   inp.value = value;
   inp.className = "board-form-input";
   inp.style.width = "60px";
-  row.appendChild(inp);
+  row.appendChild(makeNumSpinner(inp, { min: 0 }));
 
   const del = document.createElement("button");
   del.className = "btn btn-sm btn-danger-sm";
