@@ -50,13 +50,9 @@ _SPECIAL = {
     (7, 9):  {"terrain": "lake",       "name": "Everglades"},
 }
 
-_DEFAULT_ADJACENCY = {
-    "city":       {"users": 2, "suits": 1},
-    "lake":       {"money": 1, "servers": 1},
-    "government": {"reputation": 2},
-}
+_DEFAULT_ADJACENCY: dict = {}
 
-VALID_TERRAINS = {"empty", "city", "lake", "government", "industrial", "commercial"}
+VALID_TERRAINS = {"empty", "city", "lake", "sea", "government", "industrial", "commercial"}
 
 
 def _make_tile(row: int, col: int, terrain: str = "empty",
@@ -109,7 +105,7 @@ class Board:
             t["adjacency_bonuses"] = dict(_DEFAULT_ADJACENCY[terrain])
         return True
 
-    MAX_ROWS = 10
+    MAX_ROWS = 14
 
     def add_tile(self, row: int, col: int) -> bool:
         if (row, col) in self._tiles:
@@ -191,7 +187,7 @@ class Board:
         if not t or t["placed_tile"] is not None:
             return False
         terrain = t["terrain"]
-        if terrain in ("lake", "government", "city"):
+        if terrain in ("lake", "sea", "government", "city"):
             return False
         if terrain == "empty":
             return True

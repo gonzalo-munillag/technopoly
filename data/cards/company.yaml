@@ -3,33 +3,37 @@
 # ============================================================
 
 - name: NovaTech TEST
-  id: 1
+  id: 901
   tag: startup
   description: A scrappy tech startup with big ambitions and a garage full of energy
     drinks.
+  factory_refund: 0
+  dc_production_bonus: 0
   starting_resources:
-    engineers: 2
-    suits: 1
-    ads: 2
-    money: 3
-    servers: 1
+    engineers: 50
+    suits: 50
+    ads: 50
+    money: 3000
+    servers: 50
     reputation: 0
     users: 0
   starting_production:
     HR: 1
     data_centers: 1
-    ad_campaigns: 0
+    ad_campaigns: 1
   boosts: null
 - name: OmniCorp NEW TEST
-  id: 2
+  id: 902
   tag: megacorp
   description: An established corporation with deep pockets and deeper bureaucracy.
+  factory_refund: 0
+  dc_production_bonus: 0
   starting_resources:
-    engineers: 1
-    suits: 2
-    ads: 1
-    money: 30
-    servers: 2
+    engineers: 100
+    suits: 100
+    ads: 100
+    money: 3000
+    servers: 200
     reputation: 3
     users: 5
   starting_production:
@@ -38,53 +42,56 @@
     ad_campaigns: 1
   boosts: null
 - name: ViralWave
-  id: 4
+  id: 903
   tag: social
   description: Social media disruptor. Engagement is their drug, attention their currency.
+  factory_refund: 0
+  dc_production_bonus: 0
   starting_resources:
-    engineers: 1
-    suits: 1
-    ads: 3
-    money: 12
-    servers: 1
-    reputation: 2
+    engineers: 200
+    suits: 100
+    ads: 300
+    money: 1500
+    servers: 100
+    reputation: 200
     users: 8
   starting_production:
     HR: 1
-    data_centers: 0
+    data_centers: 1
     ad_campaigns: 2
   boosts: null
 - name: DeepMind Industries
-  id: 6
+  id: 904
   tag: ai
   description: An AI research lab turned corporate juggernaut. Their algorithms know
     you better than you know yourself.
-  image: null
+  factory_refund: 0
+  dc_production_bonus: 0
   starting_resources:
-    engineers: 3
-    suits: 0
-    ads: 0
-    money: 20
-    servers: 3
+    engineers: 300
+    suits: 100
+    ads: 100
+    money: 6000
+    servers: 300
     reputation: 1
     users: 2
   starting_production:
     HR: 1
     data_centers: 2
     ad_campaigns: 0
-  starting_tiles:
-  - data_center
-  - data_center
+  boosts: null
 - name: IronGate
-  id: 5
+  id: 905
   tag: cybersec
   description: Cybersecurity firm forged in paranoia. Trust no one, encrypt everything.
+  factory_refund: 0
+  dc_production_bonus: 0
   starting_resources:
-    engineers: 2
-    suits: 2
-    ads: 0
-    money: 18
-    servers: 2
+    engineers: 200
+    suits: 200
+    ads: 200
+    money: 5000
+    servers: 200
     reputation: 6
     users: 1
   starting_production:
@@ -93,20 +100,22 @@
     ad_campaigns: 0
   boosts: null
 - name: GreenByte
-  id: 3
+  id: 906
   tag: cleantech
   description: Sustainable tech venture turning sunlight into server uptime and good
     PR.
+  factory_refund: 0
+  dc_production_bonus: 0
   starting_resources:
-    engineers: 2
-    suits: 1
-    ads: 1
-    money: 15
+    engineers: 200
+    suits: 100
+    ads: 100
+    money: 2000
     servers: 0
     reputation: 7
     users: 3
   starting_production:
     HR: 2
-    data_centers: 0
+    data_centers: 1
     ad_campaigns: 1
   boosts: null

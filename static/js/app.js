@@ -421,6 +421,13 @@ function renderGameState(state) {
   }
 
   if (state.phase === "hiring") {
+    // Clear dirty flag when entering hiring phase so dials start fresh each year
+    if (lastGameState?.phase !== "hiring") {
+      const hireEng = document.getElementById("hire-engineers");
+      const hireSuit = document.getElementById("hire-suits");
+      if (hireEng) delete hireEng.dataset.dirty;
+      if (hireSuit) delete hireSuit.dataset.dirty;
+    }
     renderHiringPhase();
   }
 
@@ -509,7 +516,7 @@ function renderDraft(pool, draftedFuckups) {
       const keepBtn = document.createElement("button");
       keepBtn.className = "btn btn-sm btn-keep";
       const draftCost = lastGameState?.params?.draft_cost ?? 3;
-      keepBtn.textContent = `Keep (${draftCost} money)`;
+      keepBtn.textContent = `Keep ($${draftCost}M)`;
       keepBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         socket.emit("keep_card", { card_name: card.name });
@@ -596,8 +603,16 @@ function renderHiringPhase() {
   hireSuit.onchange = updateTotal;
   hireEng.oninput = updateTotal;
   hireSuit.oninput = updateTotal;
-  hireEng.value = 0;
-  hireSuit.value = 0;
+  // Only reset dials if the player hasn't touched them yet (data-dirty not set).
+  // This prevents another player's submission from wiping a player's own choices.
+  if (!hireEng.dataset.dirty) hireEng.value = 0;
+  if (!hireSuit.dataset.dirty) hireSuit.value = 0;
+  const markDirty = () => {
+    hireEng.dataset.dirty = "1";
+    hireSuit.dataset.dirty = "1";
+  };
+  hireEng.addEventListener("input", markDirty, { once: true });
+  hireSuit.addEventListener("input", markDirty, { once: true });
   updateTotal();
 }
 
@@ -656,8 +671,13 @@ function makeNumSpinner(input, opts = {}) {
 }
 
 document.getElementById("conclude-hiring-btn").addEventListener("click", () => {
-  const eng = parseInt(document.getElementById("hire-engineers").value) || 0;
-  const suits = parseInt(document.getElementById("hire-suits").value) || 0;
+  const hireEng = document.getElementById("hire-engineers");
+  const hireSuit = document.getElementById("hire-suits");
+  const eng = parseInt(hireEng.value) || 0;
+  const suits = parseInt(hireSuit.value) || 0;
+  // Clear dirty flag so next year's dials start at 0
+  delete hireEng.dataset.dirty;
+  delete hireSuit.dataset.dirty;
   socket.emit("submit_hiring", { engineers: eng, suits });
 });
 
@@ -670,10 +690,10 @@ function renderRegulation(card) {
   regulationDisplay.innerHTML = "";
   const el = createCardElement(card);
   const compText = Object.entries(card.compliance || card.penalty || {})
-    .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`)
+    .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`)
     .join(", ");
   const courtText = Object.entries(card.court_penalty || {})
-    .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`)
+    .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`)
     .join(", ");
   const threshold = card.court_threshold || 4;
   const winPct = Math.round(((7 - threshold) / 6) * 100);
@@ -694,9 +714,9 @@ function renderRegulation(card) {
 socket.on("regulation_alert", (data) => {
   if (data.affected) {
     const compText = Object.entries(data.compliance)
-      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(", ");
+      .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
     const courtText = Object.entries(data.court_penalty)
-      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(", ");
+      .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
     const winPct = Math.round(((7 - data.court_threshold) / 6) * 100);
     const losePct = 100 - winPct;
     const targeted = (data.targeted_cards || []).map(c => c.name).join(", ");
@@ -740,14 +760,14 @@ socket.on("regulation_result", (data) => {
   const lostMsg = lostCards.length ? `<p>Lost card(s): <strong>${lostCards.join(", ")}</strong></p>` : "";
   if (data.action === "accept") {
     const compText = Object.entries(data.compliance || data.penalty || {})
-      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(", ");
+      .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
     regulationResultBox.innerHTML = `<p>You accepted the compliance: ${compText}</p>${lostMsg}`;
   } else {
     const result = data.won ? "Won" : "Lost";
     let msg = `<p>Court roll: <strong>${data.roll}</strong> (needed ${data.threshold}+) — <strong>${result}!</strong></p>`;
     if (!data.won) {
       const courtText = Object.entries(data.penalty || {})
-        .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(", ");
+        .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
       msg += `<p>Court penalty applied: ${courtText}</p>${lostMsg}`;
     } else {
       msg += `<p>No penalty — you beat the case and keep your cards!</p>`;
@@ -771,12 +791,36 @@ regStartYearBtn.addEventListener("click", () => {
 });
 
 // ── Hand (player turns) ────────────────────────────────────
+function canAffordCard(card) {
+  const resources = lastPrivateState?.resources || {};
+  const costs = card.costs || {};
+  const COST_SKIP = new Set(["fee", "fee_card_id", "payee_card_id"]);
+  let totalMoney = 0;
+
+  if (Object.keys(costs).length === 0) {
+    // No costs dict — use card.cost (base keep cost)
+    totalMoney = card.cost || 0;
+  } else {
+    for (const [res, amt] of Object.entries(costs)) {
+      if (!amt || COST_SKIP.has(res)) continue;
+      if (res === "money") { totalMoney += amt; continue; }
+      if ((resources[res] ?? 0) < amt) return false;
+    }
+  }
+  // Add fee if the player doesn't own the fee card
+  if (costs.fee && !iOwnFeeCard(costs.fee_card_id)) {
+    totalMoney += costs.fee;
+  }
+  return totalMoney <= (resources.money ?? 0);
+}
+
 function findPayeesForFee(feeCardId) {
   if (!feeCardId || !lastGameState) return [];
+  const targetId = Number(feeCardId);  // normalise to number for safe comparison
   const results = [];
   for (const [pid, p] of Object.entries(lastGameState.players)) {
     if (pid === myPlayerId) continue;
-    const has = (p.played_cards || []).some(c => c.id === feeCardId);
+    const has = (p.played_cards || []).some(c => Number(c.id) === targetId);
     if (has) results.push({ pid, name: p.name });
   }
   return results;
@@ -784,78 +828,88 @@ function findPayeesForFee(feeCardId) {
 
 function iOwnFeeCard(feeCardId) {
   if (!feeCardId || !lastGameState) return false;
+  const targetId = Number(feeCardId);
   const me = lastGameState.players[myPlayerId];
-  return (me?.played_cards || []).some(c => c.id === feeCardId);
+  return (me?.played_cards || []).some(c => Number(c.id) === targetId);
 }
 
 function showPaymentPopup(card, useOptional, callback) {
   const cardCosts = card.costs || {};
   const hasFee = cardCosts.fee && cardCosts.fee_card_id;
 
-  // No fee needed: player owns the fee card, or nobody else has played it
+  // Fee waived — player already owns the fee card
   if (hasFee && iOwnFeeCard(cardCosts.fee_card_id)) {
     callback({});
     return;
   }
 
-  const feePayees = hasFee ? findPayeesForFee(cardCosts.fee_card_id) : [];
+  // No fee at all — play immediately
+  if (!hasFee) { callback({}); return; }
 
-  // No payees at all — play for free (no one to pay)
-  if (!feePayees.length) { callback({}); return; }
+  const feePayees = findPayeesForFee(cardCosts.fee_card_id);
+  const feeAmt = cardCosts.fee;
+  const feeCardName = cardNameById(cardCosts.fee_card_id);
 
   const overlay = document.createElement("div");
   overlay.className = "payment-popup-overlay";
   const popup = document.createElement("div");
   popup.className = "payment-popup";
 
-  let payTo = {};
+  const title = document.createElement("h3");
+  title.textContent = "Fee Payment";
+  popup.appendChild(title);
 
-  if (feePayees.length === 1) {
-    // Auto-select the single payee — just confirm
-    const { pid, name } = feePayees[0];
-    payTo = { fee: pid };
-    popup.innerHTML = `<h3>Fee payment</h3>
-      <p class="payment-info">You must pay <strong>💰$${cardCosts.fee}M</strong> to <strong>${name}</strong><br>
-      (they have played <em>${cardNameById(cardCosts.fee_card_id)}</em>).</p>`;
+  if (feePayees.length === 0) {
+    // No one has the fee card — fee goes to the bank
+    const info = document.createElement("p");
+    info.className = "payment-info";
+    info.innerHTML = `No player has played <em>${feeCardName}</em> yet.<br>
+      Your fee of <strong>💰$${feeAmt}M</strong> goes to the <strong>bank</strong> (no one receives it).`;
+    popup.appendChild(info);
+
+    const actions = document.createElement("div");
+    actions.className = "payment-actions";
+    const confirmBtn = document.createElement("button");
+    confirmBtn.className = "btn btn-sm btn-accent";
+    confirmBtn.textContent = "Pay to Bank & Play";
+    confirmBtn.addEventListener("click", () => { overlay.remove(); callback({}); });
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn btn-sm";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", () => overlay.remove());
+    actions.appendChild(confirmBtn);
+    actions.appendChild(cancelBtn);
+    popup.appendChild(actions);
+
   } else {
-    // Multiple payees — show dropdown
-    popup.innerHTML = `<h3>Choose who to pay the fee</h3>`;
-    const row = document.createElement("div");
-    row.className = "payment-row";
-    row.innerHTML = `<span class="payment-label">Fee (💰$${cardCosts.fee}M) → ${cardNameById(cardCosts.fee_card_id)}:</span>`;
-    const sel = document.createElement("select");
-    sel.className = "payment-select";
+    // One or more payees — player clicks a name button to pay and play
+    const info = document.createElement("p");
+    info.className = "payment-info";
+    info.innerHTML = feePayees.length === 1
+      ? `You owe <strong>💰$${feeAmt}M</strong> for <em>${feeCardName}</em>.<br>Click the player below to pay and play:`
+      : `You owe <strong>💰$${feeAmt}M</strong> for <em>${feeCardName}</em>.<br>Choose who receives the fee:`;
+    popup.appendChild(info);
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "payment-player-btns";
     feePayees.forEach(({ pid, name }) => {
-      const o = document.createElement("option");
-      o.value = pid; o.textContent = name;
-      sel.appendChild(o);
+      const btn = document.createElement("button");
+      btn.className = "btn btn-sm payment-player-btn";
+      btn.textContent = `💰 Pay ${name}`;
+      btn.addEventListener("click", () => { overlay.remove(); callback({ fee: pid }); });
+      btnRow.appendChild(btn);
     });
-    row.appendChild(sel);
-    popup.appendChild(row);
+    popup.appendChild(btnRow);
 
-    // Override payTo on confirm
-    const origConfirm = () => { if (sel.value) payTo = { fee: sel.value }; };
-    sel.addEventListener("change", origConfirm);
-    payTo = { fee: feePayees[0].pid }; // default first
-    sel.addEventListener("change", () => { payTo = { fee: sel.value }; });
+    const actions = document.createElement("div");
+    actions.className = "payment-actions";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn btn-sm";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", () => overlay.remove());
+    actions.appendChild(cancelBtn);
+    popup.appendChild(actions);
   }
-
-  const actions = document.createElement("div");
-  actions.className = "payment-actions";
-  const confirmBtn = document.createElement("button");
-  confirmBtn.className = "btn btn-sm btn-accent";
-  confirmBtn.textContent = "Confirm & Play";
-  confirmBtn.addEventListener("click", () => {
-    overlay.remove();
-    callback(payTo);
-  });
-  const cancelBtn = document.createElement("button");
-  cancelBtn.className = "btn btn-sm";
-  cancelBtn.textContent = "Cancel";
-  cancelBtn.addEventListener("click", () => overlay.remove());
-  actions.appendChild(confirmBtn);
-  actions.appendChild(cancelBtn);
-  popup.appendChild(actions);
 
   overlay.appendChild(popup);
   document.body.appendChild(overlay);
@@ -869,6 +923,10 @@ function renderHand(hand) {
     const hasFee = costs.fee && costs.fee_card_id;
 
     el.addEventListener("click", () => {
+      if (!canAffordCard(card)) {
+        showFloatingError("Not enough resources to play this card.");
+        return;
+      }
       if (hasFee) {
         showPaymentPopup(card, {}, (payTo) => {
           socket.emit("play_card", { card_name: card.name, use_optional: {}, pay_to: payTo });
@@ -1128,11 +1186,7 @@ function renderUsersPie() {
     ctx.arc(cx, cy, innerR, a1, a0, true);
     ctx.closePath();
 
-    const grad = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
-    const base = s.color;
-    grad.addColorStop(0, base);
-    grad.addColorStop(1, darkenColor(base, 0.25));
-    ctx.fillStyle = grad;
+    ctx.fillStyle = s.color;
     ctx.fill();
 
     ctx.strokeStyle = "#0a0a0a";
@@ -1159,8 +1213,8 @@ function renderUsersPie() {
   const mpu = lastGameState?.params?.money_per_users ?? 20;
   const income = mpu > 0 ? Math.floor(myUsers / mpu) : 0;
   const nextThreshold = mpu > 0 ? (Math.floor(myUsers / mpu) + 1) * mpu : 0;
-  const hint = `${mpu * 10}M👥 → $1M/yr`;
-  info.innerHTML = `<strong>👥 ${myUsers * 10}M</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${income}M/yr</span><br><span class="pie-hint">${hint}</span>`;
+  const hint = `${mpu}M👥 → $1M/yr`;
+  info.innerHTML = `<strong>👥 ${myUsers}M</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${income}M/yr</span><br><span class="pie-hint">${hint}</span>`;
 
   let pieTip = document.getElementById("pie-tooltip");
   if (!pieTip) {
@@ -1190,7 +1244,7 @@ function renderUsersPie() {
         const ea = end >= 0 ? end : end + 2 * Math.PI;
         if ((sa <= ea && a >= sa && a < ea) || (sa > ea && (a >= sa || a < ea))) {
           const pct = ((s.users / total) * 100).toFixed(1);
-          pieTip.textContent = `${s.name}: ${s.users * 10}M (${pct}%)`;
+          pieTip.textContent = `${s.name}: ${s.users}M (${pct}%)`;
           pieTip.style.display = "block";
           pieTip.style.left = mx + 10 + "px";
           pieTip.style.top = my - 10 + "px";
@@ -1285,6 +1339,13 @@ function emojiRes(name) {
   return RES_EMOJI[name] || name.replace(/_/g, " ");
 }
 
+// Format a resource value for display. Users and money are in M units.
+function fmtCardVal(key, val) {
+  if (key === "users") return `${val}M`;
+  if (key === "money") return `${val}M`;
+  return val;
+}
+
 let cardNamesById = {};
 function rebuildCardIndex() {
   cardNamesById = {};
@@ -1305,16 +1366,33 @@ function cardNameById(id) {
 
 // ── Card element builder ────────────────────────────────────
 const CARD_SUBTYPE_EMOJIS = {
-  "social platform":          "📱",
+  "social platform":          "🐦",
   "hardware manufacturer":    "🏭",
-  "software service":         "💻",
+  "software service":         "📜",
+  "software platform":        "🤖",
+  "software engine":          "⚙️",
   "online marketplace":       "🛒",
   "search service":           "🔍",
   "store":                    "🏪",
   "power plant":              "⚡",
-  "data center":              "🖥️",
+  "data center":              "🗄️",
   "office":                   "🏢",
   "ad campaign":              "📢",
+};
+
+const CARD_TYPE_TINTS = {
+  "social platform":       "#1a2a3e",  // dark blue
+  "hardware manufacturer": "#1a1a1a",  // near black
+  "software service":      "#3a1515",  // dark red
+  "software platform":     "#251a3a",  // dark purple
+  "software engine":       "#0f2a2a",  // dark aquamarine
+  "online marketplace":    "#2e1a0a",  // dark orange
+  "search service":        "#0f2a18",  // dark green
+  "store":                 "#252525",  // dark neutral
+  "power plant":           "#1e1208",  // dark brown
+  "data center":           "#1a1e22",  // dark slate
+  "office":                "#0f1a3a",  // dark royal blue
+  "ad campaign":           "#2e0f1e",  // dark pink
 };
 
 const CARD_DECK_EMOJIS = {
@@ -1330,13 +1408,15 @@ function createCardElement(card, options = {}) {
   const el = document.createElement("div");
   el.className = "game-card";
 
-  const colorType = card.card_color_type || card.type || "";
+  const colorType = (card.card_color_type || card.type || "").toString().toLowerCase();
   const deckType = card.card_type || options.deckType || "";
-  const typeEmoji = CARD_SUBTYPE_EMOJIS[colorType.toLowerCase()]
+  const typeEmoji = CARD_SUBTYPE_EMOJIS[colorType]
     || CARD_DECK_EMOJIS[deckType]
     || "";
 
   if (deckType === "fuck_up") el.classList.add("fuckup-card");
+  const tintColor = CARD_TYPE_TINTS[colorType];
+  if (tintColor) el.style.background = tintColor;
 
   const stripe = typeEmoji
     ? `<div class="card-type-emoji" title="${colorType || deckType}">${typeEmoji}</div>`
@@ -1356,16 +1436,16 @@ function createCardElement(card, options = {}) {
       .filter(([k, v]) => v && k !== "payee_card_id");
     if (effectEntries.length) {
       effectsHtml = `<div class="card-effects"><span class="card-section-label">Effects</span><span class="card-effects-row">`;
-      effectsHtml += effectEntries.map(([k, v]) => `<span class="card-effect-item">${v > 0 ? "+" : ""}${v} ${emojiRes(k)}</span>`).join("");
+      effectsHtml += effectEntries.map(([k, v]) => `<span class="card-effect-item">${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}</span>`).join("");
       effectsHtml += `</span></div>`;
     }
   } else {
     const prodText = Object.entries(card.production || {})
       .filter(([, v]) => v > 0)
-      .map(([k, v]) => `+${v} ${emojiRes(k)}/yr`).join(", ");
+      .map(([k, v]) => `+${fmtCardVal(k, v)} ${emojiRes(k)}/yr`).join(", ");
     const immText = Object.entries(card.immediate || {})
       .filter(([, v]) => v !== 0)
-      .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(", ");
+      .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
     if (prodText) effectsHtml += `<div class="card-production">${prodText}</div>`;
     if (immText) effectsHtml += `<div class="card-immediate">${immText}</div>`;
   }
@@ -1375,11 +1455,21 @@ function createCardElement(card, options = {}) {
   if (card.boosts && card.boosts.length) {
     boostsHtml = `<div class="card-boosts"><span class="card-section-label">Boosts</span><span class="card-effects-row">`;
     card.boosts.forEach(b => {
-      const ids = Array.isArray(b.target_id) ? b.target_id : [b.target_id];
-      const names = ids.map(id => cardNameById(id)).join(", ");
       const bonusEntries = Object.entries(b.bonus || {}).filter(([, v]) => v);
-      if (bonusEntries.length) {
-        boostsHtml += `<span class="card-boost-item">${names}: ${bonusEntries.map(([k, v]) => `${v > 0 ? "+" : ""}${v}${emojiRes(k)}`).join(" ")}</span>`;
+      if (!bonusEntries.length) return;
+      const bonusStr = bonusEntries.map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)}${emojiRes(k)}`).join(" ");
+      let targetStr = "";
+      if (b.target_id) {
+        const ids = Array.isArray(b.target_id) ? b.target_id : [b.target_id];
+        targetStr = ids.map(id => cardNameById(id)).join(", ");
+      }
+      if (b.target_type) {
+        const types = Array.isArray(b.target_type) ? b.target_type : [b.target_type];
+        const countSuffix = b.target_count ? ` ×${b.target_count}` : "";
+        targetStr += (targetStr ? " / " : "") + types.join(" or ") + countSuffix;
+      }
+      if (targetStr) {
+        boostsHtml += `<span class="card-boost-item">${targetStr}: ${bonusStr}</span>`;
       }
     });
     boostsHtml += `</span></div>`;
@@ -1391,8 +1481,8 @@ function createCardElement(card, options = {}) {
   const startProdEntries = Object.entries(card.starting_production || {}).filter(([, v]) => v !== 0);
   if (startEntries.length || startProdEntries.length) {
     startHtml = `<div class="card-effects"><span class="card-section-label">Starting</span><span class="card-effects-row">`;
-    startHtml += startEntries.map(([k, v]) => `<span class="card-effect-item">${v} ${emojiRes(k)}</span>`).join("");
-    startHtml += startProdEntries.map(([k, v]) => `<span class="card-effect-item">${v > 0 ? "+" : ""}${v} ${emojiRes(k)}/yr</span>`).join("");
+    startHtml += startEntries.map(([k, v]) => `<span class="card-effect-item">${fmtCardVal(k, v)} ${emojiRes(k)}</span>`).join("");
+    startHtml += startProdEntries.map(([k, v]) => `<span class="card-effect-item">${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}/yr</span>`).join("");
     startHtml += `</span></div>`;
   }
 
@@ -1407,22 +1497,41 @@ function createCardElement(card, options = {}) {
   let costsHtml = "";
   const costs = card.costs || {};
   const COST_SKIP = new Set(["fee", "fee_card_id", "payee_card_id"]);
-  const hasCosts = Object.entries(costs).some(([k, v]) =>
-    v && !COST_SKIP.has(k));
+  const hasCosts = Object.entries(costs).some(([k, v]) => v && !COST_SKIP.has(k));
+  // Helper: check if the player can afford a specific resource amount (only in-game)
+  const myRes = lastPrivateState?.resources;
+  const canAffordRes = (res, amt) => {
+    if (!myRes || !amt) return null; // null = no colour (editor / no state)
+    if (res === "money") {
+      // Include fee in total money needed
+      const feeAmt = (!iOwnFeeCard(costs.fee_card_id)) ? (costs.fee || 0) : 0;
+      const totalMoney = (costs.money || 0) + feeAmt;
+      return (myRes.money ?? 0) >= totalMoney;
+    }
+    const have = res === "users" ? (lastGameState?.players?.[myPlayerId]?.users ?? 0)
+                                 : (myRes[res] ?? 0);
+    return have >= amt;
+  };
   if (hasCosts) {
     costsHtml = `<div class="card-costs"><span class="card-section-label">Cost</span>`;
     for (const [res, amt] of Object.entries(costs)) {
       if (!amt || COST_SKIP.has(res)) continue;
-      costsHtml += `<span class="card-cost-item">${amt} ${emojiRes(res)}</span>`;
+      const ok = canAffordRes(res, amt);
+      const cls = ok === null ? "" : ok ? " cost-ok" : " cost-nok";
+      costsHtml += `<span class="card-cost-item${cls}">${fmtCardVal(res, amt)} ${emojiRes(res)}</span>`;
     }
     const feeAmt = costs.fee || 0;
     const feeTarget = costs.fee_card_id;
     if (feeAmt && feeTarget) {
-      costsHtml += `<span class="card-cost-item card-cost-fee">💸 $${feeAmt}M → <em>${cardNameById(feeTarget)}</em> owner</span>`;
+      const feeOk = myRes ? (myRes.money ?? 0) >= feeAmt : null;
+      const feeCls = feeOk === null ? "" : feeOk ? " cost-ok" : " cost-nok";
+      costsHtml += `<span class="card-cost-item card-cost-fee${feeCls}">💸 $${feeAmt}M → <em>${cardNameById(feeTarget)}</em> owner</span>`;
     }
     costsHtml += `</div>`;
   } else if (card.cost) {
-    costsHtml = `<div class="card-costs"><span class="card-section-label">Cost</span><span class="card-cost-item">💰${card.cost}</span></div>`;
+    const ok = myRes ? (myRes.money ?? 0) >= card.cost : null;
+    const cls = ok === null ? "" : ok ? " cost-ok" : " cost-nok";
+    costsHtml = `<div class="card-costs"><span class="card-section-label">Cost</span><span class="card-cost-item${cls}">💰${card.cost}</span></div>`;
   }
 
   el.innerHTML = `
@@ -1742,6 +1851,21 @@ const EDITOR_TYPE_LABELS = {
 const editorTotalCount = document.getElementById("editor-total-count");
 const editorSearch = document.getElementById("editor-search");
 const cardTreesBtn = document.getElementById("card-trees-btn");
+const backToGridBtn = document.getElementById("back-to-grid-btn");
+backToGridBtn.addEventListener("click", () => {
+  // Save current edit form if open, then return to grid
+  if (editingKey) {
+    const fields = editorBody.querySelector(".editor-fields");
+    const [ct, idx] = editingKey.split(":");
+    const card = editorCards[ct]?.[parseInt(idx)];
+    if (fields && card) {
+      const cardData = collectFormData(fields, card);
+      socket.emit("save_card", { card_type: ct, index: parseInt(idx), card_data: cardData });
+    }
+    editingKey = null;
+  }
+  setTimeout(() => socket.emit("get_all_cards"), 300);
+});
 const treesModal = document.getElementById("trees-modal");
 const closeTreesModal = document.getElementById("close-trees-modal");
 const treesStats = document.getElementById("trees-stats");
@@ -1816,6 +1940,8 @@ editorSearch.addEventListener("input", () => renderEditorGrid());
 
 // ── Editor Grid ──────────────────────────────────────────────
 function renderEditorGrid() {
+  backToGridBtn.classList.add("hidden");
+  editorTitle.textContent = "Card Editor";
   editorBody.innerHTML = "";
   editingKey = null;
   requestAnimationFrame(() => { editorBody.scrollTop = editorScrollTop; });
@@ -1977,6 +2103,7 @@ function renderEditorForm() {
   if (!card) return;
 
   editorTitle.textContent = `Editing: ${card.name}`;
+  backToGridBtn.classList.remove("hidden");
   editorBody.innerHTML = "";
 
   const form = document.createElement("div");
@@ -1994,8 +2121,10 @@ function renderEditorForm() {
     renderedKeys.add(key);
     if (key === "boosts") {
       fields.appendChild(buildBoostsField(value || []));
-    } else if (DICT_FIELDS.has(key) && value && typeof value === "object") {
-      fields.appendChild(buildDictField(key, value));
+    } else if (DICT_FIELDS.has(key)) {
+      // Always render as dict field (even when value is null) so + Add field is always available
+      const dictVal = (value && typeof value === "object" && !Array.isArray(value)) ? value : {};
+      fields.appendChild(buildDictField(key, dictVal));
     } else {
       fields.appendChild(buildSimpleField(key, value));
     }
@@ -2055,13 +2184,14 @@ function renderEditorForm() {
 
 const FIELD_OPTIONS = {
   build: [null, "ad_campaign", "data_center", "factory", "lobby_group", "office", "power_plant", "store"],
-  type: [
-    null,
-    "social platform", "hardware manufacturer", "software service",
-    "online marketplace", "search service", "store", "power plant",
-    "data center", "office", "ad campaign",
-  ],
 };
+
+const TYPE_OPTIONS = [
+  "social platform", "hardware manufacturer", "software service",
+  "software platform", "software engine",
+  "online marketplace", "search service", "store", "power plant",
+  "data center", "office", "ad campaign",
+];
 
 // Fields that are always numeric (even when their current value is null)
 const NUMERIC_FIELDS = new Set(["factory_refund", "dc_production_bonus"]);
@@ -2074,7 +2204,21 @@ function buildSimpleField(key, value) {
   label.textContent = key;
   row.appendChild(label);
 
-  if (FIELD_OPTIONS[key]) {
+  if (key === "type") {
+    const sel = document.createElement("select");
+    sel.dataset.fieldKey = key;
+    const noneOpt = document.createElement("option");
+    noneOpt.value = ""; noneOpt.textContent = "(none)";
+    if (!value) noneOpt.selected = true;
+    sel.appendChild(noneOpt);
+    TYPE_OPTIONS.forEach(opt => {
+      const o = document.createElement("option");
+      o.value = opt; o.textContent = opt;
+      if (value === opt) o.selected = true;
+      sel.appendChild(o);
+    });
+    row.appendChild(sel);
+  } else if (FIELD_OPTIONS[key]) {
     const sel = document.createElement("select");
     sel.dataset.fieldKey = key;
     FIELD_OPTIONS[key].forEach(opt => {
@@ -2195,10 +2339,19 @@ function buildBoostsField(boosts) {
   return container;
 }
 
+const BOOST_TYPE_OPTIONS = [
+  null,
+  "social platform", "hardware manufacturer", "software service",
+  "software platform", "software engine",
+  "online marketplace", "search service", "store", "power plant",
+  "data center", "office", "ad campaign",
+];
+
 function buildBoostEntry(boost) {
   const entry = document.createElement("div");
   entry.className = "editor-boost-entry";
 
+  // ── target_id ──
   const tidRow = document.createElement("div");
   tidRow.className = "editor-dict-row";
   const tidLabel = document.createElement("span");
@@ -2217,6 +2370,64 @@ function buildBoostEntry(boost) {
   tidRow.appendChild(removeEntry);
   entry.appendChild(tidRow);
 
+  // ── target_type (multi-checkbox) ──
+  const ttRow = document.createElement("div");
+  ttRow.className = "editor-dict-row editor-dict-row-wrap";
+  const ttLabel = document.createElement("span");
+  ttLabel.className = "editor-boost-label";
+  ttLabel.textContent = "target_type:";
+  const ttGroup = document.createElement("div");
+  ttGroup.className = "type-checkbox-group boost-target-type-group";
+  const currentTypes = Array.isArray(boost.target_type)
+    ? boost.target_type
+    : (boost.target_type ? [boost.target_type] : []);
+  BOOST_TYPE_OPTIONS.filter(Boolean).forEach(opt => {
+    const lbl = document.createElement("label");
+    lbl.className = "type-checkbox-label";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "boost-type-cb";
+    cb.value = opt;
+    cb.checked = currentTypes.includes(opt);
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(` ${opt}`));
+    ttGroup.appendChild(lbl);
+  });
+  ttRow.appendChild(ttLabel);
+  ttRow.appendChild(ttGroup);
+  entry.appendChild(ttRow);
+
+  // ── target_count ──
+  const tcRow = document.createElement("div");
+  tcRow.className = "editor-dict-row";
+  const tcLabel = document.createElement("span");
+  tcLabel.className = "editor-boost-label";
+  tcLabel.textContent = "target_count (max×):";
+  const tcInput = document.createElement("input");
+  tcInput.type = "number";
+  tcInput.className = "boost-target-count";
+  tcInput.value = boost.target_count || 0;
+  tcInput.placeholder = "0 = unlimited";
+  tcRow.appendChild(tcLabel);
+  tcRow.appendChild(makeNumSpinner(tcInput, { min: 0 }));
+  entry.appendChild(tcRow);
+
+  // ── Mutual exclusivity: target_id disables target_type + target_count ──
+  function syncTypeCountState() {
+    const usingId = parseInt(tidInput.value) > 0;
+    ttGroup.querySelectorAll("input[type=checkbox]").forEach(cb => {
+      cb.disabled = usingId;
+      if (usingId) cb.checked = false;
+    });
+    tcInput.disabled = usingId;
+    if (usingId) tcInput.value = 0;
+    ttRow.style.opacity = usingId ? "0.35" : "1";
+    tcRow.style.opacity = usingId ? "0.35" : "1";
+  }
+  tidInput.addEventListener("input", syncTypeCountState);
+  syncTypeCountState(); // apply on initial render
+
+  // ── bonus ──
   const bonusLabel = document.createElement("span");
   bonusLabel.className = "editor-boost-label";
   bonusLabel.textContent = "bonus:";
@@ -2275,13 +2486,23 @@ function collectFormData(fieldsEl, originalCard) {
     const boosts = [];
     boostsContainer.querySelectorAll(".editor-boost-entry").forEach(entry => {
       const tid = Number(entry.querySelector(".boost-target-id").value) || 0;
+      // target_type and target_count only apply when target_id is not set
+      const checkedTypes = tid ? [] : [...entry.querySelectorAll(".boost-type-cb:checked")].map(cb => cb.value);
+      const targetType = checkedTypes.length === 0 ? null
+        : checkedTypes.length === 1 ? checkedTypes[0]
+        : checkedTypes;
+      const targetCount = (!tid && targetType) ? (Number(entry.querySelector(".boost-target-count")?.value) || 0) : 0;
       const bonus = {};
       entry.querySelectorAll(".boost-bonus-rows .editor-dict-row").forEach(row => {
         const k = row.querySelector(".editor-dict-key").value.trim();
         const v = Number(row.querySelector(".editor-dict-val").value) || 0;
         if (k) bonus[k] = v;
       });
-      if (tid) boosts.push({ target_id: tid, bonus });
+      if (tid || targetType) {
+        const b = { target_id: tid || null, target_type: targetType, bonus };
+        if (targetType && targetCount) b.target_count = targetCount;
+        boosts.push(b);
+      }
     });
     data.boosts = boosts.length > 0 ? boosts : null;
   }
@@ -2347,8 +2568,14 @@ function renderTreesView() {
 
   const filteredTrees = query
     ? trees.filter(tree => {
-        const targetMatch = (tree.target.name || "").toLowerCase().includes(query) ||
-          String(tree.target.id ?? "").includes(query);
+        let targetMatch = false;
+        if (tree.is_type_target) {
+          const types = Array.isArray(tree.target_types) ? tree.target_types : [tree.target_types];
+          targetMatch = types.some(t => (t || "").toLowerCase().includes(query));
+        } else {
+          targetMatch = (tree.target?.name || "").toLowerCase().includes(query) ||
+            String(tree.target?.id ?? "").includes(query);
+        }
         const boosterMatch = tree.boosters.some(b =>
           (b.card.name || "").toLowerCase().includes(query) ||
           String(b.card.id ?? "").includes(query));
@@ -2367,7 +2594,12 @@ function renderTreesView() {
 
     const treeTitle = document.createElement("h3");
     treeTitle.className = "tree-title";
-    treeTitle.textContent = `Tree ${treeIdx + 1}`;
+    if (tree.is_type_target) {
+      const types = Array.isArray(tree.target_types) ? tree.target_types : [tree.target_types];
+      treeTitle.textContent = `Type boost → ${types.join(" / ")}`;
+    } else {
+      treeTitle.textContent = `Tree: ${tree.target?.name || "?"}`;
+    }
     treeEl.appendChild(treeTitle);
 
     const treeLayout = document.createElement("div");
@@ -2391,7 +2623,9 @@ function renderTreesView() {
 
       const bonusTag = document.createElement("div");
       bonusTag.className = "tree-bonus-tag";
-      bonusTag.textContent = `Boost: ${Object.entries(b.bonus).map(([k,v]) => `${v > 0 ? "+" : ""}${v} ${emojiRes(k)}`).join(" ") || "none"}`;
+      const bonusStr = Object.entries(b.bonus).map(([k,v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(" ") || "none";
+      const countStr = b.target_count ? ` (×${b.target_count} max)` : "";
+      bonusTag.textContent = `Boost: ${bonusStr}${countStr}`;
 
       if (lockStatus === "other") {
         const lockLabel = document.createElement("div");
@@ -2426,31 +2660,42 @@ function renderTreesView() {
     const targetWrapper = document.createElement("div");
     targetWrapper.className = "tree-card-wrapper tree-target-wrapper";
 
-    const targetLockKey = findEditorKeyForId(tree.target.id, tree.target_type);
-    const targetLock = targetLockKey ? (treesLocksMap[targetLockKey] || null) : null;
-    if (targetLock === "other") targetWrapper.classList.add("editor-card-locked");
+    if (tree.is_type_target) {
+      // Render a label badge for type-based targets
+      const types = Array.isArray(tree.target_types) ? tree.target_types : [tree.target_types];
+      const badge = document.createElement("div");
+      badge.className = "tree-type-target-badge";
+      badge.innerHTML = `<div class="tree-type-target-title">Any card of type:</div>` +
+        types.map(t => `<div class="tree-type-tag">${CARD_SUBTYPE_EMOJIS[t] || ""} ${t}</div>`).join("");
+      targetWrapper.appendChild(badge);
+      treeLayout.appendChild(targetWrapper);
+    } else {
+      const targetLockKey = findEditorKeyForId(tree.target.id, tree.target_card_type);
+      const targetLock = targetLockKey ? (treesLocksMap[targetLockKey] || null) : null;
+      if (targetLock === "other") targetWrapper.classList.add("editor-card-locked");
 
-    const targetCardEl = createCardElement(tree.target, { interactive: false, deckType: tree.target_type });
+      const targetCardEl = createCardElement(tree.target, { interactive: false, deckType: tree.target_card_type });
 
-    if (targetLock === "other") {
-      const lockLabel = document.createElement("div");
-      lockLabel.className = "editor-lock-indicator";
-      lockLabel.textContent = "Locked";
-      targetWrapper.appendChild(lockLabel);
-    }
+      if (targetLock === "other") {
+        const lockLabel = document.createElement("div");
+        lockLabel.className = "editor-lock-indicator";
+        lockLabel.textContent = "Locked";
+        targetWrapper.appendChild(lockLabel);
+      }
 
-    targetWrapper.appendChild(targetCardEl);
+      targetWrapper.appendChild(targetCardEl);
 
-    if (targetLock !== "other" && targetLockKey) {
-      targetWrapper.style.cursor = "pointer";
-      targetWrapper.addEventListener("click", () => {
-        editorContext = "trees";
-        const [ct, idx] = targetLockKey.split(":");
-        socket.emit("lock_card", { card_type: ct, index: parseInt(idx) });
-      });
-    }
+      if (targetLock !== "other" && targetLockKey) {
+        targetWrapper.style.cursor = "pointer";
+        targetWrapper.addEventListener("click", () => {
+          editorContext = "trees";
+          const [ct, idx] = targetLockKey.split(":");
+          socket.emit("lock_card", { card_type: ct, index: parseInt(idx) });
+        });
+      }
 
-    treeLayout.appendChild(targetWrapper);
+      treeLayout.appendChild(targetWrapper);
+    } // end else (id-target)
 
     treeEl.appendChild(treeLayout);
     treesBody.appendChild(treeEl);
@@ -2484,8 +2729,9 @@ function renderTreeEditForm() {
     if (TREE_HIDDEN_FIELDS.has(key)) continue;
     if (key === "boosts") {
       fields.appendChild(buildBoostsField(value || []));
-    } else if (DICT_FIELDS.has(key) && value && typeof value === "object") {
-      fields.appendChild(buildDictField(key, value));
+    } else if (DICT_FIELDS.has(key)) {
+      const dictVal = (value && typeof value === "object" && !Array.isArray(value)) ? value : {};
+      fields.appendChild(buildDictField(key, dictVal));
     } else {
       fields.appendChild(buildSimpleField(key, value));
     }
@@ -2657,6 +2903,7 @@ const TERRAIN_COLORS = {
   empty: "#2a2d35",
   city: "#2a2d35",
   lake: "#2980b9",
+  sea: "#0a2a6e",
   government: "#c0392b",
   industrial: "#5d4037",
   commercial: "#1565c0",
@@ -2701,7 +2948,7 @@ const TILE_ZONE = {
 };
 
 function canPlaceOn(tileType, terrain) {
-  if (terrain === "lake" || terrain === "government" || terrain === "city") return false;
+  if (terrain === "lake" || terrain === "sea" || terrain === "government" || terrain === "city") return false;
   if (terrain === "empty") return true;
   const zone = TILE_ZONE[tileType];
   return zone === terrain;
@@ -2873,7 +3120,7 @@ function renderBoard() {
       labelSize = "12";
     } else if (tile.name) {
       label = tile.name.length > 6 ? tile.name.slice(0, 6) : tile.name;
-      labelSize = tile.terrain === "lake" ? "6" : "7";
+      labelSize = (tile.terrain === "lake" || tile.terrain === "sea") ? "6" : "7";
     } else if (tile.terrain === "city") {
       label = "🏙️";
       labelSize = "10";
@@ -2916,6 +3163,7 @@ function renderBoard() {
       let info = `<strong>(${tile.row},${tile.col})</strong>`;
       if (tile.terrain === "city") info += ` — ${tile.name || "City"} (City)`;
       else if (tile.terrain === "lake") info += ` — ${tile.name || "Lake"} (cannot build)`;
+      else if (tile.terrain === "sea") info += ` — ${tile.name || "Sea"} (cannot build)`;
       else if (tile.terrain === "government") info += ` — ${tile.name || "Gov"} (cannot build)`;
       else if (tile.terrain === "industrial") info += ` — Industrial zone`;
       else if (tile.terrain === "commercial") info += ` — Commercial zone`;
@@ -3245,7 +3493,7 @@ function renderBoardTileForm(tile) {
   const terrainSelect = document.createElement("select");
   terrainSelect.className = "editor-dict-key";
   terrainSelect.style.width = "100%";
-  ["empty", "city", "lake", "government", "industrial", "commercial"].forEach(t => {
+  ["empty", "city", "lake", "sea", "government", "industrial", "commercial"].forEach(t => {
     const o = document.createElement("option");
     o.value = t;
     o.textContent = t.charAt(0).toUpperCase() + t.slice(1);
@@ -3324,7 +3572,7 @@ function renderBoardTileForm(tile) {
   boardTileForm.appendChild(form);
 
   // --- Add tile left/right/top/bottom ---
-  const MAX_BOARD_ROWS = 10;
+  const MAX_BOARD_ROWS = 14;
   const existingCoords = new Set(editorBoardTiles.map(t => `${t.row},${t.col}`));
   const has = (r, c) => existingCoords.has(`${r},${c}`);
 
@@ -3335,24 +3583,23 @@ function renderBoardTileForm(tile) {
   const botLeft  = isOdd ? [tile.row + 1, tile.col]     : [tile.row + 1, tile.col - 1];
 
   const addOptions = [];
-  // Left / Right
+  // Same row: left / right
   if (!has(tile.row, tile.col - 1))
-    addOptions.push({ label: "← Left", row: tile.row, col: tile.col - 1 });
+    addOptions.push({ label: "← Left",         row: tile.row,     col: tile.col - 1 });
   if (!has(tile.row, tile.col + 1))
-    addOptions.push({ label: "→ Right", row: tile.row, col: tile.col + 1 });
-  // Top: prefer top-right, fallback top-left
+    addOptions.push({ label: "→ Right",         row: tile.row,     col: tile.col + 1 });
+  // All four diagonal neighbours — show each independently if the slot is free
   if (tile.row - 1 >= 0) {
+    if (!has(...topLeft))
+      addOptions.push({ label: "↖ Top-Left",   row: topLeft[0],  col: topLeft[1] });
     if (!has(...topRight))
-      addOptions.push({ label: "↗ Top", row: topRight[0], col: topRight[1] });
-    else if (!has(...topLeft))
-      addOptions.push({ label: "↖ Top", row: topLeft[0], col: topLeft[1] });
+      addOptions.push({ label: "↗ Top-Right",  row: topRight[0], col: topRight[1] });
   }
-  // Bottom: prefer bottom-right, fallback bottom-left
   if (tile.row + 1 < MAX_BOARD_ROWS) {
+    if (!has(...botLeft))
+      addOptions.push({ label: "↙ Bot-Left",   row: botLeft[0],  col: botLeft[1] });
     if (!has(...botRight))
-      addOptions.push({ label: "↘ Bottom", row: botRight[0], col: botRight[1] });
-    else if (!has(...botLeft))
-      addOptions.push({ label: "↙ Bottom", row: botLeft[0], col: botLeft[1] });
+      addOptions.push({ label: "↘ Bot-Right",  row: botRight[0], col: botRight[1] });
   }
 
   if (addOptions.length) {

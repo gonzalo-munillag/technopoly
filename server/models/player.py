@@ -27,6 +27,8 @@ class Player:
     color: str = "#c9a227"
     users: int = 0
     _remaining_starting_tiles: list = field(default_factory=list, repr=False)
+    # Tracks how many times each boost has fired: {card_id: [count_per_boost_index]}
+    _boost_activations: dict = field(default_factory=dict, repr=False)
 
     def __post_init__(self):
         if not self.resources:
@@ -37,8 +39,10 @@ class Player:
     def set_company(self, card: Card, game=None):
         self.company = card
         for resource, amount in card.starting_resources.items():
-            if resource == "users" and amount:
-                self.gain_users(amount, game)
+            if resource == "users":
+                # Set directly — no reputation modifier on starting resources
+                taken = game.take_users(amount) if game else amount
+                self.users += taken
             else:
                 self.resources[resource] = self.resources.get(resource, 0) + amount
         for resource, amount in card.starting_production.items():
@@ -106,6 +110,105 @@ class Player:
                 self.resources[resource] = self.resources.get(resource, 0) + amount
         for resource, amount in card.production.items():
             self.production[resource] = self.production.get(resource, 0) + amount
+        self._apply_boosts(card, game)
+
+    def _apply_bonus(self, bonus: dict, multiplier: int, game=None):
+        """Apply a bonus dict scaled by multiplier."""
+        for resource, amount in bonus.items():
+            total = (amount or 0) * multiplier
+            if not total:
+                continue
+            if resource == "users":
+                self.gain_users(total, game)
+            else:
+                pool = getattr(self, self._get_pool(resource))
+                pool[resource] = pool.get(resource, 0) + total
+
+    def _ensure_activation_slots(self, card: Card) -> list:
+        """Return the activation-count list for a card, creating it if needed."""
+        cid = card.id
+        if cid not in self._boost_activations:
+            self._boost_activations[cid] = [0] * len(card.boosts or [])
+        return self._boost_activations[cid]
+
+    def _apply_boosts(self, card: Card, game=None):
+        """Apply card boosts with forward-firing retroactive support.
+
+        Two directions are handled:
+          1. NEW CARD's own boosts  → fire based on already-played cards (as before).
+          2. PREVIOUS cards' boosts → if any target the newly played card and haven't
+             fired yet (or haven't hit their cap), fire them now.
+
+        Activation counts are stored in _boost_activations so each boost fires at
+        most once for target_id, or at most target_count times for target_type.
+        target_id and target_type are mutually exclusive per boost entry.
+        """
+        already_played = [c for c in self.played_cards if c is not card]
+
+        # ── 1. New card's own boosts ─────────────────────────────────────────
+        slots = self._ensure_activation_slots(card)
+        for i, boost in enumerate(card.boosts or []):
+            bonus = boost.get("bonus") or {}
+            if not bonus:
+                continue
+
+            target_id = boost.get("target_id")
+            has_target_id = target_id is not None and target_id != 0
+
+            if has_target_id:
+                ids = target_id if isinstance(target_id, list) else [target_id]
+                matching = sum(1 for c in already_played if c.id in ids)
+                target_count = int(boost.get("target_count") or 0)
+                if target_count:
+                    matching = min(matching, target_count)
+                # Fire once per matching card already played (not yet counted)
+                new_fires = max(0, matching - slots[i])
+                if new_fires:
+                    slots[i] += new_fires
+                    self._apply_bonus(bonus, new_fires, game)
+            else:
+                target_type = boost.get("target_type")
+                if not target_type:
+                    continue
+                types = target_type if isinstance(target_type, list) else [target_type]
+                matching = sum(1 for c in already_played if c.card_color_type in types)
+                target_count = int(boost.get("target_count") or 0)
+                if target_count:
+                    matching = min(matching, target_count)
+                # Only apply the portion not yet counted
+                new_fires = max(0, matching - slots[i])
+                if new_fires:
+                    slots[i] += new_fires
+                    self._apply_bonus(bonus, new_fires, game)
+
+        # ── 2. Retroactive: previous cards' boosts that now target the new card ─
+        for prev in already_played:
+            prev_slots = self._ensure_activation_slots(prev)
+            for i, boost in enumerate(prev.boosts or []):
+                bonus = boost.get("bonus") or {}
+                if not bonus:
+                    continue
+
+                target_id = boost.get("target_id")
+                has_target_id = target_id is not None and target_id != 0
+
+                if has_target_id:
+                    ids = target_id if isinstance(target_id, list) else [target_id]
+                    # Fire once if the new card is one of the targets and not yet activated
+                    if card.id in ids and prev_slots[i] == 0:
+                        prev_slots[i] = 1
+                        self._apply_bonus(bonus, 1, game)
+                else:
+                    target_type = boost.get("target_type")
+                    if not target_type:
+                        continue
+                    types = target_type if isinstance(target_type, list) else [target_type]
+                    # Fire once more if the new card matches the type and cap allows
+                    if card.card_color_type in types:
+                        target_count = int(boost.get("target_count") or 0)
+                        if not target_count or prev_slots[i] < target_count:
+                            prev_slots[i] += 1
+                            self._apply_bonus(bonus, 1, game)
 
     _PRODUCTION_ONLY = {"HR", "data_centers", "ad_campaigns"}
     _PRODUCTION_MAP = {"data_centers": "servers", "ad_campaigns": "ads"}

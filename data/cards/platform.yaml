@@ -7,7 +7,7 @@
 # - name: Card Name
 #   id: 99                  # unique across ALL card files
 #   description: null       # flavour text shown on the card
-#   # social platform | hardware manufacturer | software service | online marketplace | search service | store | power plant | data center | office | ad campaign
+#   # social platform | hardware manufacturer | software service | software platform | software engine | online marketplace | search service | store | power plant | data center | office | ad campaign
 #   type: social platform
 #   number: 1               # copies in the shuffled projects deck
 #   # ad_campaign | data_center | factory | lobby_group | office | power_plant | store — or null
@@ -70,8 +70,8 @@
   type: social platform
   number: 1
   build: null
-  factory_refund: null
-  dc_production_bonus: null
+  factory_refund: 0
+  dc_production_bonus: 0
   effect:
     users: 100
     money: 0
@@ -121,3 +121,87 @@
   effect:
     users: 60
   boosts: null
+- name: Social Network
+  id: 3
+  description: null
+  type: social platform
+  number: 5
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 4
+    money: 0
+    servers: 4
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 200
+    fee_card_id: 4
+  effect:
+    users: 200
+  boosts:
+  - target_id: null
+    target_type:
+    - software platform
+    - online marketplace
+    bonus:
+      users: 10
+    target_count: 3
+- name: App Store
+  id: 4
+  description: null
+  type: online marketplace
+  number: 4
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  effect:
+    users: 20
+  costs:
+    engineers: 4
+    suits: 4
+    ads: 3
+    money: 0
+    servers: 5
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 400
+    fee_card_id: 5
+  boosts: null
+- name: Operating System
+  id: 5
+  description: null
+  type: software platform
+  number: 3
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  effect:
+    users: 20
+  costs:
+    engineers: 6
+    suits: 0
+    ads: 3
+    money: 500
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  boosts:
+  - target_id: 4
+    target_type: null
+    bonus:
+      users: 30
+      money: 500

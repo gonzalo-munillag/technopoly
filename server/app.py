@@ -558,17 +558,22 @@ def on_play_card(data):
     player.pay_costs(card, use_optional)
 
     if card.fee and card.fee_card_id and not player._owns_fee_card(card):
-        # Find all other players who have played the fee card
-        payees = [
-            pid for pid, p in game.players.items()
-            if pid != player_id and any(c.id == card.fee_card_id for c in p.played_cards)
-        ]
-        fee_target = pay_to.get("fee") if len(payees) > 1 else (payees[0] if payees else None)
-        if fee_target and fee_target in game.players:
-            game.players[fee_target].resources["money"] = \
-                game.players[fee_target].resources.get("money", 0) + card.fee
+        # Fee is already deducted from the payer via pay_costs().
+        # Transfer it to the chosen payee — but only if they have actually played the fee card.
+        # If pay_to["fee"] is absent (no eligible payee → bank), nothing is transferred.
+        fee_target = pay_to.get("fee")
+        if fee_target and fee_target in game.players and fee_target != player_id:
+            target_player = game.players[fee_target]
+            # Validate the target has played the card that triggers the fee
+            if any(c.id == card.fee_card_id for c in target_player.played_cards):
+                target_player.resources["money"] = (
+                    target_player.resources.get("money", 0) + card.fee
+                )
 
-    player.play_card(card_name, game)
+    played = player.play_card(card_name, game)
+    if not played:
+        emit("error", {"message": f"Failed to play '{card_name}' — card not found in hand."})
+        return
 
     if card.tile_type:
         player.pending_tile = card.tile_type
@@ -957,7 +962,7 @@ def _next_card_id() -> int:
 
 
 def _build_card_trees() -> dict:
-    """Build tree structures from card boost relationships and compute stats."""
+    """Build tree structures from card boost relationships (target_id and target_type)."""
     all_cards = _read_all_cards_yaml()
     card_by_id: dict[int, dict] = {}
     card_type_by_id: dict[int, str] = {}
@@ -968,7 +973,12 @@ def _build_card_trees() -> dict:
                 card_by_id[cid] = card
                 card_type_by_id[cid] = card_type
 
+    # target_id trees: group boosters by the specific target card id
     target_to_boosters: dict[int, list[dict]] = {}
+    # target_type trees: group boosters by a canonical key of sorted type strings
+    type_key_to_boosters: dict[str, list[dict]] = {}
+    type_key_to_types: dict[str, list] = {}   # key → original types value
+
     booster_ids_with_connections: set[int] = set()
     platform_ids_with_connections: set[int] = set()
 
@@ -976,6 +986,7 @@ def _build_card_trees() -> dict:
         for card in cards:
             cid = card.get("id", 0)
             for boost in card.get("boosts") or []:
+                # ── target_id branch ──────────────────────────────
                 raw_tid = boost.get("target_id", 0)
                 if isinstance(raw_tid, list):
                     tids = [t for t in raw_tid if isinstance(t, (int, float))]
@@ -989,29 +1000,50 @@ def _build_card_trees() -> dict:
                             "card": card,
                             "card_type": card_type,
                             "bonus": boost.get("bonus", {}),
+                            "target_count": boost.get("target_count"),
                         })
                         booster_ids_with_connections.add(cid)
                         platform_ids_with_connections.add(tid)
 
+                # ── target_type branch ────────────────────────────
+                raw_tt = boost.get("target_type")
+                if raw_tt:
+                    types_list = raw_tt if isinstance(raw_tt, list) else [raw_tt]
+                    key = "|".join(sorted(str(t) for t in types_list))
+                    type_key_to_boosters.setdefault(key, []).append({
+                        "card": card,
+                        "card_type": card_type,
+                        "bonus": boost.get("bonus", {}),
+                        "target_count": boost.get("target_count"),
+                    })
+                    type_key_to_types[key] = raw_tt
+                    booster_ids_with_connections.add(cid)
+
     trees = []
+    # Card-id trees
     for tid, boosters in target_to_boosters.items():
         trees.append({
+            "is_type_target": False,
             "target": card_by_id[tid],
-            "target_type": card_type_by_id[tid],
+            "target_card_type": card_type_by_id[tid],
+            "boosters": boosters,
+        })
+    # Type-label trees
+    for key, boosters in type_key_to_boosters.items():
+        trees.append({
+            "is_type_target": True,
+            "target_types": type_key_to_types[key],
             "boosters": boosters,
         })
 
-    connectable_types = {"platform", "leverage", "innovation"}
-    all_connectable = {
-        cid for cid, ct in card_type_by_id.items() if ct in connectable_types
-    }
     platform_ids = {cid for cid, ct in card_type_by_id.items() if ct == "platform"}
-    booster_types = {"leverage", "innovation"}
+    booster_types = {"leverage", "innovation", "build"}
     booster_ids = {cid for cid, ct in card_type_by_id.items() if ct in booster_types}
 
     unconnected_platforms = len(platform_ids - platform_ids_with_connections)
     unconnected_boosters = len(booster_ids - booster_ids_with_connections)
-    total_connections = sum(len(b) for b in target_to_boosters.values())
+    total_connections = sum(len(b) for b in target_to_boosters.values()) + \
+                        sum(len(b) for b in type_key_to_boosters.values())
     avg_boosters = round(total_connections / len(trees), 2) if trees else 0
 
     return {

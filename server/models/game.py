@@ -139,7 +139,7 @@ class Game:
 
     # ── player management ────────────────────────────────────
 
-    _PLAYER_COLORS = ["#e6c040", "#29b6f6", "#66bb6a", "#ce93d8", "#ff7043", "#26c6da", "#ffa726", "#ef5350"]
+    _PLAYER_COLORS = ["#f9c912", "#00cfff", "#4dff91", "#ff5ef3", "#ff4422", "#ff9900", "#b966ff", "#00e5c3"]
 
     def add_player(self, player_id: str, name: str) -> Player:
         idx = len(self.players) % len(self._PLAYER_COLORS)

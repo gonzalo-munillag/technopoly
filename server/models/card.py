@@ -86,6 +86,7 @@ class Card:
         costs_raw = data.get("costs") or {}
         effect_raw = data.get("effect")
         # Support effect as dict (new platform format) or string (legacy)
+        # Use `is not None` to preserve empty dicts {} instead of collapsing to None
         eff_dict = effect_raw if isinstance(effect_raw, dict) else None
         eff_str = effect_raw if isinstance(effect_raw, str) else None
 
@@ -99,7 +100,7 @@ class Card:
             description=data.get("description", ""),
             production=data.get("production") or {},
             immediate=data.get("immediate") or {},
-            effect=eff_dict or eff_str,
+            effect=eff_dict if eff_dict is not None else eff_str,
             starting_resources=data.get("starting_resources") or {},
             starting_production=data.get("starting_production") or {},
             targets_all=data.get("targets_all", 1),
@@ -112,7 +113,7 @@ class Card:
             tile_type=data.get("tile_type") or data.get("build"),
             build=data.get("build"),
             costs=costs_raw,
-            card_color_type=data.get("type", ""),
+            card_color_type=data.get("type", "") or "",
             number=data.get("number", 1),
             image=data.get("image", ""),
             payee_card_id=data.get("payee_card_id"),
