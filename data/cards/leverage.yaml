@@ -1,18 +1,16 @@
-# ============================================================
-# LEVERAGE CARDS (BOOSTERS deck)
-# ============================================================
-
-- name: Mining Operation
-  id: 22
-  image: ''
-  description: Extract raw minerals from the earth.
-  type: extraction
-  number: 2
+- name: Addiction Algorithm
+  id: 26
+  description: null
+  type: null
+  number: 1
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
-    engineers: 1
+    engineers: 0
     suits: 0
     ads: 0
-    money: 3
+    money: 0
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -21,67 +19,8 @@
     users: 0
     fee: 0
     fee_card_id: null
-  effect:
-    money: 2
-    engineers: 1
-    data_centers: 0
-    ad_campaigns: 0
-  boosts:
-  - target_id: 11
-    bonus:
-      money: 1
-      reputation: 2
-- name: Data Center
-  id: 23
-  description: A warehouse full of servers crunching numbers.
-  type: computing
-  number: 2
-  costs:
-    engineers: 1
-    suits: 0
-    ads: 0
-    money: 5
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    servers: 1
-    data_centers: 0
-    ad_campaigns: 0
-  boosts:
-  - target_id: 9
-    bonus:
-      users: 4
-- name: Power Plant
-  id: 24
-  image: ''
-  description: A conventional power plant providing steady energy.
-  type: energy
-  number: 2
-  costs:
-    engineers: 1
-    suits: 0
-    ads: 0
-    money: 4
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    money: 2
-    data_centers: 0
-    ad_campaigns: 0
-  boosts:
-  - target_id: 7
-    bonus:
-      money: 2
-      reputation: 1
+  effect: null
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true

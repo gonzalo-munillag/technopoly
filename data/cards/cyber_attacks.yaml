@@ -1,9 +1,5 @@
-# ============================================================
-# CYBER ATTACK CARDS (PROJECTS deck)
-# ============================================================
-
 - name: DDoS Storm
-  id: 16
+  id: 23
   description: Overwhelm a competitor's servers, reducing their uptime.
   type: network
   number: 2
@@ -25,71 +21,4 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: null
-- name: Ransomware
-  id: 17
-  image: ''
-  description: Encrypt a competitor's data and demand payment.
-  type: malware
-  number: 2
-  costs:
-    engineers: 2
-    suits: 0
-    ads: 0
-    money: 5
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    money: 8
-    reputation: -1
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: []
-- name: New Card
-  id: 71
-  image: ''
-  description: ''
-  type: ''
-  number: 1
-  build: null
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect: {}
-  boosts: []
-- name: New Card
-  id: 73
-  description: null
-  type: null
-  number: 1
-  build: null
-  effect: null
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  boosts: null
+  disabled: true

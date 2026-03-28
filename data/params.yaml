@@ -1,5 +1,9 @@
-total_users: 500
+# total_users: total user pool in M (5000 = 5000M users)
+total_users: 5000
+# money_per_users: how many M users needed to earn 1B/yr (10 = 10M→$1B/yr; 100M users→$10B/yr)
 money_per_users: 10
+# data_per_users: PB of data produced per 100M users per year (200 = 100M→200PB/yr)
+data_per_users: 200
 projects_draw: 3
 boosters_draw: 3
 draft_cost: 3

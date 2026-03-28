@@ -73,7 +73,7 @@ const PHASE_LABELS = {
   company_pick: "Company Pick",
   year_start_draft: "Draft",
   hiring: "Hiring",
-  regulation: "Regulation",
+  regulation: "Events",
   player_turns: "Turns",
   year_end: "Year End",
 };
@@ -86,12 +86,13 @@ const CARD_TYPE_GROUPS = [
   { key: "leverage", label: "Leverage" },
   { key: "fuck_up", label: "Fuck-ups" },
   { key: "build", label: "Build" },
-  { key: "regulation", label: "Regulation" },
+  { key: "regulation", label: "Events — Regulation" },
+  { key: "world_event", label: "Events — World Events" },
 ];
 
 const DRAFT_SECTIONS = [
-  { deck: "projects", label: "Projects", types: ["platform", "cyber_attack"] },
-  { deck: "boosters", label: "Boosters", types: ["leverage", "innovation", "build"] },
+  { deck: "projects", label: "Projects", types: ["platform", "cyber_attack", "build"] },
+  { deck: "boosters", label: "Boosters", types: ["leverage", "innovation"] },
 ];
 
 // ── In-game confirm dialog ──────────────────────────────────
@@ -353,6 +354,71 @@ socket.on("game_ended", () => {
   myName = null;
   lastGameState = null;
   lastPrivateState = null;
+});
+
+socket.on("player_bankrupt", (data) => {
+  document.querySelector(".bankrupt-overlay")?.remove();
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-dialog-overlay bankrupt-overlay";
+  const box = document.createElement("div");
+  box.className = "confirm-dialog";
+  box.style.textAlign = "center";
+  box.innerHTML = `
+    <div style="font-size:1.3em;color:var(--danger);margin-bottom:.5rem">💸 BANKRUPTCY</div>
+    <div style="margin-bottom:.8rem">
+      <strong style="color:var(--accent)">${data.player_name}</strong> has been driven into bankruptcy
+      by negative money production and has been eliminated from the game.
+    </div>
+  `;
+  const btn = document.createElement("button");
+  btn.className = "btn btn-sm btn-accent";
+  btn.textContent = "Noted";
+  btn.addEventListener("click", () => overlay.remove());
+  box.appendChild(btn);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+});
+
+socket.on("game_won", (data) => {
+  document.querySelector(".game-won-overlay")?.remove();
+
+  const scores = Object.entries(data.scores || {})
+    .sort(([,a],[,b]) => b - a)
+    .map(([name, u]) => `<span style="color:var(--text)">${name}:</span> <strong>${u}M 👥</strong>`)
+    .join("<br>");
+
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-dialog-overlay game-won-overlay";
+
+  const box = document.createElement("div");
+  box.className = "confirm-dialog";
+  box.style.maxWidth = "480px";
+  box.style.textAlign = "center";
+
+  box.innerHTML = `
+    <div style="font-size:1.5em;color:var(--accent);margin-bottom:.6rem;letter-spacing:.05em">
+      🌐 WORLD DOMINATION COMPLETE
+    </div>
+    <div style="font-size:1.1em;margin-bottom:.5rem">
+      Technofeudalist <strong style="color:var(--accent)">${data.winner_name}</strong> has won capitalism!
+    </div>
+    <div style="font-size:.88em;color:var(--text-dim);font-style:italic;margin-bottom:1rem;line-height:1.6">
+      Congratulations on your world domination endeavor.<br>Bend the planet to your will!
+    </div>
+    <div style="font-size:.82em;border-top:1px solid var(--border);padding-top:.8rem;line-height:1.8">
+      ${scores}
+    </div>
+  `;
+
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "btn btn-sm btn-accent";
+  closeBtn.textContent = "Hail the Technofeudalist";
+  closeBtn.style.marginTop = "1rem";
+  closeBtn.addEventListener("click", () => overlay.remove());
+  box.appendChild(closeBtn);
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
 });
 
 function getRepMod(rep) {
@@ -681,10 +747,10 @@ document.getElementById("conclude-hiring-btn").addEventListener("click", () => {
   socket.emit("submit_hiring", { engineers: eng, suits });
 });
 
-// ── Regulation ──────────────────────────────────────────────
+// ── Events (Regulation / World Event) ───────────────────────
 function renderRegulation(card) {
   if (!card) {
-    regulationDisplay.innerHTML = `<p class="text-dim">No regulation card this year.</p>`;
+    regulationDisplay.innerHTML = `<p class="text-dim">No event card this year.</p>`;
     return;
   }
   regulationDisplay.innerHTML = "";
@@ -701,7 +767,7 @@ function renderRegulation(card) {
   let infoHtml = "";
   if (compText) infoHtml += `<p class="reg-compliance-text"><strong>Compliance:</strong> ${compText}</p>`;
   if (courtText) infoHtml += `<p class="reg-court-text"><strong>Court penalty:</strong> ${courtText}</p>`;
-  infoHtml += `<p class="reg-court-text"><strong>Court odds:</strong> ${winPct}% win / ${losePct}% lose (>= ${threshold} on a die roll to win)</p>`;
+  infoHtml += `<p class="reg-court-text"><strong>Court odds:</strong> ${winPct}% win / ${losePct}% lose (<span class="court-threshold">&ge; ${threshold}</span> on a die roll to win)</p>`;
   if (infoHtml) {
     const infoDiv = document.createElement("div");
     infoDiv.className = "regulation-penalty-info";
@@ -720,10 +786,11 @@ socket.on("regulation_alert", (data) => {
     const winPct = Math.round(((7 - data.court_threshold) / 6) * 100);
     const losePct = 100 - winPct;
     const targeted = (data.targeted_cards || []).map(c => c.name).join(", ");
-    let html = `<p><strong>This regulation affects you!</strong></p>`;
+    const isWorldEvent = data.card_type === "world_event";
+    let html = `<p><strong>${isWorldEvent ? "🌍 This world event" : "⚖️ This regulation"} affects you!</strong></p>`;
     if (targeted) html += `<p>Targeted card(s): <strong>${targeted}</strong> — accepting means losing them.</p>`;
     html += `<p class="reg-compliance-text">Accept compliance: ${compText}</p>`;
-    html += `<p class="reg-court-text">Court loss penalty: ${courtText} — ${losePct}% chance of losing (>= ${data.court_threshold} on a die roll to win)</p>`;
+    html += `<p class="reg-court-text">Court loss penalty: ${courtText} — ${losePct}% chance of losing (<span class="court-threshold">&ge; ${data.court_threshold}</span> on a die roll to win)</p>`;
     if (targeted) html += `<p class="reg-compliance-text">Win in court (${winPct}%): keep your card(s), no penalty.</p>`;
     regulationAlertBox.innerHTML = html;
     regulationAlertBox.classList.remove("hidden");
@@ -733,9 +800,10 @@ socket.on("regulation_alert", (data) => {
     regProceedBtn.classList.add("hidden");
   } else {
     const nobodyAffected = !data.any_affected;
+    const eventWord = data.card_type === "world_event" ? "world event" : "regulation";
     regulationAlertBox.innerHTML = nobodyAffected
-      ? `<p>No players are affected by this regulation.</p>`
-      : `<p>This regulation does not affect you.</p>`;
+      ? `<p>No players are affected by this ${eventWord}.</p>`
+      : `<p>This ${eventWord} does not affect you.</p>`;
     regulationAlertBox.classList.remove("hidden");
     regulationActions.classList.add("hidden");
     regulationResultBox.classList.add("hidden");
@@ -744,27 +812,60 @@ socket.on("regulation_alert", (data) => {
   }
 });
 
-regAcceptBtn.addEventListener("click", () => socket.emit("regulation_accept"));
-regCourtBtn.addEventListener("click", () => socket.emit("regulation_court"));
-regProceedBtn.addEventListener("click", () => {
-  socket.emit("proceed_regulation");
-  regProceedBtn.classList.add("hidden");
-  regulationWaiting.textContent = "Waiting for others to resolve their compliance...";
-  regulationWaiting.classList.remove("hidden");
-});
+const dieContainer = document.getElementById("die-container");
+const dieFace = document.getElementById("die-face");
+const DIE_FACES = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+let dieRolling = false;
+let pendingCourtResult = null;
 
-socket.on("regulation_result", (data) => {
+function startDieRoll() {
+  dieContainer.classList.remove("hidden");
+  dieFace.classList.add("rolling");
+  dieFace.textContent = "🎲";
+  dieRolling = true;
+  pendingCourtResult = null;
+  let ticks = 0;
+  const total = 20; // 3 000 ms / 150 ms
+  const iv = setInterval(() => {
+    dieFace.textContent = DIE_FACES[Math.floor(Math.random() * 6)];
+    ticks++;
+    if (ticks >= total) {
+      clearInterval(iv);
+      dieFace.classList.remove("rolling");
+      dieRolling = false;
+      if (pendingCourtResult) {
+        applyCourtDieResult(pendingCourtResult);
+        pendingCourtResult = null;
+      }
+    }
+  }, 150);
+}
+
+function applyCourtDieResult(data) {
+  // Show final die face
+  if (data.roll >= 1 && data.roll <= 6) {
+    dieFace.textContent = DIE_FACES[data.roll - 1];
+  }
+  applyRegulationResult(data);
+}
+
+function applyRegulationResult(data) {
   regulationActions.classList.add("hidden");
   regulationResultBox.classList.remove("hidden");
+  regStartYearBtn.classList.add("hidden");
   const lostCards = (data.lost_cards || []);
   const lostMsg = lostCards.length ? `<p>Lost card(s): <strong>${lostCards.join(", ")}</strong></p>` : "";
   if (data.action === "accept") {
+    myWentToCourt = false;
     const compText = Object.entries(data.compliance || data.penalty || {})
       .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
-    regulationResultBox.innerHTML = `<p>You accepted the compliance: ${compText}</p>${lostMsg}`;
+    regulationResultBox.innerHTML = `<p>You accepted the compliance: ${compText || "no penalty"}</p>${lostMsg}`;
+    regulationWaiting.textContent = "Waiting for others to resolve their compliance...";
+    regulationWaiting.classList.remove("hidden");
   } else {
+    myWentToCourt = true;
     const result = data.won ? "Won" : "Lost";
-    let msg = `<p>Court roll: <strong>${data.roll}</strong> (needed ${data.threshold}+) — <strong>${result}!</strong></p>`;
+    let msg = `<p>Court roll: <strong>${data.roll}</strong> (needed <span class="court-threshold">&ge; ${data.threshold}</span>) — <strong>${result}!</strong></p>`;
     if (!data.won) {
       const courtText = Object.entries(data.penalty || {})
         .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
@@ -773,32 +874,65 @@ socket.on("regulation_result", (data) => {
       msg += `<p>No penalty — you beat the case and keep your cards!</p>`;
     }
     regulationResultBox.innerHTML = msg;
+    regulationWaiting.textContent = "Waiting for all court players to start the year...";
+    regulationWaiting.classList.remove("hidden");
   }
   regProceedBtn.classList.add("hidden");
-  regStartYearBtn.classList.add("hidden");
+}
+
+regAcceptBtn.addEventListener("click", () => socket.emit("regulation_accept"));
+regCourtBtn.addEventListener("click", () => {
+  startDieRoll();
+  socket.emit("regulation_court");
+});
+regProceedBtn.addEventListener("click", () => {
+  socket.emit("proceed_regulation");
+  regProceedBtn.classList.add("hidden");
   regulationWaiting.textContent = "Waiting for others to resolve their compliance...";
   regulationWaiting.classList.remove("hidden");
 });
 
-socket.on("regulation_all_resolved", () => {
+let myWentToCourt = false;
+
+socket.on("regulation_result", (data) => {
+  if (data.action === "court" && dieRolling) {
+    // Die still spinning — buffer result, show after animation ends
+    pendingCourtResult = data;
+  } else if (data.action === "court") {
+    applyCourtDieResult(data);
+  } else {
+    // Accepted compliance — no die needed
+    dieContainer.classList.add("hidden");
+    applyRegulationResult(data);
+  }
+});
+
+socket.on("regulation_all_resolved", (data) => {
   regulationWaiting.classList.add("hidden");
-  regStartYearBtn.classList.remove("hidden");
+  // Only court players get the Start Year button
+  if (myWentToCourt) {
+    regStartYearBtn.classList.remove("hidden");
+  } else {
+    regulationWaiting.textContent = "Waiting for court players to start the year...";
+    regulationWaiting.classList.remove("hidden");
+  }
 });
 
 regStartYearBtn.addEventListener("click", () => {
   socket.emit("start_year_after_regulation");
   regStartYearBtn.classList.add("hidden");
+  regulationWaiting.textContent = "Waiting for other court players to start the year...";
+  regulationWaiting.classList.remove("hidden");
 });
 
 // ── Hand (player turns) ────────────────────────────────────
 function canAffordCard(card) {
   const resources = lastPrivateState?.resources || {};
   const costs = card.costs || {};
-  const COST_SKIP = new Set(["fee", "fee_card_id", "payee_card_id"]);
+  const COST_SKIP = new Set(["fee", "fee_card_id", "fee_card_type", "fee_company_type", "payee_card_id"]);
   let totalMoney = 0;
 
   if (Object.keys(costs).length === 0) {
-    // No costs dict — use card.cost (base keep cost)
     totalMoney = card.cost || 0;
   } else {
     for (const [res, amt] of Object.entries(costs)) {
@@ -807,25 +941,57 @@ function canAffordCard(card) {
       if ((resources[res] ?? 0) < amt) return false;
     }
   }
-  // Add fee if the player doesn't own the fee card
-  if (costs.fee && !iOwnFeeCard(costs.fee_card_id)) {
+  if (costs.fee && !iOwnFeeCosts(costs)) {
     totalMoney += costs.fee;
   }
   return totalMoney <= (resources.money ?? 0);
 }
 
-function findPayeesForFee(feeCardId) {
-  if (!feeCardId || !lastGameState) return [];
-  const targetId = Number(feeCardId);  // normalise to number for safe comparison
+/**
+ * Return a list of {pid, name} for players (other than me) who are eligible
+ * to receive the fee defined by the costs object:
+ *   fee_card_id     → players who have played that specific card
+ *   fee_card_type   → players who have played any card of that type
+ *   fee_company_type→ players whose chosen company is of that type
+ */
+function findPayeesForFee(costs) {
+  if (!costs || !lastGameState) return [];
   const results = [];
   for (const [pid, p] of Object.entries(lastGameState.players)) {
     if (pid === myPlayerId) continue;
-    const has = (p.played_cards || []).some(c => Number(c.id) === targetId);
-    if (has) results.push({ pid, name: p.name });
+    let eligible = false;
+    if (costs.fee_card_id) {
+      const targetId = Number(costs.fee_card_id);
+      eligible = (p.played_cards || []).some(c => Number(c.id) === targetId);
+    } else if (costs.fee_card_type) {
+      eligible = (p.played_cards || []).some(c => c.card_color_type === costs.fee_card_type);
+    } else if (costs.fee_company_type) {
+      eligible = !!(p.company && p.company.card_color_type === costs.fee_company_type);
+    }
+    if (eligible) results.push({ pid, name: p.name });
   }
   return results;
 }
 
+/** True if the current player "owns" the fee target (fee is waived for them). */
+function iOwnFeeCosts(costs) {
+  if (!costs || !lastGameState) return false;
+  const me = lastGameState.players[myPlayerId];
+  if (!me) return false;
+  if (costs.fee_card_id) {
+    const targetId = Number(costs.fee_card_id);
+    return (me.played_cards || []).some(c => Number(c.id) === targetId);
+  }
+  if (costs.fee_card_type) {
+    return (me.played_cards || []).some(c => c.card_color_type === costs.fee_card_type);
+  }
+  if (costs.fee_company_type) {
+    return !!(me.company && me.company.card_color_type === costs.fee_company_type);
+  }
+  return false;
+}
+
+/** Legacy shim — kept so any remaining call sites work. */
 function iOwnFeeCard(feeCardId) {
   if (!feeCardId || !lastGameState) return false;
   const targetId = Number(feeCardId);
@@ -835,10 +1001,12 @@ function iOwnFeeCard(feeCardId) {
 
 function showPaymentPopup(card, useOptional, callback) {
   const cardCosts = card.costs || {};
-  const hasFee = cardCosts.fee && cardCosts.fee_card_id;
+  const hasFee = cardCosts.fee && (
+    cardCosts.fee_card_id || cardCosts.fee_card_type || cardCosts.fee_company_type
+  );
 
-  // Fee waived — player already owns the fee card
-  if (hasFee && iOwnFeeCard(cardCosts.fee_card_id)) {
+  // Fee waived — player already owns the fee target
+  if (hasFee && iOwnFeeCosts(cardCosts)) {
     callback({});
     return;
   }
@@ -846,9 +1014,17 @@ function showPaymentPopup(card, useOptional, callback) {
   // No fee at all — play immediately
   if (!hasFee) { callback({}); return; }
 
-  const feePayees = findPayeesForFee(cardCosts.fee_card_id);
+  const feePayees = findPayeesForFee(cardCosts);
   const feeAmt = cardCosts.fee;
-  const feeCardName = cardNameById(cardCosts.fee_card_id);
+  // Human-readable description of who triggers the fee
+  let feeCardName;
+  if (cardCosts.fee_card_id) {
+    feeCardName = cardNameById(cardCosts.fee_card_id);
+  } else if (cardCosts.fee_card_type) {
+    feeCardName = `any "${cardCosts.fee_card_type}" card`;
+  } else {
+    feeCardName = `a "${cardCosts.fee_company_type}" company`;
+  }
 
   const overlay = document.createElement("div");
   overlay.className = "payment-popup-overlay";
@@ -920,26 +1096,59 @@ function renderHand(hand) {
   hand.forEach(card => {
     const el = createCardElement(card, { interactive: true });
     const costs = card.costs || {};
-    const hasFee = costs.fee && costs.fee_card_id;
+    const hasFee = costs.fee && (costs.fee_card_id || costs.fee_card_type || costs.fee_company_type);
+    const rm = card.responsible_mining;
+
+    // Responsible-mining toggle for rare metal mine cards
+    let responsibleMining = false;
+    if (rm && Object.keys(rm).length) {
+      const rmBar = document.createElement("div");
+      rmBar.className = "card-rm-bar";
+
+      const rmToggle = document.createElement("button");
+      rmToggle.className = "btn btn-sm card-rm-btn";
+      const extraCost = rm.extra_cost ? Object.entries(rm.extra_cost).map(([k,v]) => `+$${v}B`).join(", ") : "";
+      const extraEffect = rm.extra_effect ? Object.entries(rm.extra_effect).map(([k,v]) => `+${v} ${k}`).join(", ") : "";
+      const updateRmBtn = () => {
+        rmToggle.textContent = responsibleMining
+          ? `♻️ Responsible Mining ON  (${extraCost}${extraEffect ? " → " + extraEffect : ""})`
+          : `⛏️ Standard Mining`;
+        rmToggle.style.background = responsibleMining ? "rgba(46,204,113,0.2)" : "rgba(231,76,60,0.15)";
+        rmToggle.style.borderColor = responsibleMining ? "#2ecc71" : "#555";
+      };
+      updateRmBtn();
+      rmToggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        responsibleMining = !responsibleMining;
+        updateRmBtn();
+      });
+      rmBar.appendChild(rmToggle);
+      el.appendChild(rmBar);
+    }
 
     el.addEventListener("click", () => {
       if (!canAffordCard(card)) {
         showFloatingError("Not enough resources to play this card.");
         return;
       }
-      if (hasFee) {
-        showPaymentPopup(card, {}, (payTo) => {
-          socket.emit("play_card", { card_name: card.name, use_optional: {}, pay_to: payTo });
+      const emitPlay = (payTo) => {
+        socket.emit("play_card", {
+          card_name: card.name,
+          use_optional: {},
+          pay_to: payTo || {},
+          responsible_mining: responsibleMining,
         });
+      };
+      if (hasFee) {
+        showPaymentPopup(card, {}, emitPlay);
       } else {
-        socket.emit("play_card", { card_name: card.name, use_optional: {} });
+        emitPlay({});
       }
     });
     // Show fee status hint on the card itself
     if (hasFee) {
-      const feeCardId = costs.fee_card_id;
-      const owns = iOwnFeeCard(feeCardId);
-      const payees = findPayeesForFee(feeCardId);
+      const owns = iOwnFeeCosts(costs);
+      const payees = findPayeesForFee(costs);
       const badge = document.createElement("div");
       badge.className = "card-fee-status";
       if (owns) {
@@ -987,6 +1196,45 @@ function renderPlayedCards(cards) {
     tagSpan.className = "played-mini-tag";
     tagSpan.textContent = c.tag || c.card_type;
     div.appendChild(tagSpan);
+
+    // Tier indicator for tiered cards
+    const cardTiers = c.tiers || [];
+    if (cardTiers.length > 0 && c.current_tier > 0) {
+      const tierRow = document.createElement("div");
+      tierRow.className = "played-mini-tier-row";
+      const maxTier = cardTiers.length;
+      let tierStr = "";
+      for (let t = 1; t <= maxTier; t++) {
+        tierStr += t <= c.current_tier ? "★" : "☆";
+      }
+      const tierSpan = document.createElement("span");
+      tierSpan.className = "played-tier-stars";
+      tierSpan.textContent = tierStr;
+      tierRow.appendChild(tierSpan);
+
+      // Upgrade button — only shown on own turn in PLAYER_TURNS phase
+      const nextIdx = c.current_tier;
+      const canUpgrade = nextIdx < maxTier;
+      const myTurn = lastGameState?.current_player_id === myPlayerId;
+      const phase = lastGameState?.phase;
+      if (canUpgrade && myTurn && phase === "player_turns") {
+        const nextTier = cardTiers[nextIdx];
+        const cost = nextTier?.data_cost ?? 0;
+        const myData = lastPrivateState?.resources?.data ?? 0;
+        const canAfford = myData >= cost;
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm tier-upgrade-btn" + (canAfford ? "" : " tier-upgrade-disabled");
+        btn.title = canAfford ? `Upgrade to tier ${nextIdx + 1}` : `Need ${cost}PB data`;
+        btn.textContent = `⬆ ${cost}PB`;
+        btn.disabled = !canAfford;
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          socket.emit("upgrade_card_tier", { instance_id: c.instance_id });
+        });
+        tierRow.appendChild(btn);
+      }
+      div.appendChild(tierRow);
+    }
 
     div.addEventListener("mouseenter", (e) => {
       floatingTooltip.innerHTML = "";
@@ -1124,8 +1372,8 @@ handModal.addEventListener("click", (e) => {
 });
 
 // ── Sidebar renders ─────────────────────────────────────────
-const RESOURCE_ORDER = ["money", "engineers", "suits", "servers", "ads"];
-const RESOURCE_WIDE = new Set(["money"]);
+const RESOURCE_ORDER = ["money", "data", "engineers", "suits", "servers", "ads"];
+const RESOURCE_WIDE = new Set(["money", "data"]);
 
 function renderResources(resources) {
   resourcesDiv.innerHTML = "";
@@ -1135,10 +1383,16 @@ function renderResources(resources) {
     const div = document.createElement("div");
     div.className = "resource-item";
     if (RESOURCE_WIDE.has(key)) div.classList.add("resource-wide");
-    div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">${key === "money" ? `$${val}M` : val}</span>`;
+    const dispVal = key === "money" ? `$${val}B`
+                  : key === "data"  ? `${val}PB`
+                  : val;
+    div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">${dispVal}</span>`;
     resourcesDiv.appendChild(div);
   });
 }
+
+// Fallback palette — matches _PLAYER_COLORS on the backend
+const PIE_PLAYER_COLORS = ["#f9c912","#00cfff","#4dff91","#ff5ef3","#ff4422","#ff9900","#b966ff","#00e5c3"];
 
 function renderUsersPie() {
   const canvas = document.getElementById("users-pie");
@@ -1152,9 +1406,20 @@ function renderUsersPie() {
 
   const slices = [];
   let myUsers = 0;
+  let colorIdx = 0;
+  const usedColors = new Set();
   for (const [pid, p] of Object.entries(players)) {
     const u = p.users || 0;
-    if (u > 0) slices.push({ pid, name: p.name, users: u, color: p.color });
+    // Resolve color: use p.color if it's a valid, unique hex; otherwise pick from fallback palette
+    let color = p.color && p.color.startsWith("#") ? p.color : null;
+    if (!color || usedColors.has(color)) {
+      // Find a fallback color not already used
+      while (usedColors.has(PIE_PLAYER_COLORS[colorIdx % PIE_PLAYER_COLORS.length])) colorIdx++;
+      color = PIE_PLAYER_COLORS[colorIdx % PIE_PLAYER_COLORS.length];
+      colorIdx++;
+    }
+    usedColors.add(color);
+    if (u > 0) slices.push({ pid, name: p.name, users: u, color });
     if (pid === myId) myUsers = u;
   }
   if (pool > 0) slices.push({ pid: "__pool", name: "Uncaptured", users: pool, color: "#2a2a2a" });
@@ -1211,10 +1476,12 @@ function renderUsersPie() {
 
   const myPct = total > 0 ? ((myUsers / total) * 100).toFixed(1) : "0.0";
   const mpu = lastGameState?.params?.money_per_users ?? 20;
+  const dpu = lastGameState?.params?.data_per_users ?? 200;
   const income = mpu > 0 ? Math.floor(myUsers / mpu) : 0;
-  const nextThreshold = mpu > 0 ? (Math.floor(myUsers / mpu) + 1) * mpu : 0;
-  const hint = `${mpu}M👥 → $1M/yr`;
-  info.innerHTML = `<strong>👥 ${myUsers}M</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${income}M/yr</span><br><span class="pie-hint">${hint}</span>`;
+  const hint = `100M👥 → $${Math.round(100 / mpu)}B/yr`;
+  const dataProd = Math.floor(myUsers / 100) * dpu;
+  const dataHint = `100M👥 → ${dpu}PB/yr`;
+  info.innerHTML = `<strong>👥 ${myUsers}M</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${income}B/yr</span><br><span class="pie-hint">${hint}</span><br><span class="pie-income">📊 ${dataProd}PB/yr</span><br><span class="pie-hint">${dataHint}</span>`;
 
   let pieTip = document.getElementById("pie-tooltip");
   if (!pieTip) {
@@ -1283,8 +1550,8 @@ function updateReputationBar(val) {
   if (bar) {
     const mod = getRepMod(v);
     let status;
-    if (mod > 0) status = `⭐ +${mod}👥 per gain, +${mod}🔧👔 per hire`;
-    else if (mod < 0) status = `⚠️ ${mod}👥 per gain, ${mod}🔧👔 per hire`;
+    if (mod > 0) status = `⭐ +${mod}M👥 per gain, +${mod}🔧👔 per hire`;
+    else if (mod < 0) status = `⚠️ ${mod}M👥 per gain, ${mod}🔧👔 per hire`;
     else status = "No bonus or penalty";
     const thresh = lastGameState?.params?.reputation_thresholds || [];
     const threshStr = thresh.map(t =>
@@ -1305,9 +1572,23 @@ function renderProduction(production) {
     const div = document.createElement("div");
     div.className = "resource-item";
     if (PRODUCTION_WIDE.has(key)) div.classList.add("resource-wide");
-    const prefix = key === "HR" ? "+" : "";
-    div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">${prefix}${val}</span>`;
 
+    let displayVal = val;
+    let labelHtml = prettyRes(key);
+
+    if (key === "HR") {
+      const rep = lastPrivateState?.resources?.reputation || 0;
+      const repMod = getRepMod(rep);
+      const effective = val >= 0 ? Math.max(0, val + repMod) : val;
+      displayVal = effective;
+      if (repMod !== 0) {
+        const sign = repMod > 0 ? "+" : "";
+        labelHtml += ` <span style="font-size:.7em;opacity:.7">(${val}${sign}${repMod} rep)</span>`;
+      }
+    }
+
+    const prefix = key === "HR" ? "+" : "";
+    div.innerHTML = `<span class="label">${labelHtml}</span><span class="value">${prefix}${displayVal}</span>`;
     productionDiv.appendChild(div);
   });
 
@@ -1316,7 +1597,7 @@ function renderProduction(production) {
   if (moneyProd > 0) {
     const div = document.createElement("div");
     div.className = "resource-item resource-wide";
-    div.innerHTML = `<span class="label">💰 Factory income</span><span class="value">$${moneyProd}M/yr</span>`;
+    div.innerHTML = `<span class="label">💰 Factory income</span><span class="value">$${moneyProd}B/yr</span>`;
     productionDiv.appendChild(div);
   }
 }
@@ -1326,6 +1607,7 @@ const RES_EMOJI = {
   money: "💰", users: "👥", engineers: "🔧", suits: "👔",
   servers: "🖥️", ads: "📢", reputation: "⭐", HR: "🏢",
   data_centers: "🗄️", ad_campaigns: "📣",
+  data: "📊",
 };
 
 function prettyRes(name) {
@@ -1339,10 +1621,11 @@ function emojiRes(name) {
   return RES_EMOJI[name] || name.replace(/_/g, " ");
 }
 
-// Format a resource value for display. Users and money are in M units.
+// Format a resource value for display. Users in M, money in B, data in PB.
 function fmtCardVal(key, val) {
   if (key === "users") return `${val}M`;
-  if (key === "money") return `${val}M`;
+  if (key === "money") return `${val}B`;
+  if (key === "data") return `${val}PB`;
   return val;
 }
 
@@ -1367,9 +1650,9 @@ function cardNameById(id) {
 // ── Card element builder ────────────────────────────────────
 const CARD_SUBTYPE_EMOJIS = {
   "social platform":          "🐦",
-  "hardware manufacturer":    "🏭",
+  "hardware manufacturer":    "📱",
   "software service":         "📜",
-  "software platform":        "🤖",
+  "software platform":        "🏞️",
   "software engine":          "⚙️",
   "online marketplace":       "🛒",
   "search service":           "🔍",
@@ -1378,11 +1661,15 @@ const CARD_SUBTYPE_EMOJIS = {
   "data center":              "🗄️",
   "office":                   "🏢",
   "ad campaign":              "📢",
+  "lobby":                    "🏛️",
+  "rare metal mine":          "🔩",
+  "hydroelectric power plant":"💧",
+  "satellite":                "🛰️",
 };
 
 const CARD_TYPE_TINTS = {
   "social platform":       "#1a2a3e",  // dark blue
-  "hardware manufacturer": "#1a1a1a",  // near black
+  "hardware manufacturer": "#1a1108",  // dark charcoal-brown (was factory, now hw manufacturer)
   "software service":      "#3a1515",  // dark red
   "software platform":     "#251a3a",  // dark purple
   "software engine":       "#0f2a2a",  // dark aquamarine
@@ -1393,6 +1680,10 @@ const CARD_TYPE_TINTS = {
   "data center":           "#1a1e22",  // dark slate
   "office":                "#0f1a3a",  // dark royal blue
   "ad campaign":           "#2e0f1e",  // dark pink
+  "lobby":                 "#1a2a1a",  // dark forest green
+  "rare metal mine":              "#2a3a42",  // dark steel blue-grey
+  "hydroelectric power plant":   "#0d3a50",
+  "satellite":                   "#0a0a1a",
 };
 
 const CARD_DECK_EMOJIS = {
@@ -1402,6 +1693,7 @@ const CARD_DECK_EMOJIS = {
   "leverage":      "📈",
   "company":       "🏦",
   "regulation":    "⚖️",
+  "world_event":   "🌍",
 };
 
 function createCardElement(card, options = {}) {
@@ -1454,7 +1746,7 @@ function createCardElement(card, options = {}) {
   let boostsHtml = "";
   if (card.boosts && card.boosts.length) {
     boostsHtml = `<div class="card-boosts"><span class="card-section-label">Boosts</span><span class="card-effects-row">`;
-    card.boosts.forEach(b => {
+    card.boosts.forEach((b, i) => {
       const bonusEntries = Object.entries(b.bonus || {}).filter(([, v]) => v);
       if (!bonusEntries.length) return;
       const bonusStr = bonusEntries.map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)}${emojiRes(k)}`).join(" ");
@@ -1462,11 +1754,23 @@ function createCardElement(card, options = {}) {
       if (b.target_id) {
         const ids = Array.isArray(b.target_id) ? b.target_id : [b.target_id];
         targetStr = ids.map(id => cardNameById(id)).join(", ");
+        // target_id: no cap — fires every time; no counter shown
       }
       if (b.target_type) {
         const types = Array.isArray(b.target_type) ? b.target_type : [b.target_type];
-        const countSuffix = b.target_count ? ` ×${b.target_count}` : "";
-        targetStr += (targetStr ? " / " : "") + types.join(" or ") + countSuffix;
+        const typeDisplay = types.map(t => CARD_SUBTYPE_EMOJIS[t] || t).join("/");
+        const maxCount = b.target_count || 0;
+        const fires = (card.boost_fires || [])[i] || 0;
+        // Show thumbs: used ones grayed, remaining ones lit
+        let thumbStr = "";
+        if (maxCount > 0) {
+          for (let j = 0; j < maxCount; j++) {
+            thumbStr += j < fires
+              ? `<span style="opacity:.3;font-size:.8em">👍</span>`
+              : `<span style="font-size:.8em">👍</span>`;
+          }
+        }
+        targetStr += (targetStr ? " / " : "") + typeDisplay + (thumbStr ? ` ${thumbStr}` : "");
       }
       if (targetStr) {
         boostsHtml += `<span class="card-boost-item">${targetStr}: ${bonusStr}</span>`;
@@ -1493,20 +1797,42 @@ function createCardElement(card, options = {}) {
     buildHtml = `<div class="card-build-badge">🏗️ ${label}</div>`;
   }
 
+  // Enhancement tiers
+  let tiersHtml = "";
+  const cardTiers = card.tiers || [];
+  if (cardTiers.length > 0) {
+    const curTier = card.current_tier || 0;
+    tiersHtml = `<div class="card-tiers"><span class="card-section-label">Tiers</span>`;
+    cardTiers.forEach((t, i) => {
+      const tierNum = i + 1;
+      const isActive = curTier === tierNum;
+      const isUnlocked = curTier > tierNum;
+      const cls = isActive ? "tier-active" : isUnlocked ? "tier-unlocked" : "tier-locked";
+      const dataCost = t.data_cost ? ` (${t.data_cost}PB)` : "";
+      tiersHtml += `<span class="card-tier-item ${cls}" title="Tier ${tierNum}: ${t.users}M users${dataCost}">T${tierNum}: ${t.users}M👥${dataCost}</span>`;
+    });
+    tiersHtml += `</div>`;
+  }
+
+  // Requirements
+  let reqHtml = "";
+  const reqs = card.requirements || [];
+  if (reqs.length) {
+    const reqStr = reqs.map(r => CARD_SUBTYPE_EMOJIS[r] ? `${CARD_SUBTYPE_EMOJIS[r]} ${r}` : r).join(", ");
+    reqHtml = `<div class="card-requirements"><span class="card-section-label">Requires</span><span class="card-req-list">${reqStr}</span></div>`;
+  }
+
   // Costs section (new format)
   let costsHtml = "";
   const costs = card.costs || {};
-  const COST_SKIP = new Set(["fee", "fee_card_id", "payee_card_id"]);
+  const COST_SKIP = new Set(["fee", "fee_card_id", "fee_card_type", "fee_company_type", "payee_card_id"]);
   const hasCosts = Object.entries(costs).some(([k, v]) => v && !COST_SKIP.has(k));
-  // Helper: check if the player can afford a specific resource amount (only in-game)
   const myRes = lastPrivateState?.resources;
   const canAffordRes = (res, amt) => {
-    if (!myRes || !amt) return null; // null = no colour (editor / no state)
+    if (!myRes || !amt) return null;
     if (res === "money") {
-      // Include fee in total money needed
-      const feeAmt = (!iOwnFeeCard(costs.fee_card_id)) ? (costs.fee || 0) : 0;
-      const totalMoney = (costs.money || 0) + feeAmt;
-      return (myRes.money ?? 0) >= totalMoney;
+      const feeAmt = (!iOwnFeeCosts(costs)) ? (costs.fee || 0) : 0;
+      return (myRes.money ?? 0) >= (costs.money || 0) + feeAmt;
     }
     const have = res === "users" ? (lastGameState?.players?.[myPlayerId]?.users ?? 0)
                                  : (myRes[res] ?? 0);
@@ -1521,11 +1847,16 @@ function createCardElement(card, options = {}) {
       costsHtml += `<span class="card-cost-item${cls}">${fmtCardVal(res, amt)} ${emojiRes(res)}</span>`;
     }
     const feeAmt = costs.fee || 0;
-    const feeTarget = costs.fee_card_id;
-    if (feeAmt && feeTarget) {
-      const feeOk = myRes ? (myRes.money ?? 0) >= feeAmt : null;
-      const feeCls = feeOk === null ? "" : feeOk ? " cost-ok" : " cost-nok";
-      costsHtml += `<span class="card-cost-item card-cost-fee${feeCls}">💸 $${feeAmt}M → <em>${cardNameById(feeTarget)}</em> owner</span>`;
+    if (feeAmt) {
+      let feeLabel;
+      if (costs.fee_card_id)      feeLabel = `${cardNameById(costs.fee_card_id)} owner`;
+      else if (costs.fee_card_type)   feeLabel = `"${costs.fee_card_type}" card owner`;
+      else if (costs.fee_company_type) feeLabel = `"${costs.fee_company_type}" company`;
+      if (feeLabel) {
+        const feeOk = myRes ? (myRes.money ?? 0) >= feeAmt : null;
+        const feeCls = feeOk === null ? "" : feeOk ? " cost-ok" : " cost-nok";
+        costsHtml += `<span class="card-cost-item card-cost-fee${feeCls}">💸 $${feeAmt}M → <em>${feeLabel}</em></span>`;
+      }
     }
     costsHtml += `</div>`;
   } else if (card.cost) {
@@ -1544,7 +1875,9 @@ function createCardElement(card, options = {}) {
     ${effectsHtml}
     ${boostsHtml}
     ${buildHtml}
+    ${tiersHtml}
     ${startHtml}
+    ${reqHtml}
     ${costsHtml}
   `;
 
@@ -1564,8 +1897,9 @@ const paramsModal = document.getElementById("params-modal");
 const paramsBody = document.getElementById("params-body");
 
 const PARAM_LABELS = {
-  total_users: "Total Users in Pool (×10M)",
-  money_per_users: "Users per $1M/year",
+  total_users: "Total Users in Pool (×1M)",
+  money_per_users: "$B/yr per 100M users",
+  data_per_users: "PB/yr per 100M users",
   projects_draw: "Cards from Projects Deck",
   boosters_draw: "Cards from Boosters Deck",
   draft_cost: "Cost to Keep a Card ($)",
@@ -1802,6 +2136,26 @@ function showFloatingSuccess(msg) {
   setTimeout(() => { gameError.classList.remove("visible", "floating-success"); }, 4000);
 }
 
+// ── Card-played notification popup ──────────────────────────
+const cardPlayedPopup = document.getElementById("card-played-popup");
+const cardPlayedMsg   = document.getElementById("card-played-msg");
+const cardPlayedBody  = document.getElementById("card-played-body");
+document.getElementById("card-played-ok").addEventListener("click", () => cardPlayedPopup.classList.add("hidden"));
+cardPlayedPopup.addEventListener("click", (e) => { if (e.target === cardPlayedPopup) cardPlayedPopup.classList.add("hidden"); });
+
+socket.on("card_played_notification", (data) => {
+  // Don't show to the player who played the card
+  if (data.player_id === myPlayerId) return;
+  cardPlayedMsg.textContent = `${data.player_name} played:`;
+  cardPlayedBody.innerHTML = "";
+  if (data.card) {
+    cardPlayedBody.appendChild(createCardElement(data.card, { interactive: false }));
+  } else {
+    cardPlayedBody.textContent = data.card_name;
+  }
+  cardPlayedPopup.classList.remove("hidden");
+});
+
 // ══════════════════════════════════════════════════════════════
 // ── Card Editor ──────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════
@@ -1819,13 +2173,13 @@ const DICT_FIELDS = new Set([
 
 const RESOURCE_OPTIONS = [
   "users", "money", "engineers", "suits", "servers", "ads", "reputation", "HR",
-  "data_centers", "ad_campaigns",
+  "data_centers", "ad_campaigns", "data",
 ];
 
 const COST_KEY_OPTIONS = [
   "engineers", "suits", "ads", "money",
   "servers", "data_centers", "ad_campaigns",
-  "reputation", "HR", "users", "fee", "fee_card_id",
+  "reputation", "HR", "users", "fee", "fee_card_id", "fee_card_type", "fee_company_type",
 ];
 
 const DICT_KEY_OPTIONS = {
@@ -1845,10 +2199,10 @@ const EDITOR_TYPE_LABELS = {
   leverage: "Leverage",
   innovation: "Innovation",
   build: "Build",
-  regulation: "Regulation",
+  regulation: "Events — Regulation",
+  world_event: "Events — World Events 🌍",
 };
 
-const editorTotalCount = document.getElementById("editor-total-count");
 const editorSearch = document.getElementById("editor-search");
 const cardTreesBtn = document.getElementById("card-trees-btn");
 const backToGridBtn = document.getElementById("back-to-grid-btn");
@@ -1864,6 +2218,7 @@ backToGridBtn.addEventListener("click", () => {
     }
     editingKey = null;
   }
+  _editorOpenIntent = true;
   setTimeout(() => socket.emit("get_all_cards"), 300);
 });
 const treesModal = document.getElementById("trees-modal");
@@ -1872,13 +2227,17 @@ const treesStats = document.getElementById("trees-stats");
 const treesSearch = document.getElementById("trees-search");
 const treesBody = document.getElementById("trees-body");
 
+let _editorOpenIntent = false;  // true when user explicitly clicked "Edit Cards"
+
 editCardsBtn.addEventListener("click", () => {
   editorContext = "grid";
+  _editorOpenIntent = true;
   socket.emit("get_all_cards");
 });
 
 document.getElementById("edit-cards-lobby-btn").addEventListener("click", () => {
   editorContext = "grid";
+  _editorOpenIntent = true;
   socket.emit("get_all_cards");
 });
 
@@ -1910,9 +2269,17 @@ socket.on("all_cards", (data) => {
   editorCards = data.cards;
   editorLocksMap = data.locks || {};
   rebuildCardIndex();
-  if (!editingKey) renderEditorGrid();
-  editorModal.classList.remove("hidden");
-  editorTitle.textContent = "Card Editor";
+  // Open the modal only when the user explicitly requested it;
+  // background broadcasts (from other editors saving) must not pop it open.
+  if (_editorOpenIntent) {
+    _editorOpenIntent = false;
+    editorModal.classList.remove("hidden");
+    editorTitle.textContent = "Card Editor";
+    if (!editingKey) renderEditorGrid();
+  } else if (!editorModal.classList.contains("hidden")) {
+    // Editor already open — refresh the grid in place
+    if (!editingKey) renderEditorGrid();
+  }
 });
 
 socket.on("card_locked", (data) => {
@@ -1938,6 +2305,229 @@ socket.on("lock_result", (data) => {
 
 editorSearch.addEventListener("input", () => renderEditorGrid());
 
+// ── Editor scroll-to-top button ───────────────────────────────
+const editorScrollTopBtn = document.getElementById("editor-scroll-top");
+editorBody.addEventListener("scroll", () => {
+  editorScrollTopBtn.classList.toggle("visible", editorBody.scrollTop > 200);
+});
+editorScrollTopBtn.addEventListener("click", () => {
+  editorBody.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+// ── Editor Stats Charts ───────────────────────────────────────
+const editorStatsPanel = document.getElementById("editor-stats-panel");
+
+const CHART_PALETTES = {
+  overall:  ["#f9c912", "#00cfff"],
+  projects: ["#f9c912", "#ff4422", "#ff6b35", "#4dff91"],
+  boosters: ["#00cfff", "#b966ff"],
+  platform: ["#4488ff", "#111111", "#cc2222", "#7733bb", "#116655", "#994400",
+             "#117733", "#222222", "#8833aa", "#2255cc", "#115588", "#cc4488", "#1a4a1a"],
+  build:    ["#e67e22", "#3498db", "#1abc9c", "#9b59b6", "#f1c40f", "#e74c3c", "#2ecc71"],
+};
+
+function drawPie(canvasId, slices) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const size = 180;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = size + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+  const cx = size / 2, cy = size / 2;
+  const outerR = cx - 4, innerR = outerR * 0.48;
+  const total = slices.reduce((s, x) => s + x.value, 0);
+  if (!total) return;
+  let angle = -Math.PI / 2;
+  const gap = slices.length > 1 ? 0.025 : 0;
+  // Store slice angle ranges for hover detection
+  const sliceAngles = slices.map(s => {
+    const sweep = (s.value / total) * Math.PI * 2;
+    const entry = { ...s, start: angle, end: angle + sweep, total };
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, angle + gap, angle + sweep - gap);
+    ctx.arc(cx, cy, innerR, angle + sweep - gap, angle + gap, true);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    ctx.strokeStyle = "#0a0a0a";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    angle += sweep;
+    return entry;
+  });
+  ctx.font = `bold ${Math.round(outerR * 0.22)}px 'Share Tech Mono',monospace`;
+  ctx.fillStyle = "#7a7260";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(total), cx, cy);
+
+  // Attach hover tooltip
+  let tip = canvas._pieTip;
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.className = "pie-tooltip";
+    tip.style.position = "fixed";
+    tip.style.pointerEvents = "none";
+    tip.style.display = "none";
+    document.body.appendChild(tip);
+    canvas._pieTip = tip;
+  }
+  canvas.onmousemove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const dx = mx - cx, dy = my - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < innerR || dist > outerR) { tip.style.display = "none"; return; }
+    let a = Math.atan2(dy, dx);
+    if (a < -Math.PI / 2) a += Math.PI * 2;
+    const hit = sliceAngles.find(s => a >= s.start && a < s.end);
+    if (hit) {
+      const pct = Math.round((hit.value / hit.total) * 100);
+      tip.textContent = `${hit.label}: ${hit.value} (${pct}%)`;
+      tip.style.display = "block";
+      tip.style.left = (e.clientX + 12) + "px";
+      tip.style.top  = (e.clientY - 10) + "px";
+    } else {
+      tip.style.display = "none";
+    }
+  };
+  canvas.onmouseleave = () => { tip.style.display = "none"; };
+}
+
+function makeLegend(slices, total) {
+  const div = document.createElement("div");
+  div.className = "editor-chart-legend";
+  slices.forEach(s => {
+    const item = document.createElement("div");
+    item.className = "editor-legend-item";
+    const pct = total ? Math.round((s.value / total) * 100) : 0;
+    item.innerHTML = `<span class="editor-legend-swatch" style="background:${s.color}"></span>${s.label}: ${s.value} (${pct}%)`;
+    div.appendChild(item);
+  });
+  return div;
+}
+
+let editorChartsCollapsed = false;
+
+function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = {}, DECK_MAP, allCards = {} }) {
+  const panel = editorStatsPanel;
+  panel.innerHTML = "";
+
+  // Minimize toggle button
+  const toggleBtn = document.createElement("button");
+  toggleBtn.className = "btn btn-sm editor-charts-toggle";
+  toggleBtn.title = editorChartsCollapsed ? "Show charts" : "Hide charts";
+  toggleBtn.textContent = editorChartsCollapsed ? "▼ Charts" : "▲ Hide";
+  toggleBtn.addEventListener("click", () => {
+    editorChartsCollapsed = !editorChartsCollapsed;
+    renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts, DECK_MAP, allCards });
+  });
+  panel.appendChild(toggleBtn);
+
+  if (editorChartsCollapsed) return;
+
+  const TYPE_LABELS = {
+    platform: "Platform", cyber_attack: "Cyber Attacks", fuck_up: "Fuck-ups", build: "Build",
+    leverage: "Leverage", innovation: "Innovation",
+    company: "Company", regulation: "Regulation", world_event: "World Events",
+  };
+
+  function makeChart(title, slices, container) {
+    if (!slices.length) return;
+    const total = slices.reduce((s, x) => s + x.value, 0);
+    if (!total) return;
+    const wrap = document.createElement("div");
+    wrap.className = "editor-chart-wrap";
+    const lbl = document.createElement("div");
+    lbl.className = "editor-chart-title";
+    lbl.textContent = title;
+    wrap.appendChild(lbl);
+    const canvasId = "ec-" + title.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+    const canvas = document.createElement("canvas");
+    canvas.id = canvasId;
+    wrap.appendChild(canvas);
+    wrap.appendChild(makeLegend(slices, total));
+    (container || panel).appendChild(wrap);
+    requestAnimationFrame(() => drawPie(canvasId, slices));
+  }
+
+  // ── Row 1: Overall + Projects + Boosters ──────────────────
+  const row1 = document.createElement("div");
+  row1.className = "editor-charts-row";
+  panel.appendChild(row1);
+
+  // Overall: Projects + Boosters + Company + Events
+  const OVERALL_COLORS = ["#f9c912", "#00cfff", "#ff9900", "#ff5ef3"];
+  const overallSlices = [
+    ...Object.entries(deckCounts).map(([deck, n], i) => ({
+      label: deck, value: n, color: OVERALL_COLORS[i % OVERALL_COLORS.length],
+    })),
+    ...(extraCounts.company ? [{ label: "Company", value: extraCounts.company, color: "#ff9900" }] : []),
+    ...(extraCounts.events  ? [{ label: "Events",  value: extraCounts.events,  color: "#ff5ef3" }] : []),
+  ];
+  makeChart("Overall", overallSlices, row1);
+
+  // Per-deck breakdown (Projects, Boosters)
+  const deckTypeMap = {};
+  for (const [ct, n] of Object.entries(typeCounts)) {
+    const deck = DECK_MAP[ct] || ct;
+    if (!deckTypeMap[deck]) deckTypeMap[deck] = [];
+    deckTypeMap[deck].push({ ct, n });
+  }
+  const deckPalettes = { Projects: CHART_PALETTES.projects, Boosters: CHART_PALETTES.boosters };
+  for (const [deck, types] of Object.entries(deckTypeMap)) {
+    const palette = deckPalettes[deck] || CHART_PALETTES.projects;
+    const slices = types.map(({ ct, n }, i) => ({
+      label: TYPE_LABELS[ct] || ct, value: n,
+      color: palette[i % palette.length],
+    }));
+    makeChart(deck, slices, row1);
+  }
+
+  // ── Row 2: Platform by type, Build by build, Events breakdown ─
+  const row2 = document.createElement("div");
+  row2.className = "editor-charts-row";
+  panel.appendChild(row2);
+
+  // Platform breakdown — count by card type field
+  const platformTypeCounts = {};
+  for (const card of (allCards.platform || [])) {
+    const t = card.type || "(none)";
+    platformTypeCounts[t] = (platformTypeCounts[t] || 0) + 1;
+  }
+  const platformSlices = Object.entries(platformTypeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([t, n], i) => ({
+      label: t, value: n,
+      color: CHART_PALETTES.platform[i % CHART_PALETTES.platform.length],
+    }));
+  makeChart("Platform — by Type", platformSlices, row2);
+
+  // Build breakdown — count by build field
+  const buildTypeCounts = {};
+  for (const card of (allCards.build || [])) {
+    const b = card.build || "(none)";
+    buildTypeCounts[b] = (buildTypeCounts[b] || 0) + 1;
+  }
+  const buildSlices = Object.entries(buildTypeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([b, n], i) => ({
+      label: b.replace(/_/g, " "), value: n,
+      color: CHART_PALETTES.build[i % CHART_PALETTES.build.length],
+    }));
+  makeChart("Build — by Tile", buildSlices, row2);
+
+  // Events breakdown — regulation vs world_event
+  const eventsSlices = [
+    ...(extraCounts.regulation  ? [{ label: "Regulation ⚖️",   value: extraCounts.regulation,  color: "#ff5ef3" }] : []),
+    ...(extraCounts.world_event ? [{ label: "World Events 🌍",  value: extraCounts.world_event, color: "#00d4aa" }] : []),
+  ];
+  makeChart("Events — Breakdown", eventsSlices, row2);
+}
+
 // ── Editor Grid ──────────────────────────────────────────────
 function renderEditorGrid() {
   backToGridBtn.classList.add("hidden");
@@ -1950,46 +2540,38 @@ function renderEditorGrid() {
   const query = (editorSearch.value || "").toLowerCase().trim();
 
   const DECK_MAP = {
-    platform: "Projects", cyber_attack: "Projects", fuck_up: "Projects",
-    leverage: "Boosters", innovation: "Boosters", build: "Boosters",
+    platform: "Projects", cyber_attack: "Projects", fuck_up: "Projects", build: "Projects",
+    leverage: "Boosters", innovation: "Boosters",
   };
   let totalCards = 0;
   const typeCounts = {};
   const deckCounts = {};
+  const extraCounts = {}; // company, events (regulation+world_event) — shown in overall only
   for (const [ct, cards] of Object.entries(editorCards)) {
-    if (ct === "company" || ct === "regulation") continue;
     const n = (cards || []).length;
+    if (ct === "company") {
+      extraCounts.company = n;
+      continue;
+    }
+    if (ct === "regulation" || ct === "world_event") {
+      extraCounts.events = (extraCounts.events || 0) + n;
+      // track sub-counts for breakdown chart
+      extraCounts.regulation = (extraCounts.regulation || 0) + (ct === "regulation" ? n : 0);
+      extraCounts.world_event = (extraCounts.world_event || 0) + (ct === "world_event" ? n : 0);
+      continue;
+    }
     totalCards += n;
     typeCounts[ct] = n;
     const deck = DECK_MAP[ct] || ct;
     deckCounts[deck] = (deckCounts[deck] || 0) + n;
   }
-  function roundedPcts(items, total) {
-    const t = total || items.reduce((a, b) => a + b, 0);
-    if (!t) return items.map(() => 0);
-    const raw = items.map(n => (n / t) * 100);
-    const floored = raw.map(r => Math.floor(r));
-    let remainder = 100 - floored.reduce((a, b) => a + b, 0);
-    const fracs = raw.map((r, i) => ({ i, frac: r - floored[i] }));
-    fracs.sort((a, b) => b.frac - a.frac);
-    for (let j = 0; j < remainder && j < fracs.length; j++) floored[fracs[j].i]++;
-    return floored;
-  }
 
-  const deckEntries = Object.entries(deckCounts);
-  const deckPcts = roundedPcts(deckEntries.map(([, c]) => c), totalCards);
-  let statsHtml = `Total: ${totalCards} | `;
-  deckEntries.forEach(([deck, count], di) => {
-    const typeEntries = Object.entries(typeCounts)
-      .filter(([ct]) => (DECK_MAP[ct] || ct) === deck);
-    const typePcts = roundedPcts(typeEntries.map(([, n]) => n), count);
-    const types = typeEntries.map(([ct, n], ti) => {
-      const label = CARD_TYPE_GROUPS.find(g => g.key === ct)?.label || ct;
-      return `${label}: ${n} (${typePcts[ti]}%)`;
-    }).join(", ");
-    statsHtml += `<strong>${deck}</strong> ${count} (${deckPcts[di]}%) [${types}] `;
-  });
-  editorTotalCount.innerHTML = statsHtml;
+  // Expose stats data for the pie chart renderer, passing raw card arrays for breakdown charts
+  renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts, DECK_MAP,
+    allCards: editorCards });
+
+  // Track if we've already emitted the Events group banner
+  let eventsGroupRendered = false;
 
   for (const [cardType, cards] of Object.entries(editorCards)) {
     const filtered = (cards || []).map((card, index) => ({ card, index }));
@@ -2000,6 +2582,15 @@ function renderEditorGrid() {
       : filtered;
 
     if (visible.length === 0 && query) continue;
+
+    // Inject a shared "EVENTS" group banner before the first events section
+    if ((cardType === "regulation" || cardType === "world_event") && !eventsGroupRendered) {
+      eventsGroupRendered = true;
+      const groupBanner = document.createElement("div");
+      groupBanner.className = "editor-group-banner";
+      groupBanner.textContent = "⚡ EVENTS";
+      editorBody.appendChild(groupBanner);
+    }
 
     const section = document.createElement("div");
     section.className = "editor-section";
@@ -2029,13 +2620,47 @@ function renderEditorGrid() {
     const grid = document.createElement("div");
     grid.className = "editor-grid";
 
+    let dragSrcIndex = null;
+
     visible.forEach(({ card, index }) => {
       const key = `${cardType}:${index}`;
       const lockStatus = editorLocksMap[key];
 
       const wrapper = document.createElement("div");
       wrapper.className = "editor-card-wrapper";
+      wrapper.draggable = true;
+      wrapper.dataset.index = index;
+      wrapper.dataset.cardType = cardType;
       if (lockStatus === "other") wrapper.classList.add("editor-card-locked");
+
+      wrapper.addEventListener("dragstart", (e) => {
+        dragSrcIndex = index;
+        wrapper.classList.add("drag-source");
+        e.dataTransfer.effectAllowed = "move";
+      });
+      wrapper.addEventListener("dragend", () => {
+        wrapper.classList.remove("drag-source");
+        grid.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+      });
+      wrapper.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        grid.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+        if (index !== dragSrcIndex) wrapper.classList.add("drag-over");
+      });
+      wrapper.addEventListener("dragleave", () => wrapper.classList.remove("drag-over"));
+      wrapper.addEventListener("drop", (e) => {
+        e.preventDefault();
+        wrapper.classList.remove("drag-over");
+        if (dragSrcIndex === null || dragSrcIndex === index) return;
+        editorScrollTop = editorBody.scrollTop;
+        socket.emit("reorder_cards", {
+          card_type: cardType,
+          from_index: dragSrcIndex,
+          to_index: index,
+        });
+        dragSrcIndex = null;
+      });
 
       const cardEl = createCardElement(card, { interactive: false, deckType: cardType });
 
@@ -2076,6 +2701,28 @@ function renderEditorGrid() {
 
       wrapper.appendChild(overlay);
       wrapper.appendChild(cardEl);
+
+      // Dim the card visually when disabled
+      if (card.disabled) {
+        cardEl.style.opacity = "0.35";
+        cardEl.style.filter = "grayscale(80%)";
+      }
+
+      // Disable toggle — sits below the card, outside the click-to-edit zone
+      const disableToggle = document.createElement("button");
+      disableToggle.className = "editor-disable-btn" + (card.disabled ? " editor-disable-btn--off" : "");
+      disableToggle.textContent = card.disabled ? "🔴 Disabled" : "🟢 Active";
+      disableToggle.title = card.disabled ? "Click to re-activate this card" : "Click to deactivate this card";
+      disableToggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        editorScrollTop = editorBody.scrollTop;
+        socket.emit("set_card_disabled", {
+          card_type: cardType,
+          index,
+          disabled: !card.disabled,
+        });
+      });
+      wrapper.appendChild(disableToggle);
 
       if (lockStatus !== "other") {
         wrapper.style.cursor = "pointer";
@@ -2121,30 +2768,42 @@ function renderEditorForm() {
     renderedKeys.add(key);
     if (key === "boosts") {
       fields.appendChild(buildBoostsField(value || []));
+    } else if (key === "requirements") {
+      fields.appendChild(buildRequirementsField(value || []));
+    } else if (key === "tiers") {
+      fields.appendChild(buildTiersField(value || []));
+    } else if (key === "current_tier" || key === "instance_id") {
+      // skip — managed by backend
     } else if (DICT_FIELDS.has(key)) {
-      // Always render as dict field (even when value is null) so + Add field is always available
       const dictVal = (value && typeof value === "object" && !Array.isArray(value)) ? value : {};
       fields.appendChild(buildDictField(key, dictVal));
     } else {
-      fields.appendChild(buildSimpleField(key, value));
+      fields.appendChild(buildSimpleField(key, value, cardType));
     }
   }
 
   // Always show these fields even if absent from the card data
   for (const key of ALWAYS_SHOW_FIELDS) {
     if (!renderedKeys.has(key)) {
-      fields.appendChild(buildSimpleField(key, null));
+      fields.appendChild(buildSimpleField(key, null, cardType));
     }
   }
 
   if (!("boosts" in card)) {
     fields.appendChild(buildBoostsField([]));
   }
+  if (!("requirements" in card)) {
+    fields.appendChild(buildRequirementsField([]));
+  }
+  if (!("tiers" in card)) {
+    fields.appendChild(buildTiersField([]));
+  }
 
   function saveAndGoBack() {
     const cardData = collectFormData(fields, card);
     socket.emit("save_card", { card_type: cardType, index, card_data: cardData });
     editingKey = null;
+    _editorOpenIntent = true;
     setTimeout(() => socket.emit("get_all_cards"), 300);
   }
 
@@ -2183,20 +2842,22 @@ function renderEditorForm() {
 }
 
 const FIELD_OPTIONS = {
-  build: [null, "ad_campaign", "data_center", "factory", "lobby_group", "office", "power_plant", "store"],
+  build: [null, "ad_campaign", "data_center", "factory", "hydroelectric_power_plant", "lobby_group", "office", "power_plant", "rare_metal_mine", "satellite", "store"],
 };
 
 const TYPE_OPTIONS = [
   "social platform", "hardware manufacturer", "software service",
   "software platform", "software engine",
   "online marketplace", "search service", "store", "power plant",
-  "data center", "office", "ad campaign",
+  "data center", "office", "ad campaign", "lobby", "rare metal mine",
+  "hydroelectric power plant", "satellite",
 ];
 
 // Fields that are always numeric (even when their current value is null)
 const NUMERIC_FIELDS = new Set(["factory_refund", "dc_production_bonus"]);
 
-function buildSimpleField(key, value) {
+// cardType: optional string ("company", "platform", etc.) used for conditional field rendering
+function buildSimpleField(key, value, cardType) {
   const row = document.createElement("div");
   row.className = "editor-field";
 
@@ -2205,6 +2866,7 @@ function buildSimpleField(key, value) {
   row.appendChild(label);
 
   if (key === "type") {
+    // Card-type dropdown — shared by platform, build, company, etc.
     const sel = document.createElement("select");
     sel.dataset.fieldKey = key;
     const noneOpt = document.createElement("option");
@@ -2271,6 +2933,9 @@ function buildDictField(key, dict) {
   return container;
 }
 
+// Keys whose dict values should be a TYPE_OPTIONS dropdown instead of a number input
+const STRING_VAL_DICT_KEYS = new Set(["fee_card_type", "fee_company_type"]);
+
 function buildDictRow(k, v, keyOptions) {
   const row = document.createElement("div");
   row.className = "editor-dict-row";
@@ -2294,25 +2959,197 @@ function buildDictRow(k, v, keyOptions) {
     keyEl.placeholder = "key";
   }
 
-  const valInput = document.createElement("input");
-  valInput.type = (v === null || v === undefined) ? "text" : "number";
-  valInput.className = "editor-dict-val";
-  valInput.value = (v === null || v === undefined) ? "" : v;
-  valInput.placeholder = "value";
-
   const removeBtn = document.createElement("button");
   removeBtn.className = "btn btn-sm editor-remove-btn";
   removeBtn.textContent = "\u00d7";
   removeBtn.addEventListener("click", () => row.remove());
 
-  row.appendChild(keyEl);
-  if (valInput.type === "number") {
-    row.appendChild(makeNumSpinner(valInput));
-  } else {
-    row.appendChild(valInput);
+  // Build the appropriate value element for a given key
+  function makeValEl(key, val) {
+    if (STRING_VAL_DICT_KEYS.has(key)) {
+      const sel = document.createElement("select");
+      sel.className = "editor-dict-val";
+      const noneOpt = document.createElement("option");
+      noneOpt.value = ""; noneOpt.textContent = "(none)";
+      if (!val) noneOpt.selected = true;
+      sel.appendChild(noneOpt);
+      TYPE_OPTIONS.forEach(opt => {
+        const o = document.createElement("option");
+        o.value = opt; o.textContent = opt;
+        if (val === opt) o.selected = true;
+        sel.appendChild(o);
+      });
+      return { el: sel, isSpinner: false };
+    }
+    const inp = document.createElement("input");
+    inp.className = "editor-dict-val";
+    inp.type = (val === null || val === undefined) ? "text" : "number";
+    inp.value = (val === null || val === undefined) ? "" : val;
+    inp.placeholder = "value";
+    return { el: inp, isSpinner: inp.type === "number" };
   }
+
+  function attachValEl(key, val) {
+    // Remove any existing value element / spinner
+    const old = row.querySelector(".editor-dict-val");
+    if (old) {
+      const spinner = old.closest(".num-spinner");
+      (spinner || old).remove();
+    }
+    const { el, isSpinner } = makeValEl(key, val);
+    row.insertBefore(isSpinner ? makeNumSpinner(el) : el, removeBtn);
+  }
+
+  row.appendChild(keyEl);
   row.appendChild(removeBtn);
+  attachValEl(k, v);
+
+  // When the key changes, swap value element if needed
+  keyEl.addEventListener("change", () => {
+    const wasString = STRING_VAL_DICT_KEYS.has(k);
+    k = keyEl.value;
+    const isString = STRING_VAL_DICT_KEYS.has(k);
+    if (wasString !== isString) {
+      attachValEl(k, isString ? null : 0);
+    }
+  });
+
   return row;
+}
+
+// ── Requirements field builder ───────────────────────────────
+function buildRequirementsField(requirements) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.requirementsKey = "requirements";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "requirements";
+  container.appendChild(header);
+
+  const list = document.createElement("div");
+  list.className = "editor-requirements-list";
+  container.appendChild(list);
+
+  function addReqRow(val) {
+    const row = document.createElement("div");
+    row.className = "editor-req-row editor-dict-row";
+    const sel = document.createElement("select");
+    sel.className = "editor-req-type";
+    sel.style.flex = "1";
+    const noneOpt = document.createElement("option");
+    noneOpt.value = ""; noneOpt.textContent = "(choose type)";
+    if (!val) noneOpt.selected = true;
+    sel.appendChild(noneOpt);
+    TYPE_OPTIONS.forEach(t => {
+      const o = document.createElement("option");
+      o.value = t; o.textContent = t;
+      if (t === val) o.selected = true;
+      sel.appendChild(o);
+    });
+    const rmBtn = document.createElement("button");
+    rmBtn.className = "btn btn-sm editor-remove-btn";
+    rmBtn.textContent = "×";
+    rmBtn.addEventListener("click", () => row.remove());
+    row.appendChild(sel);
+    row.appendChild(rmBtn);
+    list.appendChild(row);
+  }
+
+  (requirements || []).forEach(r => addReqRow(r));
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm";
+  addBtn.textContent = "+ Add Requirement";
+  addBtn.style.marginTop = ".4rem";
+  addBtn.addEventListener("click", () => addReqRow(""));
+  container.appendChild(addBtn);
+
+  return container;
+}
+
+// ── Tiers field builder ───────────────────────────────────────
+function buildTiersField(tiers) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.tiersKey = "tiers";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "tiers (enhancement track)";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-bottom:.4rem";
+  hint.textContent = "Tier 1 = base (applied on play). Tiers 2+ unlock by spending data. Quadratic for social/search, linear for others.";
+  container.appendChild(hint);
+
+  const list = document.createElement("div");
+  list.className = "editor-tiers-list";
+  container.appendChild(list);
+
+  function addTierRow(tierData, idx) {
+    const row = document.createElement("div");
+    row.className = "editor-tier-row";
+    row.style.cssText = "display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;";
+
+    const lbl = document.createElement("span");
+    lbl.style.cssText = "font-size:.75rem;color:var(--text-dim);min-width:3rem;";
+    lbl.textContent = `T${idx + 1}:`;
+    row.appendChild(lbl);
+
+    const usersLbl = document.createElement("span");
+    usersLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
+    usersLbl.textContent = "users:";
+    row.appendChild(usersLbl);
+
+    const usersInput = document.createElement("input");
+    usersInput.type = "number";
+    usersInput.className = "editor-tier-users";
+    usersInput.min = 0;
+    usersInput.value = tierData?.users ?? 0;
+    usersInput.style.cssText = "width:5rem;";
+    row.appendChild(makeNumSpinner(usersInput, { min: 0 }));
+
+    const dataLbl = document.createElement("span");
+    dataLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
+    dataLbl.textContent = "data_cost (PB):";
+    row.appendChild(dataLbl);
+
+    const costInput = document.createElement("input");
+    costInput.type = "number";
+    costInput.className = "editor-tier-cost";
+    costInput.min = 0;
+    costInput.value = idx === 0 ? 0 : (tierData?.data_cost ?? 0);
+    costInput.style.cssText = "width:5rem;";
+    costInput.disabled = idx === 0; // tier 1 is always free
+    row.appendChild(idx === 0 ? costInput : makeNumSpinner(costInput, { min: 0 }));
+
+    if (idx > 0) {
+      const rmBtn = document.createElement("button");
+      rmBtn.className = "btn btn-sm editor-remove-btn";
+      rmBtn.textContent = "×";
+      rmBtn.addEventListener("click", () => row.remove());
+      row.appendChild(rmBtn);
+    }
+
+    list.appendChild(row);
+  }
+
+  (tiers || []).forEach((t, i) => addTierRow(t, i));
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm";
+  addBtn.textContent = "+ Add Tier";
+  addBtn.style.marginTop = ".4rem";
+  addBtn.addEventListener("click", () => {
+    const rows = list.querySelectorAll(".editor-tier-row");
+    addTierRow({}, rows.length);
+  });
+  container.appendChild(addBtn);
+
+  return container;
 }
 
 // ── Boosts field builder ─────────────────────────────────────
@@ -2344,7 +3181,8 @@ const BOOST_TYPE_OPTIONS = [
   "social platform", "hardware manufacturer", "software service",
   "software platform", "software engine",
   "online marketplace", "search service", "store", "power plant",
-  "data center", "office", "ad campaign",
+  "data center", "office", "ad campaign", "lobby", "rare metal mine",
+  "hydroelectric power plant", "satellite",
 ];
 
 function buildBoostEntry(boost) {
@@ -2475,13 +3313,36 @@ function collectFormData(fieldsEl, originalCard) {
     container.querySelectorAll(".editor-dict-row").forEach(row => {
       const k = row.querySelector(".editor-dict-key").value.trim();
       const raw = row.querySelector(".editor-dict-val").value;
-      const v = (raw === "" || raw === "null") ? null : Number(raw);
+      // String-valued keys (type dropdowns) are stored as strings, not numbers
+      const v = STRING_VAL_DICT_KEYS.has(k)
+        ? (raw || null)
+        : (raw === "" || raw === "null") ? null : Number(raw);
       if (k) dict[k] = v;
     });
     data[dictKey] = Object.keys(dict).length > 0 ? dict : null;
   });
 
-  const boostsContainer = fieldsEl.querySelector(".editor-boosts-field");
+  const reqContainer = fieldsEl.querySelector("[data-requirements-key='requirements']");
+  if (reqContainer) {
+    const reqs = [...reqContainer.querySelectorAll(".editor-req-type")]
+      .map(sel => sel.value)
+      .filter(v => v);
+    data.requirements = reqs.length > 0 ? reqs : null;
+  }
+
+  const tiersContainer = fieldsEl.querySelector("[data-tiers-key='tiers']");
+  if (tiersContainer) {
+    const tierRows = tiersContainer.querySelectorAll(".editor-tier-row");
+    const tiersArr = [];
+    tierRows.forEach((row, i) => {
+      const users = Number(row.querySelector(".editor-tier-users")?.value) || 0;
+      const dataCost = i === 0 ? 0 : (Number(row.querySelector(".editor-tier-cost")?.value) || 0);
+      tiersArr.push({ users, data_cost: dataCost });
+    });
+    data.tiers = tiersArr.length > 0 ? tiersArr : null;
+  }
+
+  const boostsContainer = fieldsEl.querySelector("[data-boosts-key='boosts']");
   if (boostsContainer) {
     const boosts = [];
     boostsContainer.querySelectorAll(".editor-boost-entry").forEach(entry => {
@@ -2733,7 +3594,7 @@ function renderTreeEditForm() {
       const dictVal = (value && typeof value === "object" && !Array.isArray(value)) ? value : {};
       fields.appendChild(buildDictField(key, dictVal));
     } else {
-      fields.appendChild(buildSimpleField(key, value));
+      fields.appendChild(buildSimpleField(key, value, cardType));
     }
   }
 
@@ -2900,68 +3761,128 @@ const HEX_SIZE = 24;
 const SQRT3 = Math.sqrt(3);
 
 const TERRAIN_COLORS = {
-  empty: "#2a2d35",
-  city: "#2a2d35",
-  lake: "#2980b9",
-  sea: "#0a2a6e",
-  government: "#c0392b",
-  industrial: "#5d4037",
-  commercial: "#1565c0",
+  empty:            "#2a2d35",
+  city:             "#2a2d35",
+  lake:             "#2980b9",
+  sea:              "#0a2a6e",
+  government:       "#c0392b",
+  commercial:       "#1565c0",
+  sun:              "#7a5e10",
+  wind:             "#1a4a2a",
+  gas_reserve:      "#4a3a10",
+  coal:             "#1a1a1a",
+  wall:             "#3d2b1a",
+  rare_metal_mine:  "#3a4a52",
+  natural_park:     "#1a3a1a",
+  offshore_wind:    "#0a2a6e",
+  offshore_solar:   "#0a2a6e",
+  space:            "#05050f",
 };
 
 const TILE_COLORS = {
-  power_plant: "#f1c40f",
-  factory:     "#8b6914",
-  data_center: "#5dade2",
-  store:       "#27ae60",
-  ads:         "#e056a0",
+  power_plant:               "#f1c40f",
+  factory:                   "#8b6914",
+  data_center:               "#5dade2",
+  store:                     "#27ae60",
+  ads:                       "#e056a0",
+  rare_metal_mine:           "#7a8a9a",
+  hydroelectric_power_plant: "#1a7abf",
+  satellite:                 "#8888cc",
 };
 
+function hexToRgba(hex, alpha) {
+  const h = (hex || "#888888").replace("#", "");
+  const full = h.length === 3
+    ? h[0]+h[0]+h[1]+h[1]+h[2]+h[2]
+    : h;
+  const r = parseInt(full.slice(0,2), 16);
+  const g = parseInt(full.slice(2,4), 16);
+  const b = parseInt(full.slice(4,6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 const TILE_LABELS = {
-  power_plant:  "⚡",
-  factory:      "🏭",
-  data_center:  "🖥️",
-  store:        "🏪",
-  ad_campaign:  "📢",
-  office:       "🏢",
-  lobby_group:  "💻",
+  power_plant:               "⚡",
+  factory:                   "🏭",
+  data_center:               "🖥️",
+  store:                     "🏪",
+  ad_campaign:               "📢",
+  office:                    "🏢",
+  lobby_group:               "💻",
+  rare_metal_mine:           "🔩",
+  hydroelectric_power_plant: "💧",
+  satellite:                 "🛰️",
 };
 
 const TILE_FULL_NAMES = {
-  power_plant:  "Power Plant",
-  factory:      "Hardware Factory",
-  data_center:  "Data Center",
-  store:        "Store",
-  ad_campaign:  "Ad Campaign",
-  office:       "Office",
-  lobby_group:  "Lobby Group",
+  power_plant:               "Power Plant",
+  factory:                   "Hardware Factory",
+  data_center:               "Data Center",
+  store:                     "Store",
+  ad_campaign:               "Ad Campaign",
+  office:                    "Office",
+  lobby_group:               "Lobby Group",
+  rare_metal_mine:           "Rare Metal Mine",
+  hydroelectric_power_plant: "Hydroelectric Power Plant",
+  satellite:                 "Satellite",
 };
 
-const TILE_ZONE = {
-  power_plant:  "industrial",
-  factory:      "industrial",
-  data_center:  "industrial",
-  store:        "commercial",
-  ad_campaign:  "commercial",
-  lobby_group:  "commercial",
-  office:       "commercial",
+// Placement rules (mirrors board.py can_place logic):
+//   rare_metal_mine tile  → only on rare_metal_mine terrain
+//   store, lobby_group    → only on commercial terrain
+//   everything else       → empty, sun, wind, gas_reserve, coal, natural_park
+//   lake/sea/gov/city/wall/rare_metal_mine terrain → blocked for non-mine tiles
+const _NO_BUILD = new Set(["government", "city", "wall"]);
+const _COMMERCIAL_ONLY = new Set(["store", "lobby_group"]);
+const _OPEN_TERRAINS = new Set(["empty", "sun", "wind", "gas_reserve", "coal", "natural_park"]);
+const _SPACE_TILES_FE = new Set(["satellite"]);
+const _SPACE_TERRAIN_TILES_FE = {
+  "space": new Set(["satellite"]),
 };
+const _SATELLITE_STACKABLE_FE = new Set(["data_center", "power_plant"]);
+const _OFFSHORE_TERRAINS_FE = new Set(["offshore_wind", "offshore_solar"]);
 
-function canPlaceOn(tileType, terrain) {
-  if (terrain === "lake" || terrain === "sea" || terrain === "government" || terrain === "city") return false;
-  if (terrain === "empty") return true;
-  const zone = TILE_ZONE[tileType];
-  return zone === terrain;
+// canPlaceOn: checks terrain rules only (no placed_tile info here)
+// Pass placedTileType to check stacking on satellites
+function canPlaceOn(tileType, terrain, placedTileType) {
+  // Stacking on an existing satellite
+  if (placedTileType === "satellite") {
+    return _SATELLITE_STACKABLE_FE.has(tileType);
+  }
+  if (_NO_BUILD.has(terrain)) return false;
+  // space tiles → space terrains only
+  if (_SPACE_TILES_FE.has(tileType)) {
+    const allowed = _SPACE_TERRAIN_TILES_FE[terrain];
+    return !!(allowed && allowed.has(tileType));
+  }
+  if (_SPACE_TERRAIN_TILES_FE[terrain]) return _SPACE_TERRAIN_TILES_FE[terrain].has(tileType);
+  // hydroelectric → lake only; lake → hydroelectric only
+  if (tileType === "hydroelectric_power_plant") return terrain === "lake";
+  if (terrain === "lake") return false;
+  // rare_metal_mine → its terrain only
+  if (tileType === "rare_metal_mine") return terrain === "rare_metal_mine";
+  if (terrain === "rare_metal_mine") return false;
+  // offshore (wind/solar) → power_plant only
+  if (_OFFSHORE_TERRAINS_FE.has(terrain)) return tileType === "power_plant";
+  // sea → data_center only
+  if (terrain === "sea") return tileType === "data_center";
+  // commercial tiles → commercial terrain only
+  if (_COMMERCIAL_ONLY.has(tileType)) return terrain === "commercial";
+  if (terrain === "commercial") return false;
+  return _OPEN_TERRAINS.has(terrain);
 }
 
 const CLIENT_TILE_BASE_BONUSES = {
-  power_plant:  {},
-  factory:      {},
-  data_center:  { production: { data_centers: 1 } },
-  store:        { production: { ad_campaigns: 1 } },
-  ad_campaign:  { production: { ad_campaigns: 1 } },
-  office:       { production: { HR: 1 } },
-  lobby_group:  {},
+  power_plant:               {},
+  factory:                   {},
+  data_center:               { production: { data_centers: 1 } },
+  store:                     { production: { ad_campaigns: 1 } },
+  ad_campaign:               { production: { ad_campaigns: 1 } },
+  office:                    { production: { HR: 1 } },
+  lobby_group:               {},
+  rare_metal_mine:           { production: { money: 10 } },
+  hydroelectric_power_plant: { production: { data_centers: 2 } },
+  satellite:                 { production: { data_centers: 2 } },
 };
 
 function previewPlacementBonuses(tile, tileType) {
@@ -3101,15 +4022,23 @@ function renderBoard() {
     poly.setAttribute("points", hexPointsStr(cx, cy));
 
     let fill;
+    let tileStroke = "#555";
+    let tileStrokeWidth = "1.5";
     if (tile.placed_tile) {
       const owner = lastGameState?.players?.[tile.placed_tile.owner_id];
-      fill = owner?.color || TILE_COLORS[tile.placed_tile.type] || "#888";
+      if (owner?.color) {
+        fill = owner.color;
+        tileStroke = "#fff";
+        tileStrokeWidth = "2";
+      } else {
+        fill = hexToRgba(TILE_COLORS[tile.placed_tile.type] || "#888888", 0.5);
+      }
     } else {
       fill = TERRAIN_COLORS[tile.terrain] || TERRAIN_COLORS.empty;
     }
     poly.setAttribute("fill", fill);
-    poly.setAttribute("stroke", "#555");
-    poly.setAttribute("stroke-width", "1.5");
+    poly.setAttribute("stroke", tileStroke);
+    poly.setAttribute("stroke-width", tileStrokeWidth);
     g.appendChild(poly);
 
     let label = "";
@@ -3118,17 +4047,52 @@ function renderBoard() {
     if (tile.placed_tile) {
       label = TILE_LABELS[tile.placed_tile.type] || "?";
       labelSize = "12";
+      // If a secondary tile is stacked on top, show both
+      if (tile.secondary_tile) {
+        label = `${TILE_LABELS[tile.secondary_tile.type] || "?"}/${label}`;
+        labelSize = "8";
+      }
     } else if (tile.name) {
       label = tile.name.length > 6 ? tile.name.slice(0, 6) : tile.name;
       labelSize = (tile.terrain === "lake" || tile.terrain === "sea") ? "6" : "7";
     } else if (tile.terrain === "city") {
       label = "🏙️";
       labelSize = "10";
-    } else if (tile.terrain === "industrial") {
-      label = "🔩";
-      labelSize = "10";
     } else if (tile.terrain === "commercial") {
       label = "💼";
+      labelSize = "10";
+    } else if (tile.terrain === "sun") {
+      label = "☀️";
+      labelSize = "10";
+    } else if (tile.terrain === "wind") {
+      label = "💨";
+      labelSize = "10";
+    } else if (tile.terrain === "gas_reserve") {
+      label = "🔥";
+      labelSize = "10";
+    } else if (tile.terrain === "coal") {
+      label = "⛏️";
+      labelSize = "10";
+    } else if (tile.terrain === "wall") {
+      label = "🧱";
+      labelSize = "12";
+    } else if (tile.terrain === "lake") {
+      label = "🌊";
+      labelSize = "10";
+    } else if (tile.terrain === "offshore_wind") {
+      label = "💨";
+      labelSize = "10";
+    } else if (tile.terrain === "offshore_solar") {
+      label = "☀️";
+      labelSize = "10";
+    } else if (tile.terrain === "rare_metal_mine") {
+      label = "🔩";
+      labelSize = "10";
+    } else if (tile.terrain === "natural_park") {
+      label = "🌳";
+      labelSize = "10";
+    } else if (tile.terrain === "space") {
+      label = "✨";
       labelSize = "10";
     }
     if (label) {
@@ -3149,12 +4113,13 @@ function renderBoard() {
        Object.keys(tile.build_bonuses.production || {}).length);
     const hasAdjBonus = tile.adjacency_bonuses &&
       Object.keys(tile.adjacency_bonuses).length;
-    if (hasBuildBonus || hasAdjBonus) {
+    const hasReqs = (tile.requirements || []).length > 0;
+    if (hasBuildBonus || hasAdjBonus || hasReqs) {
       const dot = document.createElementNS(ns, "circle");
       dot.setAttribute("cx", cx + HEX_SIZE * 0.55);
       dot.setAttribute("cy", cy - HEX_SIZE * 0.55);
       dot.setAttribute("r", 3);
-      dot.setAttribute("fill", hasBuildBonus ? "var(--accent)" : "#f39c12");
+      dot.setAttribute("fill", hasReqs ? "#e74c3c" : hasBuildBonus ? "var(--accent)" : "#f39c12");
       dot.setAttribute("pointer-events", "none");
       g.appendChild(dot);
     }
@@ -3162,62 +4127,114 @@ function renderBoard() {
     g.addEventListener("mouseenter", (e) => {
       let info = `<strong>(${tile.row},${tile.col})</strong>`;
       if (tile.terrain === "city") info += ` — ${tile.name || "City"} (City)`;
-      else if (tile.terrain === "lake") info += ` — ${tile.name || "Lake"} (cannot build)`;
-      else if (tile.terrain === "sea") info += ` — ${tile.name || "Sea"} (cannot build)`;
+      else if (tile.terrain === "lake") info += ` — 🌊 ${tile.name || "Lake"} (hydroelectric only)`;
+      else if (tile.terrain === "sea")           info += ` — ${tile.name || "Sea"} (data center only, −$150B)`;
+      else if (tile.terrain === "offshore_wind") info += ` — 💨 ${tile.name || "Offshore Wind"} (power plant, −$100B)`;
+      else if (tile.terrain === "offshore_solar") info += ` — ☀️ ${tile.name || "Offshore Solar"} (power plant, −$100B)`;
+      else if (tile.terrain === "space") {
+        info += ` — ✨ ${tile.name || "Space"} (satellite only, −$200B)`;
+        if (tile.placed_tile?.type === "satellite" && !tile.secondary_tile)
+          info += `<br><span style="color:#f39c12">▸ Stack data center or power plant here</span>`;
+      }
+      else if (tile.terrain === "sun")         info += ` — ☀️ ${tile.name || "Sun terrain"}`;
+      else if (tile.terrain === "wind")        info += ` — 💨 ${tile.name || "Wind terrain"}`;
+      else if (tile.terrain === "gas_reserve") info += ` — 🔥 ${tile.name || "Gas Reserve"}`;
+      else if (tile.terrain === "coal")        info += ` — ⛏️ ${tile.name || "Coal terrain"}`;
+      else if (tile.terrain === "wall")             info += ` — 🧱 ${tile.name || "Wall"} (cannot build)`;
+      else if (tile.terrain === "rare_metal_mine")  info += ` — 🔩 ${tile.name || "Rare Metal Deposit"} (mine only)`;
+      else if (tile.terrain === "natural_park")     info += ` — 🌳 ${tile.name || "Natural Park"} (−2 🌟 if built here)`;
       else if (tile.terrain === "government") info += ` — ${tile.name || "Gov"} (cannot build)`;
-      else if (tile.terrain === "industrial") info += ` — Industrial zone`;
       else if (tile.terrain === "commercial") info += ` — Commercial zone`;
       else if (tile.placed_tile) {
         const owner = lastGameState?.players?.[tile.placed_tile.owner_id];
         info += ` — ${TILE_FULL_NAMES[tile.placed_tile.type] || tile.placed_tile.type}`;
         if (owner) info += ` (${owner.name})`;
+        if (tile.secondary_tile) {
+          const owner2 = lastGameState?.players?.[tile.secondary_tile.owner_id];
+          info += ` + ${TILE_FULL_NAMES[tile.secondary_tile.type] || tile.secondary_tile.type}`;
+          if (owner2) info += ` (${owner2.name})`;
+        }
       } else {
         info += " — Empty";
       }
 
-      const isPlaceable = pending && !tile.placed_tile && canPlaceOn(pending, tile.terrain);
+      // Show requirements in tooltip
+      const tileReqs = tile.requirements || [];
+      if (tileReqs.length) {
+        const myTypes = new Set(
+          (lastGameState?.players?.[lastGameState?.current_player_id]?.played_cards || [])
+            .map(c => c.type).filter(Boolean)
+        );
+        const missingReqs = tileReqs.filter(r => !myTypes.has(r));
+        if (missingReqs.length) {
+          info += `<br><span style="color:#e74c3c">🔒 Requires: ${missingReqs.map(r => CARD_SUBTYPE_EMOJIS[r] || r).join(", ")}</span>`;
+        } else {
+          info += `<br><span style="color:#2ecc71">✅ Requirements met: ${tileReqs.map(r => CARD_SUBTYPE_EMOJIS[r] || r).join(", ")}</span>`;
+        }
+      }
+
+      const myPlayedTypes = new Set(
+        (lastGameState?.players?.[lastGameState?.current_player_id]?.played_cards || [])
+          .map(c => c.type).filter(Boolean)
+      );
+      const reqsMet = tileReqs.every(r => myPlayedTypes.has(r));
+      const placedType = tile.placed_tile?.type || null;
+      const secondaryFilled = !!tile.secondary_tile;
+      const canStack = placedType === "satellite" && !secondaryFilled;
+      const isPlaceable = pending && reqsMet && (
+        canStack
+          ? canPlaceOn(pending, tile.terrain, placedType)
+          : (!tile.placed_tile && canPlaceOn(pending, tile.terrain))
+      );
 
       if (isPlaceable) {
         const preview = previewPlacementBonuses(tile, pending);
         const parts = [];
         for (const [res, amt] of Object.entries(preview.immediate))
-          if (amt) parts.push(`+${amt} ${res}`);
+          if (amt) parts.push(`+${fmtCardVal(res, amt)} ${res}`);
         for (const [res, amt] of Object.entries(preview.production))
-          if (amt) parts.push(`+${amt} ${res}/yr`);
+          if (amt) parts.push(`+${fmtCardVal(res, amt)} ${res}/yr`);
         info += `<br><strong style="color:#2ecc71">▸ ${TILE_FULL_NAMES[pending]}:</strong> `;
         info += parts.length ? parts.join(", ") : "no bonuses";
       } else {
         const ab = Object.entries(tile.adjacency_bonuses || {});
-        if (ab.length) info += `<br>Adj: ${ab.map(([k,v]) => `+${v} ${k}`).join(", ")}`;
+        if (ab.length) info += `<br>Adj: ${ab.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}`).join(", ")}`;
         const bb = tile.build_bonuses || {};
         const bImm = Object.entries(bb.immediate || {});
         const bProd = Object.entries(bb.production || {});
         if (bImm.length || bProd.length) {
           info += `<br>Build: `;
-          info += [...bImm.map(([k,v]) => `+${v} ${k}`), ...bProd.map(([k,v]) => `+${v} ${k}/yr`)].join(", ");
+          info += [...bImm.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}`), ...bProd.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}/yr`)].join(", ");
         }
       }
 
       tooltip.innerHTML = info;
       tooltip.classList.remove("hidden");
-      const rect = boardContainer.getBoundingClientRect();
       const ttW = tooltip.offsetWidth || 200;
       const ttH = tooltip.offsetHeight || 40;
-      let left = e.clientX - rect.left + 12;
-      let top = e.clientY - rect.top - 10;
-      if (left + ttW > rect.width - 8) left = e.clientX - rect.left - ttW - 12;
-      if (top + ttH > rect.height - 8) top = e.clientY - rect.top - ttH - 8;
-      if (left < 4) left = 4;
-      if (top < 4) top = 4;
+      const margin = 10;
+      let left = e.clientX + 14;
+      let top  = e.clientY - 10;
+      if (left + ttW + margin > window.innerWidth)  left = e.clientX - ttW - 14;
+      if (top  + ttH + margin > window.innerHeight) top  = e.clientY - ttH - 10;
+      if (left < margin) left = margin;
+      if (top  < margin) top  = margin;
       tooltip.style.left = left + "px";
-      tooltip.style.top = top + "px";
+      tooltip.style.top  = top  + "px";
     });
 
     g.addEventListener("mouseleave", () => {
       tooltip.classList.add("hidden");
     });
 
-    if (pending && !tile.placed_tile && canPlaceOn(pending, tile.terrain)) {
+    const _ptType = tile.placed_tile?.type || null;
+    const _canStack = _ptType === "satellite" && !tile.secondary_tile;
+    const _placeable = pending && (
+      _canStack
+        ? canPlaceOn(pending, tile.terrain, _ptType)
+        : (!tile.placed_tile && canPlaceOn(pending, tile.terrain))
+    );
+    if (_placeable) {
       poly.classList.add("board-hex-placeable");
       g.style.cursor = "pointer";
       g.addEventListener("click", () => {
@@ -3227,9 +4244,9 @@ function renderBoard() {
         const preview = previewPlacementBonuses(tile, pending);
         const parts = [];
         for (const [res, amt] of Object.entries(preview.immediate))
-          if (amt) parts.push(`+${amt} ${res}`);
+          if (amt) parts.push(`+${fmtCardVal(res, amt)} ${res}`);
         for (const [res, amt] of Object.entries(preview.production))
-          if (amt) parts.push(`+${amt} ${res}/yr`);
+          if (amt) parts.push(`+${fmtCardVal(res, amt)} ${res}/yr`);
         const bonusStr = parts.length ? parts.join(", ") : "no bonuses";
         showConfirmDialog(
           `Place ${TILE_FULL_NAMES[pending]} here?`,
@@ -3328,7 +4345,8 @@ function renderBoardEditor() {
 
     let fill;
     if (tile.placed_tile) {
-      fill = TILE_COLORS[tile.placed_tile.type] || "#888";
+      // In editor there are no live player sessions — always 50% opacity
+      fill = hexToRgba(TILE_COLORS[tile.placed_tile.type] || "#888888", 0.5);
     } else {
       fill = TERRAIN_COLORS[tile.terrain] || TERRAIN_COLORS.empty;
     }
@@ -3350,10 +4368,30 @@ function renderBoardEditor() {
       label = tile.name.length > 8 ? tile.name.slice(0, 8) : tile.name;
     } else if (tile.terrain === "city") {
       label = "🏙️"; edLabelSize = "10";
-    } else if (tile.terrain === "industrial") {
-      label = "🔩"; edLabelSize = "10";
     } else if (tile.terrain === "commercial") {
       label = "💼"; edLabelSize = "10";
+    } else if (tile.terrain === "sun") {
+      label = "☀️"; edLabelSize = "10";
+    } else if (tile.terrain === "wind") {
+      label = "💨"; edLabelSize = "10";
+    } else if (tile.terrain === "gas_reserve") {
+      label = "🔥"; edLabelSize = "10";
+    } else if (tile.terrain === "coal") {
+      label = "⛏️"; edLabelSize = "10";
+    } else if (tile.terrain === "wall") {
+      label = "🧱"; edLabelSize = "12";
+    } else if (tile.terrain === "lake") {
+      label = "🌊"; edLabelSize = "10";
+    } else if (tile.terrain === "offshore_wind") {
+      label = "💨"; edLabelSize = "10";
+    } else if (tile.terrain === "offshore_solar") {
+      label = "☀️"; edLabelSize = "10";
+    } else if (tile.terrain === "rare_metal_mine") {
+      label = "🔩"; edLabelSize = "10";
+    } else if (tile.terrain === "natural_park") {
+      label = "🌳"; edLabelSize = "10";
+    } else if (tile.terrain === "space") {
+      label = "✨"; edLabelSize = "10";
     }
     if (label) {
       const txt = document.createElementNS(ns, "text");
@@ -3391,17 +4429,29 @@ function renderBoardEditor() {
       const bProd = Object.entries(bb.production || {});
       if (bImm.length || bProd.length) {
         info += `<br>Build: `;
-        info += [...bImm.map(([k,v]) => `+${v} ${k}`), ...bProd.map(([k,v]) => `+${v} ${k}/yr`)].join(", ");
+        info += [...bImm.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}`), ...bProd.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}/yr`)].join(", ");
       }
       const ab = Object.entries(tile.adjacency_bonuses || {});
       if (ab.length) {
-        info += `<br>Adj: ${ab.map(([k,v]) => `+${v} ${k}`).join(", ")}`;
+        info += `<br>Adj: ${ab.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}`).join(", ")}`;
+      }
+      const reqs = tile.requirements || [];
+      if (reqs.length) {
+        info += `<br>🔒 Requires: ${reqs.map(r => `${CARD_SUBTYPE_EMOJIS[r] || ""} ${r}`).join(", ")}`;
       }
       tooltip.innerHTML = info;
       tooltip.classList.remove("hidden");
-      const rect = boardEditorContainer.getBoundingClientRect();
-      tooltip.style.left = (e.clientX - rect.left + 12) + "px";
-      tooltip.style.top = (e.clientY - rect.top - 10) + "px";
+      const ttW = tooltip.offsetWidth || 200;
+      const ttH = tooltip.offsetHeight || 40;
+      const margin = 10;
+      let left = e.clientX + 14;
+      let top  = e.clientY - 10;
+      if (left + ttW + margin > window.innerWidth)  left = e.clientX - ttW - 14;
+      if (top  + ttH + margin > window.innerHeight) top  = e.clientY - ttH - 10;
+      if (left < margin) left = margin;
+      if (top  < margin) top  = margin;
+      tooltip.style.left = left + "px";
+      tooltip.style.top  = top  + "px";
     });
 
     g.addEventListener("mouseleave", () => tooltip.classList.add("hidden"));
@@ -3427,6 +4477,41 @@ function _boardInput(value, placeholder) {
   inp.placeholder = placeholder || "";
   inp.className = "board-form-input";
   return inp;
+}
+
+function _boardReqRow(cardType) {
+  const row = document.createElement("div");
+  row.className = "board-res-row board-req-row";
+
+  const sel = document.createElement("select");
+  sel.className = "editor-dict-key";
+  sel.style.flex = "1";
+  ["", ...TYPE_OPTIONS].forEach(t => {
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = t || "— select card type —";
+    if (t === cardType) o.selected = true;
+    sel.appendChild(o);
+  });
+  row.appendChild(sel);
+
+  const del = document.createElement("button");
+  del.className = "btn btn-sm btn-danger-sm";
+  del.textContent = "×";
+  del.style.padding = "0 .4rem";
+  del.addEventListener("click", () => row.remove());
+  row.appendChild(del);
+
+  return row;
+}
+
+function _collectReqRows(container) {
+  const result = [];
+  container.querySelectorAll(".board-req-row").forEach(row => {
+    const v = row.querySelector("select")?.value;
+    if (v) result.push(v);
+  });
+  return result;
 }
 
 function _boardResRow(key, value) {
@@ -3493,7 +4578,9 @@ function renderBoardTileForm(tile) {
   const terrainSelect = document.createElement("select");
   terrainSelect.className = "editor-dict-key";
   terrainSelect.style.width = "100%";
-  ["empty", "city", "lake", "sea", "government", "industrial", "commercial"].forEach(t => {
+  ["empty", "city", "lake", "sea", "offshore_wind", "offshore_solar", "government",
+   "commercial", "sun", "wind", "gas_reserve", "coal", "wall",
+   "rare_metal_mine", "natural_park", "space"].forEach(t => {
     const o = document.createElement("option");
     o.value = t;
     o.textContent = t.charAt(0).toUpperCase() + t.slice(1);
@@ -3561,18 +4648,38 @@ function renderBoardTileForm(tile) {
   adjSection.appendChild(adjContainer);
   form.appendChild(adjSection);
 
+  // --- Requirements ---
+  const reqSection = document.createElement("div");
+  reqSection.className = "editor-field board-bonus-section";
+  const reqTitle = document.createElement("label");
+  reqTitle.textContent = "Build requirements (card types player must have played)";
+  reqSection.appendChild(reqTitle);
+  const reqContainer = document.createElement("div");
+  reqContainer.className = "board-res-container";
+  (tile.requirements || []).forEach(rt => reqContainer.appendChild(_boardReqRow(rt)));
+  const addReqBtn = document.createElement("button");
+  addReqBtn.className = "btn btn-sm";
+  addReqBtn.textContent = "+ Add requirement";
+  addReqBtn.addEventListener("click", () => {
+    reqContainer.insertBefore(_boardReqRow(""), addReqBtn);
+  });
+  reqContainer.appendChild(addReqBtn);
+  reqSection.appendChild(reqContainer);
+  form.appendChild(reqSection);
+
   // --- Hint ---
   const hint = document.createElement("p");
   hint.style.fontSize = ".75rem";
   hint.style.color = "var(--text-dim)";
   hint.style.margin = ".5rem 0";
-  hint.innerHTML = "<strong>Empty/City</strong> = buildable | <strong>Lake/Government</strong> = not buildable";
+  hint.innerHTML = "<strong>Store/Lobby</strong> → commercial | <strong>Power/DC/etc.</strong> → open terrains | <strong>🔩Mine</strong> → rare_metal_mine | <strong>💧Hydro</strong> → 🌊lake | <strong>Offshore (wind/solar)</strong> → power_plant (−$100B) | <strong>🌊Sea</strong> → data_center (−$150B) | <strong>🌌Space</strong> → solar/satellite (−$200–300B) | <strong>🌳Park</strong> = −2⭐ | <strong>Gov/City/Wall</strong> → no build";
   form.appendChild(hint);
 
   boardTileForm.appendChild(form);
 
   // --- Add tile left/right/top/bottom ---
   const MAX_BOARD_ROWS = 14;
+  const MIN_BOARD_ROW = -8;  // must match board.py Board.MIN_ROW
   const existingCoords = new Set(editorBoardTiles.map(t => `${t.row},${t.col}`));
   const has = (r, c) => existingCoords.has(`${r},${c}`);
 
@@ -3585,21 +4692,22 @@ function renderBoardTileForm(tile) {
   const addOptions = [];
   // Same row: left / right
   if (!has(tile.row, tile.col - 1))
-    addOptions.push({ label: "← Left",         row: tile.row,     col: tile.col - 1 });
+    addOptions.push({ label: "← Left",        row: tile.row,     col: tile.col - 1 });
   if (!has(tile.row, tile.col + 1))
-    addOptions.push({ label: "→ Right",         row: tile.row,     col: tile.col + 1 });
-  // All four diagonal neighbours — show each independently if the slot is free
-  if (tile.row - 1 >= 0) {
+    addOptions.push({ label: "→ Right",        row: tile.row,     col: tile.col + 1 });
+  // Top diagonal neighbours — allowed down to MIN_BOARD_ROW
+  if (tile.row - 1 >= MIN_BOARD_ROW) {
     if (!has(...topLeft))
-      addOptions.push({ label: "↖ Top-Left",   row: topLeft[0],  col: topLeft[1] });
+      addOptions.push({ label: "↖ Top-Left",  row: topLeft[0],  col: topLeft[1] });
     if (!has(...topRight))
-      addOptions.push({ label: "↗ Top-Right",  row: topRight[0], col: topRight[1] });
+      addOptions.push({ label: "↗ Top-Right", row: topRight[0], col: topRight[1] });
   }
+  // Bottom diagonal neighbours — allowed up to MAX_BOARD_ROWS
   if (tile.row + 1 < MAX_BOARD_ROWS) {
     if (!has(...botLeft))
-      addOptions.push({ label: "↙ Bot-Left",   row: botLeft[0],  col: botLeft[1] });
+      addOptions.push({ label: "↙ Bot-Left",  row: botLeft[0],  col: botLeft[1] });
     if (!has(...botRight))
-      addOptions.push({ label: "↘ Bot-Right",  row: botRight[0], col: botRight[1] });
+      addOptions.push({ label: "↘ Bot-Right", row: botRight[0], col: botRight[1] });
   }
 
   if (addOptions.length) {
@@ -3637,6 +4745,7 @@ function renderBoardTileForm(tile) {
       production: {},
     };
     const adjacencyBonuses = _collectResRows(adjContainer);
+    const requirements = _collectReqRows(reqContainer);
     socket.emit("edit_board_tile", {
       row: tile.row,
       col: tile.col,
@@ -3644,6 +4753,7 @@ function renderBoardTileForm(tile) {
       name: nameInput.value.trim(),
       build_bonuses: buildBonuses,
       adjacency_bonuses: adjacencyBonuses,
+      requirements,
     });
     selectedEditorTile = null;
     boardTileForm.classList.add("hidden");

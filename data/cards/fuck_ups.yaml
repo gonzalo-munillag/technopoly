@@ -1,13 +1,10 @@
-# ============================================================
-# FUCK-UP CARDS (PROJECTS deck)
-# ============================================================
-
-- name: fuck up 1
-  id: 18
-  image: ''
+- name: Me-Too Movement
+  id: 24
   description: A data breach exposes user information. Reputation takes a hit.
-  type: scandal
+  type: null
   number: 1
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
     engineers: 0
     suits: 0
@@ -25,33 +22,11 @@
     reputation: -3
     data_centers: 0
     ad_campaigns: 0
-  boosts: []
-- name: fuck up 2
-  id: 19
-  description: Executive caught in a financial scandal. Lose money and suits.
-  type: scandal
-  number: 1
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    money: -5
-    suits: -1
-    data_centers: 0
-    ad_campaigns: 0
+  requirements: null
   boosts: null
+  disabled: true
 - name: fuck up 3
-  id: 20
+  id: 25
   image: ''
   description: Server outage causes widespread service disruption.
   type: scandal
@@ -75,28 +50,4 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: []
-- name: fuck up 4
-  id: 21
-  image: ''
-  description: Product recall due to manufacturing defect.
-  type: scandal
-  number: 1
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    money: -4
-    reputation: -2
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: []
+  disabled: true

@@ -1,10 +1,6 @@
-# ============================================================
-# COMPANY CARDS
-# ============================================================
-
 - name: NovaTech TEST
-  id: 901
-  tag: startup
+  id: 1
+  type: startup
   description: A scrappy tech startup with big ambitions and a garage full of energy
     drinks.
   factory_refund: 0
@@ -22,9 +18,10 @@
     data_centers: 1
     ad_campaigns: 1
   boosts: null
+  disabled: true
 - name: OmniCorp NEW TEST
-  id: 902
-  tag: megacorp
+  id: 2
+  type: null
   description: An established corporation with deep pockets and deeper bureaucracy.
   factory_refund: 0
   dc_production_bonus: 0
@@ -41,9 +38,10 @@
     data_centers: 1
     ad_campaigns: 1
   boosts: null
+  disabled: true
 - name: ViralWave
-  id: 903
-  tag: social
+  id: 3
+  type: null
   description: Social media disruptor. Engagement is their drug, attention their currency.
   factory_refund: 0
   dc_production_bonus: 0
@@ -53,16 +51,19 @@
     ads: 300
     money: 1500
     servers: 100
-    reputation: 200
+    reputation: 0
     users: 8
   starting_production:
     HR: 1
     data_centers: 1
     ad_campaigns: 2
+  requirements: null
+  tiers: null
   boosts: null
+  disabled: true
 - name: DeepMind Industries
-  id: 904
-  tag: ai
+  id: 4
+  type: ai
   description: An AI research lab turned corporate juggernaut. Their algorithms know
     you better than you know yourself.
   factory_refund: 0
@@ -81,8 +82,8 @@
     ad_campaigns: 0
   boosts: null
 - name: IronGate
-  id: 905
-  tag: cybersec
+  id: 5
+  type: cybersec
   description: Cybersecurity firm forged in paranoia. Trust no one, encrypt everything.
   factory_refund: 0
   dc_production_bonus: 0
@@ -100,8 +101,8 @@
     ad_campaigns: 0
   boosts: null
 - name: GreenByte
-  id: 906
-  tag: cleantech
+  id: 6
+  type: cleantech
   description: Sustainable tech venture turning sunlight into server uptime and good
     PR.
   factory_refund: 0
@@ -119,3 +120,152 @@
     data_centers: 1
     ad_campaigns: 1
   boosts: null
+- name: Chip Designer
+  id: 7
+  type: hardware manufacturer
+  description: 'Design the chips (CPU, GPU, ASIC), don’t manufacture
+
+
+    Examples: NVIDIA, Qualcomm. Fabless'
+  factory_refund: 0
+  dc_production_bonus: 0
+  starting_resources:
+    engineers: 100
+    suits: 100
+    ads: 200
+    money: 5000
+    servers: 200
+    reputation: 0
+    users: 100
+  starting_production:
+    HR: 0
+    data_centers: 0
+    ad_campaigns: 0
+  requirements: null
+  tiers: null
+  boosts: null
+- name: Chip Manufacturer
+  id: 8
+  type: hardware manufacturer
+  description: 'Physically produce chips from designs
+
+
+    Examples: TSMC, GlobalFoundries
+
+    Foundries'
+  factory_refund: 0
+  dc_production_bonus: 0
+  starting_resources:
+    engineers: 100
+    suits: 100
+    ads: 100
+    money: 5000
+    servers: 100
+    reputation: 0
+    users: 100
+  starting_production:
+    HR: 0
+    data_centers: 0
+    ad_campaigns: 0
+  requirements: null
+  tiers: null
+  boosts: null
+- name: IDM
+  id: 9
+  type: hardware manufacturer
+  description: 'Integrated Device Manufacturers
+
+    Design + manufacture chips
+
+
+    Examples: Intel, Samsung Electronics'
+  factory_refund: 0
+  dc_production_bonus: 0
+  starting_resources:
+    engineers: 100
+    suits: 100
+    ads: 100
+    money: 5000
+    servers: 100
+    reputation: 0
+    users: 100
+  starting_production:
+    HR: 0
+    data_centers: 0
+    ad_campaigns: 0
+  requirements: null
+  tiers: null
+  boosts: null
+- name: Cloud Provider
+  id: 10
+  type: software platform
+  description: 'Offer computing as a service (built on data centers)
+
+    Examples: Amazon Web Services, Microsoft Azure'
+  factory_refund: 0
+  dc_production_bonus: 0
+  starting_resources:
+    engineers: 100
+    suits: 100
+    ads: 100
+    money: 5000
+    servers: 100
+    reputation: 0
+    users: 100
+  starting_production:
+    HR: 1
+    data_centers: 1
+    ad_campaigns: 1
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Server Vendor
+  id: 11
+  type: hardware manufacturer
+  description: 'Build servers and physical infrastructure you buy
+
+    Examples: Dell Technologies, Hewlett Packard Enterprise, Supermicro'
+  factory_refund: 0
+  dc_production_bonus: 0
+  starting_resources:
+    engineers: 100
+    suits: 100
+    ads: 100
+    money: 5000
+    servers: 100
+    reputation: 0
+    users: 100
+  starting_production:
+    HR: 1
+    data_centers: 1
+    ad_campaigns: 1
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: CDN Provider
+  id: 12
+  type: software service
+  description: 'Deliver content via distributed edge servers
+
+
+    Examples: Cloudflare, Akamai Technologies'
+  factory_refund: 0
+  dc_production_bonus: 0
+  starting_resources:
+    engineers: 100
+    suits: 100
+    ads: 100
+    money: 5000
+    servers: 100
+    reputation: 0
+    users: 100
+  starting_production:
+    HR: 1
+    data_centers: 1
+    ad_campaigns: 1
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true

@@ -85,7 +85,12 @@ CARD_TYPE_FILES = {
     "innovation": "innovation.yaml",
     "build": "build.yaml",
     "regulation": "regulation.yaml",
+    "world_event": "world_event.yaml",
 }
+
+# Canonical file order for globally sequential ID assignment.
+# IDs run 1, 2, 3... across all files in this order.
+FILE_ORDER = ["company", "platform", "cyber_attack", "fuck_up", "leverage", "innovation", "build", "regulation", "world_event"]
 
 
 # ── HTTP routes ──────────────────────────────────────────────
@@ -461,10 +466,20 @@ def on_proceed_regulation():
 
 
 def _check_regulation_done():
-    if game.all_regulation_resolved():
-        socketio.emit("regulation_all_resolved", {}, room="game")
+    if not game.all_regulation_resolved():
+        return
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+    if game.all_court_players_ready():
+        # No court players at all — auto-advance
+        game.advance_past_regulation()
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
+    else:
+        # Court players still need to click Start Year
+        socketio.emit("regulation_all_resolved", {
+            "court_player_ids": [p.player_id for p in game.court_players()]
+        }, room="game")
 
 
 @socketio.on("start_year_after_regulation")
@@ -473,9 +488,18 @@ def on_start_year_after_regulation():
         return
     if not game.all_regulation_resolved():
         return
-    game.advance_past_regulation()
+    player_id = connected_players.get(request.sid)
+    player = game.players.get(player_id)
+    if not player or not player.went_to_court:
+        emit("error", {"message": "Only players who went to court can start the year."})
+        return
+    player.court_start_ready = True
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
+    if game.all_court_players_ready():
+        game.advance_past_regulation()
+        socketio.emit("game_state", game.to_dict(), room="game")
+        _send_private_states()
 
 
 def _send_regulation_alerts():
@@ -493,6 +517,7 @@ def _send_regulation_alerts():
             "affected": affected,
             "any_affected": anyone_affected,
             "regulation": reg.to_dict(),
+            "card_type": reg.card_type,  # "regulation" or "world_event"
             "compliance": reg.compliance if affected else {},
             "court_penalty": reg.court_penalty if affected else {},
             "court_threshold": reg.court_threshold,
@@ -542,6 +567,7 @@ def on_play_card(data):
             if len(player.hand) == 0:
                 player.year_done = True
             _advance_to_next_or_end_year()
+        _check_win_condition()
         return
 
     cpt = P("cards_per_turn", 2)
@@ -551,21 +577,51 @@ def on_play_card(data):
 
     use_optional = data.get("use_optional") or {}
     pay_to = data.get("pay_to") or {}
+    use_responsible_mining = bool(data.get("responsible_mining"))
+    req_err = player.check_requirements(card)
+    if req_err:
+        emit("error", {"message": req_err})
+        return
+
+    # Validate responsible-mining extra cost if chosen
+    if use_responsible_mining and card.responsible_mining:
+        extra_cost = card.responsible_mining.get("extra_cost") or {}
+        for res, amt in extra_cost.items():
+            if player.resources.get(res, 0) < amt:
+                emit("error", {"message": f"Not enough {res} for responsible mining (need {amt} extra)."})
+                return
+
     err = player.can_afford_costs(card, use_optional)
     if err:
         emit("error", {"message": err})
         return
     player.pay_costs(card, use_optional)
 
-    if card.fee and card.fee_card_id and not player._owns_fee_card(card):
-        # Fee is already deducted from the payer via pay_costs().
-        # Transfer it to the chosen payee — but only if they have actually played the fee card.
-        # If pay_to["fee"] is absent (no eligible payee → bank), nothing is transferred.
+    # Apply responsible-mining extra cost and bonus effect
+    if use_responsible_mining and card.responsible_mining:
+        for res, amt in (card.responsible_mining.get("extra_cost") or {}).items():
+            player.resources[res] = player.resources.get(res, 0) - amt
+        for res, amt in (card.responsible_mining.get("extra_effect") or {}).items():
+            player.resources[res] = player.resources.get(res, 0) + amt
+
+    if card.fee and not player._owns_fee_card(card):
+        # Fee already deducted via pay_costs(). Transfer it to the chosen payee
+        # only when the target is valid.  If absent (bank or no eligible player),
+        # nothing is transferred.
         fee_target = pay_to.get("fee")
         if fee_target and fee_target in game.players and fee_target != player_id:
             target_player = game.players[fee_target]
-            # Validate the target has played the card that triggers the fee
-            if any(c.id == card.fee_card_id for c in target_player.played_cards):
+            eligible = False
+            if card.fee_card_id:
+                eligible = any(c.id == card.fee_card_id for c in target_player.played_cards)
+            elif card.fee_card_type:
+                eligible = any(c.card_color_type == card.fee_card_type for c in target_player.played_cards)
+            elif card.fee_company_type:
+                eligible = bool(
+                    target_player.company and
+                    target_player.company.card_color_type == card.fee_company_type
+                )
+            if eligible:
                 target_player.resources["money"] = (
                     target_player.resources.get("money", 0) + card.fee
                 )
@@ -575,6 +631,14 @@ def on_play_card(data):
         emit("error", {"message": f"Failed to play '{card_name}' — card not found in hand."})
         return
 
+    # Notify all players that a card was played
+    socketio.emit("card_played_notification", {
+        "player_name": player.name,
+        "player_id": player_id,
+        "card_name": card_name,
+        "card": played.to_dict(),
+    }, room="game")
+
     if card.tile_type:
         player.pending_tile = card.tile_type
         player.pending_tile_meta = {
@@ -583,6 +647,7 @@ def on_play_card(data):
         }
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
+        _check_win_condition()
         return
 
     if len(player.hand) == 0:
@@ -591,6 +656,7 @@ def on_play_card(data):
     else:
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
+    _check_win_condition()
 
 
 @socketio.on("buy_resource")
@@ -631,6 +697,26 @@ def on_buy_resource(data):
         return
     socketio.emit("game_state", game.to_dict())
     _send_private_states()
+
+
+@socketio.on("upgrade_card_tier")
+def on_upgrade_card_tier(data):
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.PLAYER_TURNS:
+        return
+    if player_id != game.current_player_id:
+        emit("error", {"message": "It's not your turn."})
+        return
+    player = game.players.get(player_id)
+    if not player:
+        return
+    instance_id = data.get("instance_id", "")
+    result = player.upgrade_card_tier(instance_id, game)
+    if result["ok"]:
+        _broadcast()
+    else:
+        emit("error", {"message": result["error"]})
 
 
 @socketio.on("end_turn")
@@ -687,11 +773,14 @@ def _advance_to_next_or_end_year():
 
 
 def _handle_year_end():
-    game.end_current_year()
+    bankrupt = game.end_current_year()
+    for pid, pname in bankrupt:
+        socketio.emit("player_bankrupt", {"player_name": pname}, room="game")
     if game.phase == Phase.REGULATION:
         _send_regulation_alerts()
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
+    _check_win_condition()
 
 
 # ── Board ────────────────────────────────────────────────────
@@ -723,6 +812,15 @@ def on_place_tile(data):
         return
 
     row, col = data.get("row"), data.get("col")
+
+    # Check tile requirements against player's played card subtypes (c.type = "social platform", etc.)
+    played_types = {c.type for c in player.played_cards if c.type}
+    if not game.board.player_meets_requirements(row, col, played_types):
+        tile = game.board.get_tile(row, col)
+        reqs = tile.get("requirements", []) if tile else []
+        emit("error", {"message": f"You need to have played a card of type: {', '.join(reqs)}"})
+        return
+
     meta = player.pending_tile_meta or {}
     bonuses = game.board.place_tile(
         row, col, player.pending_tile, player_id,
@@ -733,6 +831,7 @@ def on_place_tile(data):
         emit("error", {"message": "Cannot place a tile there."})
         return
 
+    users_before_tile = player.users
     for res, amt in bonuses.get("immediate", {}).items():
         if res == "users":
             player.gain_users(amt, game)
@@ -740,6 +839,14 @@ def on_place_tile(data):
             player.resources[res] = player.resources.get(res, 0) + amt
     for res, amt in bonuses.get("production", {}).items():
         player.production[res] = player.production.get(res, 0) + amt
+    users_gained_tile = player.users - users_before_tile
+    if users_gained_tile > 0:
+        mod = player.reputation_modifier()
+        if mod != 0:
+            delta = max(-users_gained_tile, mod)
+            player.users += delta
+            if delta > 0:
+                game.user_pool = max(0, game.user_pool - delta)
 
     tile_type = player.pending_tile
     player.pending_tile = None
@@ -784,6 +891,7 @@ def on_place_tile(data):
         else:
             socketio.emit("game_state", game.to_dict(), room="game")
             _send_private_states()
+    _check_win_condition()
 
 
 # ── Board Editor (master / editors only) ─────────────────────
@@ -818,10 +926,29 @@ def on_edit_board_tile(data):
     name = data.get("name", "")
     build_bonuses = data.get("build_bonuses")
     adjacency_bonuses = data.get("adjacency_bonuses")
+    requirements = data.get("requirements") or []
     if not game.board.set_tile_terrain(
-        row, col, terrain, name, build_bonuses, adjacency_bonuses
+        row, col, terrain, name, build_bonuses, adjacency_bonuses, requirements
     ):
         emit("error", {"message": "Invalid tile or terrain type."})
+        return
+    _save_board_config()
+    board_data = game.board.to_list()
+    for sid in editor_sids:
+        socketio.emit("board_editor_data", board_data, room=sid)
+    if game.started:
+        socketio.emit("board_update", board_data, room="game")
+
+
+@socketio.on("set_placed_tile_editor")
+def on_set_placed_tile_editor(data):
+    if request.sid not in editor_sids:
+        return
+    row = data.get("row")
+    col = data.get("col")
+    tile_type = data.get("tile_type") or None  # None = clear
+    if not game.board.set_placed_tile_editor(row, col, tile_type):
+        emit("error", {"message": "Could not set tile type."})
         return
     _save_board_config()
     board_data = game.board.to_list()
@@ -873,6 +1000,21 @@ def _broadcast_lobby():
         for pid, p in game.players.items()
     ]
     socketio.emit("lobby_update", {"players": players}, room="game")
+
+
+def _check_win_condition():
+    """Broadcast game_won if total captured users >= total_users threshold."""
+    if not game.started or not game.players:
+        return
+    total_captured = sum(p.users for p in game.players.values())
+    if total_captured < game.total_users:
+        return
+    winner = max(game.players.values(), key=lambda p: p.users)
+    socketio.emit("game_won", {
+        "winner_name": winner.name,
+        "winner_users": winner.users,
+        "scores": {p.name: p.users for p in game.players.values()},
+    }, room="game")
 
 
 def _send_private_states():
@@ -959,6 +1101,66 @@ def _next_card_id() -> int:
         for c in cards:
             max_id = max(max_id, c.get("id", 0))
     return max_id + 1
+
+
+def _reassign_all_ids_globally() -> dict:
+    """Assign globally sequential IDs (1, 2, 3...) across all card files in FILE_ORDER.
+    Also updates every cross-reference (target_id, fee_card_id) in all files and the
+    graveyard.  Returns the {old_id: new_id} mapping."""
+    id_map: dict[int, int] = {}
+    counter = 1
+    all_file_data: list[tuple[Path, str, list[dict]]] = []
+
+    for card_type in FILE_ORDER:
+        filename = CARD_TYPE_FILES.get(card_type)
+        if not filename:
+            continue
+        filepath = CARDS_DIR / filename
+        if not filepath.exists():
+            continue
+        header, entries = _read_yaml_file(filepath)
+        for entry in entries:
+            old_id = entry.get("id")
+            new_id = counter
+            if isinstance(old_id, int) and old_id > 0 and old_id != new_id:
+                id_map[old_id] = new_id
+            entry["id"] = new_id
+            counter += 1
+        all_file_data.append((filepath, header, entries))
+
+    # Remap cross-references in all entries (in-memory, before any writes)
+    def _remap_refs(entry: dict) -> None:
+        tid = entry.get("target_id")
+        if isinstance(tid, list):
+            entry["target_id"] = [id_map.get(t, t) for t in tid]
+        elif isinstance(tid, int) and tid in id_map:
+            entry["target_id"] = id_map[tid]
+        costs = entry.get("costs") or {}
+        fci = costs.get("fee_card_id")
+        if isinstance(fci, int) and fci in id_map:
+            costs["fee_card_id"] = id_map[fci]
+            entry["costs"] = costs
+        for boost in (entry.get("boosts") or []):
+            btid = boost.get("target_id")
+            if isinstance(btid, list):
+                boost["target_id"] = [id_map.get(t, t) for t in btid]
+            elif isinstance(btid, int) and btid in id_map:
+                boost["target_id"] = id_map[btid]
+
+    if id_map:
+        for _, _, entries in all_file_data:
+            for entry in entries:
+                _remap_refs(entry)
+        if GRAVEYARD_FILE.exists():
+            grave = _read_graveyard()
+            for entry in grave:
+                _remap_refs(entry)
+            _write_graveyard(grave)
+
+    for filepath, header, entries in all_file_data:
+        _write_yaml_file(filepath, header, entries)
+
+    return id_map
 
 
 def _build_card_trees() -> dict:
@@ -1169,10 +1371,10 @@ def on_add_card(data):
         "engineers": 0, "suits": 0, "ads": 0,
         "money": 0, "servers": 0, "data_centers": 0, "ad_campaigns": 0,
         "reputation": 0, "HR": 0, "users": 0,
-        "fee": 0, "fee_card_id": None,
+        "fee": 0, "fee_card_id": None, "fee_card_type": None, "fee_company_type": None,
     }
     _CATEGORY_TEMPLATES = {
-        "company": {"name": "New Company", "id": _next_card_id(), "tag": "",
+        "company": {"name": "New Company", "id": _next_card_id(), "type": "",
                      "description": "", "image": None,
                      "starting_resources": {k: 0 for k in ["engineers", "suits", "ads", "money", "servers", "reputation", "users"]},
                      "starting_production": {"HR": 0, "data_centers": 0, "ad_campaigns": 0},
@@ -1180,10 +1382,14 @@ def on_add_card(data):
         "regulation": {"name": "New Regulation", "id": _next_card_id(), "tag": "",
                         "description": "", "image": None, "targets_all": 1, "target_id": None,
                         "target_type": None, "compliance": {}, "court_penalty": {}, "court_threshold": 4},
+        "world_event": {"name": "New World Event", "id": _next_card_id(), "tag": "",
+                        "description": "", "image": None, "targets_all": 1, "target_id": None,
+                        "target_type": None, "compliance": {}, "court_penalty": {}, "court_threshold": 4},
     }
     _DEFAULT = {"name": "New Card", "id": _next_card_id(), "image": None, "description": "",
                 "type": "", "number": 1, "build": None, "costs": dict(_COSTS_TEMPLATE),
-                "effect": {}, "boosts": [],
+                "effect": {}, "boosts": [], "requirements": [],
+                "tiers": [],
                 "factory_refund": None, "dc_production_bonus": None}
 
     new_card = _CATEGORY_TEMPLATES.get(card_type, dict(_DEFAULT))
@@ -1193,6 +1399,7 @@ def on_add_card(data):
     entries.append(new_card)
     new_index = len(entries) - 1
     _write_yaml_file(filepath, header, entries)
+    _reassign_all_ids_globally()   # new card + all subsequent files get correct IDs
 
     key = f"{card_type}:{new_index}"
     locked_cards[key] = request.sid
@@ -1209,6 +1416,71 @@ def on_add_card(data):
         }, room=sid)
 
     emit("lock_result", {"success": True, "key": key})
+
+
+@socketio.on("reorder_cards")
+def on_reorder_cards(data):
+    if request.sid not in editor_sids:
+        return
+    card_type = data.get("card_type")
+    from_idx = data.get("from_index")
+    to_idx = data.get("to_index")
+    filename = CARD_TYPE_FILES.get(card_type)
+    if not filename or from_idx is None or to_idx is None or from_idx == to_idx:
+        return
+    filepath = CARDS_DIR / filename
+    header, entries = _read_yaml_file(filepath)
+    if not (0 <= from_idx < len(entries) and 0 <= to_idx < len(entries)):
+        return
+    # Check no locks are held on the cards being moved
+    for key in (f"{card_type}:{from_idx}", f"{card_type}:{to_idx}"):
+        if key in locked_cards and locked_cards[key] != request.sid:
+            emit("editor_error", {"message": "A card being moved is locked by another editor."})
+            return
+    entry = entries.pop(from_idx)
+    entries.insert(to_idx, entry)
+    _write_yaml_file(filepath, header, entries)   # persist reorder before global reassign
+    _reassign_all_ids_globally()
+    # Clear all positional locks for this file — indices shifted, locks are stale
+    for key in list(locked_cards.keys()):
+        if key.startswith(f"{card_type}:"):
+            locked_cards.pop(key, None)
+    cards = _read_all_cards_yaml()
+    for sid in editor_sids:
+        socketio.emit("all_cards", {
+            "cards": cards,
+            "locks": _get_locks_for_client(sid),
+        }, room=sid)
+
+
+@socketio.on("set_card_disabled")
+def on_set_card_disabled(data):
+    """Toggle the disabled flag on a card without requiring a lock."""
+    if request.sid not in editor_sids:
+        return
+    card_type = data.get("card_type")
+    index = data.get("index")
+    disabled = bool(data.get("disabled"))
+    filename = CARD_TYPE_FILES.get(card_type)
+    if not filename:
+        return
+    filepath = CARDS_DIR / filename
+    with open(filepath) as f:
+        entries = yaml.safe_load(f) or []
+    if index < 0 or index >= len(entries):
+        return
+    if disabled:
+        entries[index]["disabled"] = True
+    else:
+        entries[index].pop("disabled", None)
+    with open(filepath, "w") as f:
+        yaml.dump(entries, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    cards = _read_all_cards_yaml()
+    for sid in editor_sids:
+        socketio.emit("all_cards", {
+            "cards": cards,
+            "locks": _get_locks_for_client(sid),
+        }, room=sid)
 
 
 GRAVEYARD_FILE = CARDS_DIR / "graveyard.yaml"
@@ -1263,6 +1535,7 @@ def on_delete_card(data):
         locked_cards.pop(k, None)
         socketio.emit("card_unlocked", {"key": k}, room="editors")
 
+    _reassign_all_ids_globally()   # close the ID gap in this file + shift subsequent files
     cards = _read_all_cards_yaml()
     for sid in editor_sids:
         socketio.emit("all_cards", {
@@ -1300,6 +1573,7 @@ def on_restore_card(data):
         entries.append(card_data)
         _write_yaml_file(filepath, header, entries)
 
+    _reassign_all_ids_globally()   # restored card + subsequent files get correct IDs
     cards = _read_all_cards_yaml()
     for sid in editor_sids:
         socketio.emit("all_cards", {

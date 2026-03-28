@@ -1,9 +1,5 @@
-# ============================================================
-# REGULATION CARDS
-# ============================================================
-
 - name: Anti-Monopoly Ruling
-  id: 30
+  id: 65
   description: Large companies are fined for anti-competitive practices.
   tag: antitrust
   image: null
@@ -17,7 +13,7 @@
     reputation: -3
   court_threshold: 4
 - name: Anti-Monopoly Ruling 2
-  id: 31
+  id: 66
   description: Large companies are fined for anti-competitive practices.
   tag: antitrust
   targets_all: 1
@@ -31,7 +27,7 @@
     reputation: -3
   boosts: null
 - name: Cybersecurity Mandate
-  id: 32
+  id: 67
   description: All companies must meet minimum cybersecurity standards.
   tag: security
   image: null
@@ -46,7 +42,7 @@
     reputation: -4
   court_threshold: 5
 - name: Platform Licensing Act
-  id: 53
+  id: 68
   description: Search engines must acquire a government license or shut down.
   tag: licensing
   image: null
@@ -58,4 +54,44 @@
   court_penalty:
     money: -10
     reputation: -2
+  court_threshold: 4
+- name: 'Climate Change: Rising see level'
+  id: 69
+  tag: null
+  description: 'int note: you need to pay extra to build dikes around power plants
+    next to the see'
+  targets_all: 1
+  target_id: null
+  target_type: null
+  court_threshold: 4
+  factory_refund: 0
+  dc_production_bonus: 0
+  compliance: null
+  court_penalty: null
+  requirements: null
+  boosts: null
+- name: Green Deal
+  id: 70
+  tag: null
+  description: 'int comment: you pay X for every fossil fuel power plant'
+  targets_all: 1
+  target_id: null
+  target_type: null
+  court_threshold: 4
+  factory_refund: 0
+  dc_production_bonus: 0
+  compliance: null
+  court_penalty: null
+  requirements: null
+  boosts: null
+- name: New Regulation
+  id: 71
+  tag: ''
+  description: ''
+  image: null
+  targets_all: 1
+  target_id: null
+  target_type: null
+  compliance: {}
+  court_penalty: {}
   court_threshold: 4

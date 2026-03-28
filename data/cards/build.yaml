@@ -6,143 +6,124 @@
 # ── OFFICES (commercial zone) ── increase HR production ──────
 
 - name: Headquarters
-  id: 60
-  image: ''
-  description: Establish your corporate headquarters. A hub for hiring top talent.
+  id: 35
+  description: null
   type: office
   number: 1
   build: office
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
-    engineers: 1
-    suits: 2
-    ads: 0
-    money: 12
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
+    money: 900
   effect:
-    HR: 3
-    reputation: 1
-    data_centers: 0
-    ad_campaigns: 0
+    HR: 4
+    reputation: 2
+    suits: 5
+    engineers: 5
   boosts: null
-
 - name: Home Office Gear
-  id: 61
-  image: ''
-  description: Equip remote workers with everything they need. Cheap but effective.
-  type: office
-  number: 2
-  build: office
-  costs:
-    engineers: 0
-    suits: 1
-    ads: 0
-    money: 3
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    HR: 1
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: null
-
-- name: Coworking Rental
-  id: 62
-  image: ''
-  description: Rent flexible workspace. Low commitment, decent capacity.
-  type: office
-  number: 2
-  build: office
-  costs:
-    engineers: 0
-    suits: 1
-    ads: 0
-    money: 4
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    HR: 1
-    suits: 1
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: null
-
-- name: Buy Office Building
-  id: 63
-  image: ''
-  description: Purchase a permanent office building. High upfront cost, lasting returns.
+  id: 36
+  description: null
   type: office
   number: 1
   build: office
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
-    engineers: 1
-    suits: 2
+    engineers: 0
+    suits: 0
     ads: 0
-    money: 15
+    money: 50
     servers: 0
     data_centers: 0
     ad_campaigns: 0
     fee: 0
     fee_card_id: null
   effect:
-    HR: 2
+    HR: 1
+    data_centers: 0
+    ad_campaigns: 0
     engineers: 1
     suits: 1
+    reputation: 1
+  boosts: null
+- name: Coworking Rental
+  id: 37
+  description: null
+  type: office
+  number: 1
+  build: office
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 300
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    HR: 1
+    suits: 2
+    engineers: 2
+    users: 0
+    reputation: 1
+  boosts: null
+- name: Office Building
+  id: 38
+  description: null
+  type: office
+  number: 1
+  build: office
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    money: 550
+  effect:
+    HR: 2
+    engineers: 3
+    suits: 3
     reputation: 1
     data_centers: 0
     ad_campaigns: 0
   boosts: null
-
-- name: Rent Office Building
-  id: 64
-  image: ''
-  description: Lease office space. Flexible terms but ongoing costs.
+- name: Office Building Rental
+  id: 39
+  description: null
   type: office
-  number: 2
+  number: 1
   build: office
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
-    engineers: 0
-    suits: 1
-    ads: 0
-    money: 6
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
+    money: 450
   effect:
     HR: 2
-    data_centers: 0
-    ad_campaigns: 0
+    engineers: 2
+    suits: 2
+    reputation: 1
   boosts: null
-
-# ── DATA CENTERS (industrial zone) ── increase data_centers production ──
-
 - name: Hyperscale Data Center
-  id: 49
-  image: ''
-  description: Massive server farms powering the digital economy.
+  id: 40
+  description: "INT NOTE: fee to HW someone who has a HW focused company. choose to\
+    \ pay  \nMassive facilities built for huge-scale operations."
   type: data center
   number: 1
   build: data_center
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
-    engineers: 3
-    suits: 0
+    engineers: 10
+    suits: 3
     ads: 0
-    money: 12
-    servers: 0
-    data_centers: 0
+    money: 1000
+    servers: 5
+    data_centers: 5
     ad_campaigns: 0
-    fee: 0
+    fee: 500
     fee_card_id: null
   effect:
     servers: 6
@@ -150,14 +131,63 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: null
-
-- name: Edge Computing Node
-  id: 65
-  image: ''
-  description: Smaller distributed data centers closer to users. Fast and efficient.
+- name: On-Premise Data Center
+  id: 41
+  description: "INT NOTE: fee to HW vendor. \nOwned and operated by a single company\
+    \ for its own internal use."
+  type: data center
+  number: 1
+  build: data_center
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  boosts: null
+- name: Colocation Data Center
+  id: 42
+  description: "INT NOTE: fee to HW vendor. \nThird-party facilities where multiple\
+    \ businesses rent space."
+  type: data center
+  number: 1
+  build: data_center
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  boosts: null
+- name: Edge Data Center
+  id: 43
+  description: "INT NOTE: fee to HW vendor. \nSmaller distributed data center closer\
+    \ to users. "
   type: data center
   number: 2
   build: data_center
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
     engineers: 2
     suits: 0
@@ -174,16 +204,14 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: null
-
-# ── STORES (commercial zone) ── increase ad_campaigns production ──
-
-- name: Tech Retail Chain
-  id: 47
-  image: ''
-  description: Physical and online stores selling consumer electronics.
+- name: Brand-Owned Store
+  id: 44
+  description: Sell only one brand’s products. Apple Store
   type: store
-  number: 2
+  number: 3
   build: store
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
     engineers: 0
     suits: 2
@@ -199,15 +227,50 @@
     money: 4
     data_centers: 0
     ad_campaigns: 0
+  requirements:
+  - hardware manufacturer
   boosts: null
+- name: Electronics Retailer
+  id: 45
+  description: 'Large stores selling many brands and categories
 
-- name: Retail Chain
-  id: 55
-  image: ''
-  description: Build physical stores to sell hardware and attract users.
+    TVs, laptops, phones, appliances
+
+    Example: MediaMarkt'
+  type: store
+  number: 3
+  build: store
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  requirements:
+  - hardware manufacturer
+  boosts: null
+- name: Authorized Reseller
+  id: 46
+  description: 'Official partners of brands
+
+    Sell genuine products with warranty support
+
+    Often smaller stores or chains certified by manufacturers'
   type: store
   number: 2
   build: store
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
     engineers: 0
     suits: 2
@@ -223,65 +286,11 @@
     money: 3
     data_centers: 0
     ad_campaigns: 0
+  requirements:
+  - hardware manufacturer
   boosts: null
-
-# ── AD CAMPAIGNS (commercial zone) ── increase ad_campaigns production ──
-
-- name: Digital Ad Network
-  id: 50
-  image: ''
-  description: Targeted advertising infrastructure reaching billions of eyeballs.
-  type: ad campaign
-  number: 2
-  build: ad_campaign
-  costs:
-    engineers: 1
-    suits: 1
-    ads: 0
-    money: 3
-    servers: 1
-    data_centers: 0
-    ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    ads: 6
-    users: 4
-    money: 3
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: null
-
-- name: Billboard Blitz
-  id: 66
-  image: ''
-  description: Plaster your brand across every surface. Old school, still works.
-  type: ad campaign
-  number: 2
-  build: ad_campaign
-  costs:
-    engineers: 0
-    suits: 1
-    ads: 0
-    money: 4
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    ads: 3
-    users: 2
-    money: 1
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: null
-
-# ── POWER PLANTS (industrial zone) ── adjacency bonuses ──────
-
-- name: Power Grid Operator
-  id: 48
-  image: ''
+- name: Nuclear Power Plant
+  id: 47
   description: Build and operate power infrastructure. Essential for data centers.
   type: power plant
   number: 1
@@ -303,10 +312,8 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: null
-
-- name: Solar Farm
-  id: 67
-  image: ''
+- name: Natural Gas Power Plant
+  id: 48
   description: Harness the sun. Clean energy and good PR.
   type: power plant
   number: 2
@@ -329,16 +336,288 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: null
-
-# ── LOBBY GROUPS (commercial zone) ──────────────────────────
-
-- name: Lobbying Group
+- name: PV Power plant
+  id: 49
+  description: Photovoltaic Power plant
+  type: power plant
+  number: 1
+  build: power_plant
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  boosts: null
+- name: Solar Power Plant
+  id: 50
+  description: null
+  type: power plant
+  number: 1
+  build: power_plant
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  boosts: null
+- name: Wind Power Plant
+  id: 51
+  description: null
+  type: power plant
+  number: 1
+  build: power_plant
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  boosts: null
+- name: Hydroelectric Power Plant
+  id: 52
+  description: null
+  type: power plant
+  number: 3
+  build: power_plant
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  requirements: null
+  tiers: null
+  boosts: null
+- name: Biomass Power Plant
+  id: 53
+  description: null
+  type: power plant
+  number: 1
+  build: power_plant
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  boosts: null
+- name: Geothermal Power Plant
+  id: 54
+  description: null
+  type: power plant
+  number: 1
+  build: power_plant
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  boosts: null
+- name: Coal Power Plant
+  id: 55
+  description: null
+  type: power plant
+  number: 1
+  build: power_plant
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  boosts: null
+- name: Digital Banner Ads
   id: 56
+  description: Targeted advertising infrastructure reaching billions of eyeballs.
+  type: ad campaign
+  number: 2
+  build: ad_campaign
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 1
+    suits: 1
+    ads: 0
+    money: 3
+    servers: 1
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    ads: 6
+    users: 4
+    money: 3
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+- name: Video Ads
+  id: 57
+  description: null
+  type: ad campaign
+  number: 1
+  build: ad_campaign
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  boosts: null
+- name: Influencer Advertising
+  id: 58
+  description: Pay a soulless influencer to advertise your ads.
+  type: ad campaign
+  number: 1
+  build: ad_campaign
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  boosts: null
+- name: Billboard Blitz
+  id: 59
   image: ''
+  description: Plaster your brand across every surface. Old school, still works.
+  type: ad campaign
+  number: 2
+  build: ad_campaign
+  costs:
+    engineers: 0
+    suits: 1
+    ads: 0
+    money: 4
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    ads: 3
+    users: 2
+    money: 1
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: null
+- name: Lobbying Group
+  id: 60
   description: Influence government policy in your favor. Build a lobbying operation.
-  type: software service
+  type: lobby
   number: 1
   build: lobby_group
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
     engineers: 0
     suits: 3
@@ -354,4 +633,97 @@
     money: 2
     data_centers: 0
     ad_campaigns: 0
+  requirements: null
+  boosts: null
+- name: Grassroots Lobbying
+  id: 61
+  description: mobilize public to pressure officials
+  type: lobby
+  number: 1
+  build: lobby_group
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  requirements: null
+  boosts: null
+- name: Corporate Lobbying
+  id: 62
+  description: companies influencing regulation
+  type: lobby
+  number: 1
+  build: lobby_group
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  requirements: null
+  boosts: null
+- name: Rare Metal Mine
+  id: 63
+  description: null
+  type: rare metal mine
+  number: 3
+  build: rare_metal_mine
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    money: 200
+    engineers: 3
+  effect:
+    money: 10
+  responsible_mining:
+    extra_cost:
+      money: 50
+    extra_effect:
+      reputation: 2
+  requirements: null
+  tiers: null
+  boosts: null
+- name: Hydroelectric Power Plant
+  id: 64
+  description: 'Build a hydroelectric dam on a lake tile. Generates clean power, boosting
+    data center production.
+
+    '
+  type: hydroelectric power plant
+  number: 2
+  build: hydroelectric_power_plant
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    money: 150
+    engineers: 2
+  effect:
+    data_centers: 2
+  requirements: null
+  tiers: null
   boosts: null

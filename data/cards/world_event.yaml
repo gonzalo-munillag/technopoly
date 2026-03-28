@@ -1,0 +1,24 @@
+# ============================================================
+# WORLD EVENT CARDS (EVENTS deck — card_type is always "world_event")
+# ============================================================
+#
+# World Events affect all players simultaneously and represent
+# macro-level disruptions to the tech landscape.
+# Emoji: 🌍
+#
+# ---- TEMPLATE (copy, uncomment, and fill in) ---------------
+#
+# - name: Event Name
+#   id: 99                  # unique across ALL card files
+#   description: null       # flavour text shown on the card
+#   targets_all: 1          # 1 = affects all players
+#   compliance:             # cost if player accepts the event
+#     money: 0
+#     users: 0
+#   court_penalty:          # additional penalty if player loses in court
+#     money: 0
+#   court_threshold: 4      # roll >= this on a d6 to win in court
+#   image: null
+#
+# ---- CARDS -------------------------------------------------
+[]

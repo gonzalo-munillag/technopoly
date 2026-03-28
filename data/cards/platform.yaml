@@ -1,77 +1,18 @@
-# ============================================================
-# PLATFORM CARDS (PROJECTS deck — card_type is always "platform")
-# ============================================================
-#
-# ---- TEMPLATE (copy, uncomment, and fill in) ---------------
-#
-# - name: Card Name
-#   id: 99                  # unique across ALL card files
-#   description: null       # flavour text shown on the card
-#   # social platform | hardware manufacturer | software service | software platform | software engine | online marketplace | search service | store | power plant | data center | office | ad campaign
-#   type: social platform
-#   number: 1               # copies in the shuffled projects deck
-#   # ad_campaign | data_center | factory | lobby_group | office | power_plant | store — or null
-#   build: null
-#   # effect — resource/production deltas when the card resolves (omit zero keys in real cards if you prefer)
-#   effect:
-#     users: 0
-#     money: 0
-#     engineers: 0
-#     suits: 0
-#     servers: 0
-#     ads: 0
-#     reputation: 0
-#     HR: 0
-#     data_centers: 0
-#     ad_campaigns: 0
-#   # costs — to play the card; if fee > 0, keep money at 0 (game rule)
-#   costs:
-#     users: 0
-#     money: 0
-#     engineers: 0
-#     suits: 0
-#     servers: 0
-#     ads: 0
-#     reputation: 0
-#     HR: 0
-#     data_centers: 0
-#     ad_campaigns: 0
-#     fee: 0              # if > 0, set money above to 0; paid to another player's card
-#     fee_card_id: null   # ID of the card whose owner receives the fee
-#   # boosts — list of synergies; target_id may be one id OR a list [1, 2, 3]
-#   boosts:
-#     - target_id: null
-#       bonus:
-#         users: 0
-#         money: 0
-#         engineers: 0
-#         suits: 0
-#         servers: 0
-#         ads: 0
-#         reputation: 0
-#         HR: 0
-#         data_centers: 0
-#         ad_campaigns: 0
-#     # - target_id: [1, 2, 3]
-#     #   bonus:
-#     #     users: 1
-#   # power_plant only: +X $M/yr money production per adjacent factory
-#   factory_refund: null
-#   # power_plant only: +X data_centers production per adjacent data center
-#   dc_production_bonus: null
-#   # artwork path/URL — not editable in the in-game card editor
-#   image: null
-#
-# ---- CARDS -------------------------------------------------
-
 - name: Metaverse
-  id: 1
+  id: 13
   description: null
-  type: social platform
+  type: software platform
   number: 1
   build: null
   factory_refund: 0
   dc_production_bonus: 0
+  tiers:
+  - users: 100
+    data_cost: 0
+  - users: 250
+    data_cost: 200
+  - users: 500
+    data_cost: 400
   effect:
     users: 100
     money: 0
@@ -98,13 +39,20 @@
     fee_card_id: null
   boosts: null
 - name: Machine Learning Service
-  id: 2
+  id: 14
   description: null
   type: software service
   number: 1
   build: null
   factory_refund: 0
   dc_production_bonus: 0
+  tiers:
+  - users: 60
+    data_cost: 0
+  - users: 120
+    data_cost: 200
+  - users: 200
+    data_cost: 400
   costs:
     engineers: 2
     suits: 0
@@ -122,13 +70,20 @@
     users: 60
   boosts: null
 - name: Social Network
-  id: 3
+  id: 15
   description: null
   type: social platform
-  number: 5
+  number: 3
   build: null
   factory_refund: 0
   dc_production_bonus: 0
+  tiers:
+  - users: 200
+    data_cost: 0
+  - users: 600
+    data_cost: 200
+  - users: 1500
+    data_cost: 600
   costs:
     engineers: 0
     suits: 0
@@ -141,7 +96,7 @@
     HR: 0
     users: 0
     fee: 200
-    fee_card_id: 4
+    fee_card_id: 16
   effect:
     users: 200
   boosts:
@@ -153,10 +108,10 @@
       users: 10
     target_count: 3
 - name: App Store
-  id: 4
+  id: 16
   description: null
   type: online marketplace
-  number: 4
+  number: 3
   build: null
   factory_refund: 0
   dc_production_bonus: 0
@@ -174,10 +129,10 @@
     HR: 0
     users: 0
     fee: 400
-    fee_card_id: 5
+    fee_card_id: 17
   boosts: null
 - name: Operating System
-  id: 5
+  id: 17
   description: null
   type: software platform
   number: 3
@@ -200,8 +155,146 @@
     fee: 0
     fee_card_id: null
   boosts:
-  - target_id: 4
+  - target_id: 16
     target_type: null
     bonus:
       users: 30
       money: 500
+- name: Mainframe Computer
+  id: 18
+  description: '- INT NOTE: give some boost to an existing data center
+
+    Designed for reliability and massive transaction processing.
+
+    Handles millions of operations and is extremely stable and secure.'
+  type: hardware manufacturer
+  number: 1
+  build: factory
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Quantum Computer
+  id: 19
+  description: null
+  type: hardware manufacturer
+  number: 1
+  build: factory
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Supercomputer
+  id: 20
+  description: null
+  type: hardware manufacturer
+  number: 1
+  build: factory
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Content Delivery Network
+  id: 21
+  description: null
+  type: software service
+  number: 1
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  boosts: null
+  disabled: true
+- name: Semiconductor Equipment
+  id: 22
+  description: 'Equipment to manufacture chips
+
+
+    Company: Build machines used to manufacture chips
+
+
+    Example: ASML'
+  type: hardware manufacturer
+  number: 1
+  build: factory
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true

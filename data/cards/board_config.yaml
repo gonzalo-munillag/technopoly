@@ -1,10 +1,10 @@
 - row: 0
   col: 3
-  terrain: empty
+  terrain: rare_metal_mine
   name: ''
 - row: 0
   col: 4
-  terrain: empty
+  terrain: rare_metal_mine
   name: ''
 - row: 0
   col: 5
@@ -24,11 +24,11 @@
   name: ''
 - row: 0
   col: 9
-  terrain: industrial
+  terrain: empty
   name: ''
 - row: 0
   col: 10
-  terrain: lake
+  terrain: empty
   name: ''
 - row: 0
   col: 11
@@ -36,7 +36,7 @@
   name: ''
 - row: 0
   col: 12
-  terrain: lake
+  terrain: empty
   name: ''
 - row: 1
   col: 2
@@ -44,7 +44,7 @@
   name: ''
 - row: 1
   col: 3
-  terrain: empty
+  terrain: rare_metal_mine
   name: ''
 - row: 1
   col: 4
@@ -55,20 +55,12 @@
   terrain: empty
   name: ''
 - row: 1
-  col: 6
-  terrain: empty
-  name: ''
-- row: 1
-  col: 7
-  terrain: empty
-  name: ''
-- row: 1
   col: 8
   terrain: empty
   name: ''
 - row: 1
   col: 9
-  terrain: industrial
+  terrain: empty
   name: ''
 - row: 1
   col: 10
@@ -76,30 +68,30 @@
   name: ''
 - row: 1
   col: 11
-  terrain: industrial
-  name: DET
+  terrain: empty
+  name: ''
 - row: 1
   col: 12
   terrain: lake
   name: ''
 - row: 1
   col: 13
-  terrain: commercial
+  terrain: empty
   name: ''
   adjacency_bonuses:
     users: 2
     suits: 1
 - row: 2
   col: 1
-  terrain: empty
+  terrain: natural_park
   name: ''
 - row: 2
   col: 2
-  terrain: empty
+  terrain: coal
   name: ''
 - row: 2
   col: 3
-  terrain: empty
+  terrain: coal
   name: ''
 - row: 2
   col: 4
@@ -123,7 +115,7 @@
   name: ''
 - row: 2
   col: 9
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 2
   col: 10
@@ -136,15 +128,15 @@
       HR: 1
 - row: 2
   col: 11
-  terrain: industrial
+  terrain: empty
   name: ''
 - row: 2
   col: 12
-  terrain: industrial
+  terrain: empty
   name: ''
 - row: 2
   col: 13
-  terrain: industrial
+  terrain: empty
   name: ''
 - row: 2
   col: 14
@@ -154,16 +146,13 @@
   col: 0
   terrain: empty
   name: ''
-  adjacency_bonuses:
-    users: 2
-    suits: 1
 - row: 3
   col: 1
-  terrain: empty
+  terrain: natural_park
   name: ''
 - row: 3
   col: 2
-  terrain: empty
+  terrain: coal
   name: ''
 - row: 3
   col: 3
@@ -191,11 +180,11 @@
   name: ''
 - row: 3
   col: 9
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 3
   col: 10
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 3
   col: 11
@@ -207,7 +196,7 @@
   name: ''
 - row: 3
   col: 13
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 3
   col: 14
@@ -223,7 +212,7 @@
   name: ''
 - row: 4
   col: 2
-  terrain: empty
+  terrain: natural_park
   name: ''
 - row: 4
   col: 3
@@ -255,33 +244,28 @@
   name: ''
 - row: 4
   col: 10
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 4
   col: 11
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 4
   col: 12
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 4
   col: 13
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 5
   col: 1
-  terrain: empty
+  terrain: natural_park
   name: ''
 - row: 5
   col: 2
-  terrain: city
-  name: DEN
-  build_bonuses:
-    immediate:
-      users: 10
-    production:
-      HR: 1
+  terrain: empty
+  name: ''
 - row: 5
   col: 3
   terrain: empty
@@ -300,7 +284,7 @@
   name: ''
 - row: 5
   col: 7
-  terrain: empty
+  terrain: lake
   name: ''
 - row: 5
   col: 8
@@ -312,19 +296,19 @@
   name: ''
 - row: 5
   col: 10
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 5
   col: 11
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 5
   col: 12
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 5
   col: 13
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 6
   col: 2
@@ -360,7 +344,7 @@
   name: ''
 - row: 6
   col: 10
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 6
   col: 11
@@ -372,21 +356,20 @@
   name: ''
 - row: 7
   col: 3
-  terrain: empty
+  terrain: wind
   name: ''
 - row: 7
   col: 4
-  terrain: commercial
+  terrain: wind
   name: ''
 - row: 7
   col: 5
-  terrain: city
-  name: DAL
+  terrain: wind
+  name: ''
   build_bonuses:
     immediate:
       users: 10
-    production:
-      HR: 1
+    production: {}
 - row: 7
   col: 6
   terrain: empty
@@ -397,11 +380,11 @@
   name: ''
 - row: 7
   col: 8
-  terrain: lake
+  terrain: empty
   name: ''
 - row: 7
   col: 9
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 7
   col: 10
@@ -423,14 +406,14 @@
   col: 14
   terrain: city
   name: NY
-  adjacency_bonuses:
-    users: 2
-    suits: 1
   build_bonuses:
     immediate:
       users: 10
     production:
       HR: 1
+  adjacency_bonuses:
+    users: 2
+    suits: 1
 - row: 0
   col: 13
   terrain: lake
@@ -445,35 +428,35 @@
   name: ''
 - row: 0
   col: 15
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 4
   col: 14
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 4
   col: 15
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 5
   col: 14
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 6
   col: 13
   terrain: city
   name: CLT
-  adjacency_bonuses:
-    users: 2
-    suits: 1
   build_bonuses:
     immediate:
       users: 10
     production:
       HR: 1
+  adjacency_bonuses:
+    users: 2
+    suits: 1
 - row: 8
   col: 11
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 4
   col: -1
@@ -485,8 +468,12 @@
   name: ''
 - row: 1
   col: 1
-  terrain: empty
+  terrain: natural_park
   name: ''
+  build_bonuses:
+    immediate: &id003
+      reputation: -2
+    production: &id004 {}
 - row: 1
   col: 0
   terrain: lake
@@ -505,20 +492,20 @@
   name: ''
 - row: 0
   col: -2
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 0
   col: -3
   terrain: city
   name: SEA
-  adjacency_bonuses:
-    users: 2
-    suits: 1
   build_bonuses:
     immediate:
       users: 10
     production:
       HR: 1
+  adjacency_bonuses:
+    users: 2
+    suits: 1
 - row: 1
   col: -1
   terrain: empty
@@ -561,7 +548,7 @@
   name: ''
 - row: 4
   col: -3
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 5
   col: -2
@@ -571,21 +558,21 @@
   col: -3
   terrain: city
   name: SF
-  adjacency_bonuses:
-    users: 2
-    suits: 1
   build_bonuses:
     immediate:
       users: 10
     production:
       HR: 1
+  adjacency_bonuses:
+    users: 2
+    suits: 1
 - row: 6
   col: -2
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 7
   col: -2
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 7
   col: 0
@@ -599,14 +586,14 @@
   col: -1
   terrain: city
   name: LV
-  adjacency_bonuses:
-    users: 2
-    suits: 1
   build_bonuses:
     immediate:
       users: 10
     production:
       HR: 1
+  adjacency_bonuses:
+    users: 2
+    suits: 1
 - row: 5
   col: -1
   terrain: empty
@@ -633,11 +620,11 @@
   name: ''
 - row: 8
   col: 2
-  terrain: empty
+  terrain: gas_reserve
   name: ''
 - row: 8
   col: 3
-  terrain: industrial
+  terrain: gas_reserve
   name: ''
 - row: 8
   col: 4
@@ -645,83 +632,83 @@
   name: ''
 - row: 9
   col: 3
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 9
   col: 4
   terrain: city
   name: ATX
-  adjacency_bonuses:
-    users: 2
-    suits: 1
   build_bonuses:
     immediate:
       users: 10
     production:
       HR: 1
+  adjacency_bonuses:
+    users: 2
+    suits: 1
 - row: 6
   col: 14
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 7
   col: 13
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 7
   col: 11
   terrain: city
   name: ATL
-  adjacency_bonuses:
-    users: 2
-    suits: 1
   build_bonuses:
     immediate:
       users: 10
     production:
       HR: 1
+  adjacency_bonuses:
+    users: 2
+    suits: 1
 - row: 7
   col: 12
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 8
   col: 12
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 8
   col: 13
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 9
   col: 12
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 10
   col: 5
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 9
   col: 2
-  terrain: industrial
+  terrain: gas_reserve
   name: ''
 - row: 10
   col: 4
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 11
   col: 4
-  terrain: industrial
+  terrain: empty
   name: ''
 - row: 9
   col: 5
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 10
   col: 13
-  terrain: industrial
-  name: CC
+  terrain: commercial
+  name: ''
 - row: 9
   col: 11
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 8
   col: 8
@@ -733,7 +720,7 @@
   name: ''
 - row: 8
   col: 10
-  terrain: empty
+  terrain: commercial
   name: ''
 - row: 8
   col: 1
@@ -743,215 +730,725 @@
   col: 13
   terrain: city
   name: MIA
-  adjacency_bonuses:
-    users: 2
-    suits: 1
   build_bonuses:
     immediate:
       users: 10
     production:
       HR: 1
+  adjacency_bonuses:
+    users: 2
+    suits: 1
 - row: 8
   col: -1
-  terrain: industrial
+  terrain: empty
   name: ''
 - row: 8
   col: 0
-  terrain: city
-  name: PHX
-  adjacency_bonuses:
-    users: 2
-    suits: 1
-  build_bonuses:
-    immediate:
-      users: 10
-    production:
-      HR: 1
+  terrain: empty
+  name: ''
 - row: 9
   col: 0
-  terrain: empty
+  terrain: sun
   name: ''
 - row: 9
   col: 1
-  terrain: empty
+  terrain: sun
   name: ''
 - row: 7
   col: -3
   terrain: city
   name: LA
-  adjacency_bonuses:
-    users: 2
-    suits: 1
   build_bonuses:
     immediate:
       users: 10
     production:
       HR: 1
+  adjacency_bonuses:
+    users: 2
+    suits: 1
 - row: 8
   col: -2
-  terrain: city
-  name: SD
-  adjacency_bonuses:
-    users: 2
-    suits: 1
-  build_bonuses:
-    immediate:
-      users: 10
-    production:
-      HR: 1
+  terrain: commercial
+  name: ''
 - row: 6
   col: -3
-  terrain: industrial
+  terrain: commercial
   name: ''
 - row: 9
   col: -1
-  terrain: empty
+  terrain: sun
   name: ''
 - row: 10
   col: 3
-  terrain: industrial
+  terrain: empty
   name: ''
 - row: 9
   col: 6
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: &id001
+      money: -150
+    production: &id002 {}
 - row: 0
   col: -4
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 1
   col: -4
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 2
   col: -4
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 3
   col: -4
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 4
   col: -4
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 5
   col: -4
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 6
   col: -4
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 7
   col: -4
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 8
   col: -3
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 11
   col: 5
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 10
   col: 6
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 9
   col: 7
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 9
   col: 8
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 9
   col: 9
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 9
   col: 10
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 10
   col: 11
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 10
   col: 12
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 11
   col: 12
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 11
   col: 14
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 10
   col: 14
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 9
   col: 13
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 8
   col: 14
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 7
   col: 14
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 6
   col: 15
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 5
   col: 15
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 4
   col: 16
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 3
   col: 15
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 2
   col: 15
   terrain: city
   name: PHI
-  adjacency_bonuses:
-    users: 2
-    suits: 1
   build_bonuses:
     immediate:
       users: 10
     production:
       HR: 1
+  adjacency_bonuses:
+    users: 2
+    suits: 1
 - row: 2
   col: 16
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 1
   col: 15
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 0
   col: 16
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 12
   col: 13
   terrain: sea
   name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
 - row: 12
   col: 14
   terrain: sea
+  name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
+- row: 10
+  col: 2
+  terrain: natural_park
+  name: ''
+  build_bonuses:
+    immediate: *id003
+    production: *id004
+- row: 11
+  col: 3
+  terrain: gas_reserve
+  name: ''
+- row: 9
+  col: -2
+  terrain: wall
+  name: ''
+- row: 10
+  col: -1
+  terrain: wall
+  name: ''
+- row: 10
+  col: 0
+  terrain: wall
+  name: ''
+- row: 10
+  col: 1
+  terrain: wall
+  name: ''
+- row: 11
+  col: 1
+  terrain: wall
+  name: ''
+- row: 11
+  col: 2
+  terrain: wall
+  name: ''
+- row: 12
+  col: 3
+  terrain: wall
+  name: ''
+- row: 12
+  col: 4
+  terrain: wall
+  name: ''
+- row: 12
+  col: 5
+  terrain: wall
+  name: ''
+- row: 10
+  col: 7
+  terrain: offshore_wind
+  name: ''
+  build_bonuses:
+    immediate: &id005
+      money: -100
+    production: &id006 {}
+- row: 10
+  col: 8
+  terrain: offshore_wind
+  name: ''
+  build_bonuses:
+    immediate: *id005
+    production: *id006
+- row: 10
+  col: 9
+  terrain: offshore_wind
+  name: ''
+  build_bonuses:
+    immediate: *id005
+    production: *id006
+- row: 10
+  col: 10
+  terrain: offshore_wind
+  name: ''
+  build_bonuses:
+    immediate: *id005
+    production: *id006
+- row: 11
+  col: 6
+  terrain: sea
+  name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
+- row: 11
+  col: 7
+  terrain: offshore_solar
+  name: ''
+  build_bonuses:
+    immediate:
+      money: -150
+    production: {}
+- row: 11
+  col: 8
+  terrain: offshore_solar
+  name: ''
+  build_bonuses:
+    immediate:
+      money: -150
+    production: {}
+- row: 11
+  col: 9
+  terrain: offshore_solar
+  name: ''
+  build_bonuses:
+    immediate:
+      money: -150
+    production: {}
+- row: 11
+  col: 10
+  terrain: offshore_solar
+  name: ''
+  build_bonuses:
+    immediate:
+      money: -150
+    production: {}
+- row: 11
+  col: 11
+  terrain: sea
+  name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
+- row: 12
+  col: 6
+  terrain: sea
+  name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
+- row: 12
+  col: 7
+  terrain: sea
+  name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
+- row: 12
+  col: 8
+  terrain: sea
+  name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
+- row: 12
+  col: 9
+  terrain: sea
+  name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
+- row: 12
+  col: 10
+  terrain: sea
+  name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
+- row: 12
+  col: 11
+  terrain: sea
+  name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
+- row: 12
+  col: 12
+  terrain: sea
+  name: ''
+  build_bonuses:
+    immediate: *id001
+    production: *id002
+- row: -3
+  col: 4
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: &id007
+      money: -200
+    production: &id008 {}
+- row: -3
+  col: 3
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 5
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 2
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 1
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 0
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: -1
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: -2
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: -3
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 6
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 7
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 8
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 9
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 10
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 11
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 12
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 13
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -3
+  col: 14
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 13
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 14
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 12
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 11
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 10
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 9
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 8
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 7
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 6
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 5
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate:
+      money: -200
+    production: {}
+- row: -2
+  col: 4
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 3
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 2
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 1
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: 0
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: -1
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: -2
+  col: -2
+  terrain: space
+  name: ''
+  build_bonuses:
+    immediate: *id007
+    production: *id008
+- row: 1
+  col: 6
+  terrain: empty
+  name: ''
+- row: 1
+  col: 7
+  terrain: empty
   name: ''

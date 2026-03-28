@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
+import uuid
 
 OPTIONAL_COST_PAIRS = []
 
@@ -38,6 +39,17 @@ class Card:
     starting_tiles: list[str] = field(default_factory=list)
     factory_refund: int = 0          # $ refund per adjacent factory when this power plant is placed
     dc_production_bonus: int = 0     # +N data_centers production per adjacent data center
+    requirements: list[str] = field(default_factory=list)  # card types player must have played
+    # Optional responsible-mining upgrade: {extra_cost: {resource: amount}, extra_effect: {resource: amount}}
+    responsible_mining: dict = field(default_factory=dict)
+    # Enhancement tiers: [{users, data_cost}, ...] — tier 1 is base, upgrade by spending data
+    tiers: list[dict] = field(default_factory=list)
+    # Which tier the card is currently at (0 = no tiers; 1 = base tier; 2/3 = upgraded)
+    current_tier: int = 0
+    # Stable per-instance identifier — never shared between copies of the same card.
+    # Uses uuid4 so it survives across moves (hand → played_cards) and is never reused
+    # unlike id(card) whose memory address can be recycled after garbage collection.
+    _instance_id: str = field(default_factory=lambda: str(uuid.uuid4()), repr=False, compare=False, hash=False)
 
     @property
     def fee(self) -> int:
@@ -46,6 +58,16 @@ class Card:
     @property
     def fee_card_id(self) -> int | None:
         return self.costs.get("fee_card_id")
+
+    @property
+    def fee_card_type(self) -> str | None:
+        """Fee is paid to a player who has played a card of this type."""
+        return self.costs.get("fee_card_type") or None
+
+    @property
+    def fee_company_type(self) -> str | None:
+        """Fee is paid to a player whose chosen company is of this type."""
+        return self.costs.get("fee_company_type") or None
 
     def to_dict(self) -> dict:
         d = {
@@ -78,6 +100,11 @@ class Card:
             "starting_tiles": self.starting_tiles,
             "factory_refund": self.factory_refund,
             "dc_production_bonus": self.dc_production_bonus,
+            "requirements": self.requirements or [],
+            "tiers": self.tiers or [],
+            "current_tier": self.current_tier,
+            "responsible_mining": self.responsible_mining or {},
+            "instance_id": self._instance_id,
         }
         return d
 
@@ -120,4 +147,7 @@ class Card:
             starting_tiles=data.get("starting_tiles") or [],
             factory_refund=data.get("factory_refund", 0),
             dc_production_bonus=data.get("dc_production_bonus", 0),
+            requirements=data.get("requirements") or [],
+            tiers=data.get("tiers") or [],
+            responsible_mining=data.get("responsible_mining") or {},
         )

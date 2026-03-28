@@ -16,16 +16,19 @@ PROJECTS_FILES = {
     "cyber_attacks.yaml": "cyber_attack",
     "fuck_ups.yaml": "fuck_up",
     "platform.yaml": "platform",
+    "build.yaml": "build",
 }
 
 BOOSTERS_FILES = {
     "leverage.yaml": "leverage",
     "innovation.yaml": "innovation",
-    "build.yaml": "build",
 }
 
 COMPANY_FILE = "company.yaml"
-REGULATION_FILE = "regulation.yaml"
+EVENTS_FILES = {
+    "regulation.yaml": "regulation",
+    "world_event.yaml": "world_event",
+}
 
 PARAMS_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "params.yaml"
 
@@ -78,12 +81,12 @@ class Game:
     user_pool: int = 0
 
     def take_users(self, amount: int) -> int:
-        """Take users from the global pool. Returns actual amount taken."""
+        """Decrement the display pool and return amount (uncapped).
+        The pool tracks uncaptured market share for the pie chart only."""
         if amount <= 0:
             return 0
-        taken = min(amount, self.user_pool)
-        self.user_pool -= taken
-        return taken
+        self.user_pool = max(0, self.user_pool - amount)
+        return amount
 
     # ── deck loading ─────────────────────────────────────────
 
@@ -97,6 +100,8 @@ class Game:
             with open(filepath) as f:
                 entries = yaml.safe_load(f) or []
             for entry in entries:
+                if entry.get("disabled"):   # skip deactivated cards
+                    continue
                 count = entry.get("number", 1) or 1
                 for _ in range(count):
                     cards.append(Card.from_yaml(entry, card_type, deck_name))
@@ -107,7 +112,7 @@ class Game:
         self.projects_deck = self._load_deck(PROJECTS_FILES, "projects", cards_dir)
         self.boosters_deck = self._load_deck(BOOSTERS_FILES, "boosters", cards_dir)
         self.regulation_deck = self._load_deck(
-            {REGULATION_FILE: "regulation"}, "regulation", cards_dir
+            EVENTS_FILES, "regulation", cards_dir
         )
         filepath = cards_dir / COMPANY_FILE
         self.company_cards = []
@@ -115,6 +120,8 @@ class Game:
             with open(filepath) as f:
                 entries = yaml.safe_load(f) or []
             for entry in entries:
+                if entry.get("disabled"):   # skip deactivated company cards
+                    continue
                 self.company_cards.append(
                     Card.from_yaml(entry, "company", "company")
                 )
@@ -209,6 +216,8 @@ class Game:
             player.draft_pool = []
             player.year_done = False
             player.regulation_resolved = False
+            player.went_to_court = False
+            player.court_start_ready = False
             drawn = self._draw_projects_limited(P("projects_draw", 3))
             fuckups = []
             for card in drawn:
@@ -322,6 +331,8 @@ class Game:
         penalty = reg.compliance
         player.apply_penalty(penalty, self)
         player.regulation_resolved = True
+        player.went_to_court = False
+        player.court_start_ready = False
         return {"penalty": penalty, "lost_cards": lost_cards}
 
     def resolve_regulation_court(self, player_id: str) -> dict:
@@ -346,11 +357,24 @@ class Game:
                         self.discard_pile.append(c)
                         lost_cards.append(c.name)
         player.regulation_resolved = True
+        player.went_to_court = True
+        player.court_start_ready = False
         return {"roll": roll, "threshold": threshold, "won": won, "penalty": penalty, "lost_cards": lost_cards}
 
     def all_regulation_resolved(self) -> bool:
         """Every player must acknowledge/resolve the regulation."""
         return all(p.regulation_resolved for p in self.players.values())
+
+    def court_players(self) -> list:
+        return [p for p in self.players.values() if p.went_to_court]
+
+    def all_court_players_ready(self) -> bool:
+        """True when every player who went to court has clicked Start Year.
+        If nobody went to court, returns True immediately (auto-advance)."""
+        court = self.court_players()
+        if not court:
+            return True
+        return all(p.court_start_ready for p in court)
 
     def advance_past_regulation(self):
         """After regulation resolved, begin draft for this year."""
@@ -391,18 +415,30 @@ class Game:
     def all_year_done(self) -> bool:
         return all(p.year_done for p in self.players.values())
 
-    def end_current_year(self):
-        """End this year: collect production, start next year."""
-        for player in self.players.values():
-            player.collect_production(P("money_per_users", 20))
+    def end_current_year(self) -> list:
+        """End this year: collect production, start next year.
+        Returns list of (player_id, player_name) for any player that went bankrupt."""
+        bankrupt = []
+        for pid, player in list(self.players.items()):
+            went_bankrupt = player.collect_production(
+                P("money_per_users", 20),
+                P("data_per_users", 200),
+            )
             player.reset_turn()
             player.year_done = False
+            if went_bankrupt:
+                bankrupt.append((pid, player.name))
+        for pid, _ in bankrupt:
+            self.players.pop(pid, None)
+            if pid in self.turn_order:
+                self.turn_order.remove(pid)
         self.year += 1
         self._rotate_dealer()
         if self.year >= 2:
             self.draw_regulation()
         else:
             self.begin_year_draft()
+        return bankrupt
 
     def _rotate_dealer(self):
         if self.turn_order:

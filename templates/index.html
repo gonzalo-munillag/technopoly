@@ -153,13 +153,16 @@
 
           <!-- REGULATION PHASE -->
           <div id="regulation-area" class="phase-area hidden">
-            <h2>Regulation</h2>
-            <p class="phase-hint">A new regulation has been enacted this year.</p>
+            <h2>⚡ Events</h2>
+            <p class="phase-hint">An event card has been drawn for this year.</p>
             <div id="regulation-card-display" class="regulation-display"></div>
             <div id="regulation-alert-box" class="regulation-alert hidden"></div>
             <div id="regulation-actions" class="action-btns hidden">
               <button id="reg-accept-btn" class="btn btn-sm btn-accent">Accept Compliance</button>
               <button id="reg-court-btn" class="btn btn-sm btn-danger-sm">Go to Court</button>
+            </div>
+            <div id="die-container" class="die-container hidden">
+              <div id="die-face" class="die-face">🎲</div>
             </div>
             <div id="regulation-result-box" class="regulation-result hidden"></div>
             <div id="regulation-waiting" class="waiting-msg hidden">Waiting for others to resolve their compliance...</div>
@@ -252,11 +255,12 @@
             <button id="close-editor-modal" class="btn btn-sm">&times;</button>
           </div>
         </div>
+        <div id="editor-stats-panel" class="editor-stats-panel"></div>
         <div class="editor-toolbar">
-          <div id="editor-total-count" class="editor-total-count"></div>
           <input id="editor-search" type="text" class="editor-search" placeholder="Search by name or ID..." />
         </div>
         <div id="editor-body" class="modal-body editor-body"></div>
+        <button id="editor-scroll-top" class="editor-scroll-top-btn" title="Back to top">↑</button>
       </div>
     </div>
 
@@ -299,6 +303,15 @@
   </div>
 
   <div id="game-error" class="error-msg floating-error"></div>
+
+  <!-- Card played notification popup -->
+  <div id="card-played-popup" class="card-played-popup hidden">
+    <div class="card-played-header">
+      <span id="card-played-msg"></span>
+      <button id="card-played-ok" class="btn btn-sm">✕</button>
+    </div>
+    <div id="card-played-body"></div>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
   <script src="/static/js/app.js?v={{ range(1,999999) | random }}"></script>

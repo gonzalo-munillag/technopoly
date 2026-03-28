@@ -3,7 +3,7 @@
 # ============================================================
 
 - name: AI Assistant
-  id: 25
+  id: 27
   image: ''
   description: Automate routine tasks, boosting engineer output.
   type: ai
@@ -27,67 +27,10 @@
     data_centers: 0
     ad_campaigns: 0
   boosts:
-  - target_id: 8
+  - target_id: 19
     bonus:
       engineers: 2
-
 - name: Cloud Migration
-  id: 26
-  image: ''
-  description: Move to the cloud for scalable server capacity.
-  type: infrastructure
-  number: 2
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 3
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    servers: 2
-    data_centers: 0
-    ad_campaigns: 0
-  boosts:
-  - target_id: 6
-    bonus:
-      users: 3
-  - target_id: 9
-    bonus:
-      users: 2
-
-- name: AI Assistant 2
-  id: 27
-  description: Automate routine tasks, boosting engineer output.
-  type: ai
-  number: 2
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 4
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    engineers: 1
-    HR: 1
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: []
-
-- name: Cloud Migration 2
   id: 28
   image: ''
   description: Move to the cloud for scalable server capacity.
@@ -110,4 +53,156 @@
     servers: 2
     data_centers: 0
     ad_campaigns: 0
+  boosts:
+  - target_id: 18
+    bonus:
+      users: 3
+  - target_id: 21
+    bonus:
+      users: 2
+- name: AI Assistant 2
+  id: 29
+  description: Automate routine tasks, boosting engineer output.
+  type: ai
+  number: 2
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 4
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    engineers: 1
+    HR: 1
+    data_centers: 0
+    ad_campaigns: 0
   boosts: []
+- name: Cloud Migration 2
+  id: 30
+  image: ''
+  description: Move to the cloud for scalable server capacity.
+  type: infrastructure
+  number: 2
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 3
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    servers: 2
+    data_centers: 0
+    ad_campaigns: 0
+  boosts: []
+- name: New Card
+  id: 31
+  image: null
+  description: ''
+  type: ''
+  number: 1
+  build: null
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: {}
+  boosts: []
+  factory_refund: null
+  dc_production_bonus: null
+- name: New Card
+  id: 32
+  image: null
+  description: ''
+  type: ''
+  number: 1
+  build: null
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: {}
+  boosts: []
+  factory_refund: null
+  dc_production_bonus: null
+- name: New Card
+  id: 33
+  image: null
+  description: ''
+  type: ''
+  number: 1
+  build: null
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: {}
+  boosts: []
+  factory_refund: null
+  dc_production_bonus: null
+- name: New Card
+  id: 34
+  image: null
+  description: ''
+  type: ''
+  number: 1
+  build: null
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: {}
+  boosts: []
+  factory_refund: null
+  dc_production_bonus: null

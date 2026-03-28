@@ -20,6 +20,8 @@ class Player:
     ready: bool = False
     draft_pool: list[Card] = field(default_factory=list)
     regulation_resolved: bool = False
+    went_to_court: bool = False
+    court_start_ready: bool = False
     year_done: bool = False
     hiring_done: bool = False
     pending_tile: str | None = None
@@ -56,10 +58,41 @@ class Player:
             if card.name == card_name:
                 played = self.hand.pop(i)
                 self.played_cards.append(played)
+                if played.tiers:
+                    played.current_tier = 1  # start at tier 1 when played
                 self.apply_card_effects(played, game)
                 self.cards_played_this_turn += 1
                 return played
         return None
+
+    def upgrade_card_tier(self, instance_id: str, game=None) -> dict:
+        """Upgrade a played card to the next tier by spending data.
+
+        Tiers list format: [{users, data_cost}, ...]
+          tiers[0] = tier 1 (base, applied on play)
+          tiers[1] = tier 2 (upgrade costs tiers[1].data_cost, gains tiers[1].users - tiers[0].users)
+          tiers[2] = tier 3 (upgrade costs tiers[2].data_cost, gains tiers[2].users - tiers[1].users)
+        """
+        card = next((c for c in self.played_cards if c._instance_id == instance_id), None)
+        if not card:
+            return {"ok": False, "error": "Card not found in played cards."}
+        tiers = card.tiers or []
+        if not tiers or card.current_tier <= 0:
+            return {"ok": False, "error": "Card has no tier system."}
+        next_idx = card.current_tier  # 1-based current → 0-based index of next tier
+        if next_idx >= len(tiers):
+            return {"ok": False, "error": "Already at maximum tier."}
+        data_cost = tiers[next_idx].get("data_cost", 0)
+        if self.resources.get("data", 0) < data_cost:
+            return {"ok": False, "error": f"Not enough data — need {data_cost}PB to upgrade."}
+        self.resources["data"] = self.resources.get("data", 0) - data_cost
+        prev_users = tiers[next_idx - 1].get("users", 0)
+        new_users = tiers[next_idx].get("users", 0)
+        users_diff = max(0, new_users - prev_users)
+        if users_diff > 0:
+            self.gain_users(users_diff, game)
+        card.current_tier += 1
+        return {"ok": True, "users_gained": users_diff, "new_tier": card.current_tier, "card_name": card.name}
 
     def remove_from_hand(self, card_name: str) -> Card | None:
         """Remove a card from hand without adding to played_cards."""
@@ -85,14 +118,16 @@ class Player:
         return 0
 
     def gain_users(self, amount: int, pool: "Game | None" = None) -> int:
-        mod = self.reputation_modifier()
-        total = max(0, amount + mod) if amount > 0 else amount
-        if pool is not None:
-            total = pool.take_users(total)
-        self.users += total
-        return total
+        """Add users directly. No reputation modifier — caller is responsible for applying it once.
+        Users are floored at 0; they cannot go negative."""
+        if pool is not None and amount > 0:
+            pool.user_pool = max(0, pool.user_pool - amount)
+        self.users = max(0, self.users + amount)
+        return amount
 
     def apply_card_effects(self, card: Card, game=None):
+        users_before = self.users
+
         SKIP = {"payee_card_id", "users"}
         if isinstance(card.effect, dict):
             user_gain = card.effect.get("users", 0)
@@ -112,6 +147,17 @@ class Player:
             self.production[resource] = self.production.get(resource, 0) + amount
         self._apply_boosts(card, game)
 
+        # Apply reputation modifier exactly once, after every user gain from this card play
+        users_gained = self.users - users_before
+        if users_gained > 0:
+            mod = self.reputation_modifier()
+            if mod != 0:
+                # mod adds/subtracts flat users per gain event (not per individual card)
+                delta = max(-users_gained, mod)  # can't lose more than was gained
+                self.users += delta
+                if game and delta > 0:
+                    game.user_pool = max(0, game.user_pool - delta)
+
     def _apply_bonus(self, bonus: dict, multiplier: int, game=None):
         """Apply a bonus dict scaled by multiplier."""
         for resource, amount in bonus.items():
@@ -125,27 +171,33 @@ class Player:
                 pool[resource] = pool.get(resource, 0) + total
 
     def _ensure_activation_slots(self, card: Card) -> list:
-        """Return the activation-count list for a card, creating it if needed."""
-        cid = card.id
-        if cid not in self._boost_activations:
-            self._boost_activations[cid] = [0] * len(card.boosts or [])
-        return self._boost_activations[cid]
+        """Return the activation-count list for a card instance, creating it if needed.
+
+        Keyed by card._instance_id — a UUID assigned at Card creation time.
+        This is stable across moves (hand → played_cards) and is NEVER reused,
+        unlike id(card) whose memory address can be recycled after garbage collection
+        (which caused wrong initial counts when a new card landed on a discarded card's address)."""
+        key = card._instance_id
+        if key not in self._boost_activations:
+            self._boost_activations[key] = [0] * len(card.boosts or [])
+        return self._boost_activations[key]
 
     def _apply_boosts(self, card: Card, game=None):
-        """Apply card boosts with forward-firing retroactive support.
+        """Apply card boosts in two directions.
 
-        Two directions are handled:
-          1. NEW CARD's own boosts  → fire based on already-played cards (as before).
-          2. PREVIOUS cards' boosts → if any target the newly played card and haven't
-             fired yet (or haven't hit their cap), fire them now.
+        Each card instance tracks its own activation counts via _boost_activations,
+        keyed by id(card) so two copies of the same card never share state.
 
-        Activation counts are stored in _boost_activations so each boost fires at
-        most once for target_id, or at most target_count times for target_type.
-        target_id and target_type are mutually exclusive per boost entry.
+        Rules per boost type:
+          target_id   — no cap; fires once for every matching card, both when
+                        this card is first played (§1) and retroactively whenever
+                        a new matching card is played by this player (§2).
+          target_type — fires for every matching-type card up to target_count
+                        (inclusive).  target_count=0 means unlimited.
         """
         already_played = [c for c in self.played_cards if c is not card]
 
-        # ── 1. New card's own boosts ─────────────────────────────────────────
+        # ── §1. New card's own boosts vs already-played cards ────────────────
         slots = self._ensure_activation_slots(card)
         for i, boost in enumerate(card.boosts or []):
             bonus = boost.get("bonus") or {}
@@ -156,17 +208,15 @@ class Player:
             has_target_id = target_id is not None and target_id != 0
 
             if has_target_id:
+                # target_id: fire once per already-played matching card, no cap
                 ids = target_id if isinstance(target_id, list) else [target_id]
                 matching = sum(1 for c in already_played if c.id in ids)
-                target_count = int(boost.get("target_count") or 0)
-                if target_count:
-                    matching = min(matching, target_count)
-                # Fire once per matching card already played (not yet counted)
                 new_fires = max(0, matching - slots[i])
                 if new_fires:
                     slots[i] += new_fires
                     self._apply_bonus(bonus, new_fires, game)
             else:
+                # target_type: fire up to target_count matching cards (0 = unlimited)
                 target_type = boost.get("target_type")
                 if not target_type:
                     continue
@@ -175,13 +225,12 @@ class Player:
                 target_count = int(boost.get("target_count") or 0)
                 if target_count:
                     matching = min(matching, target_count)
-                # Only apply the portion not yet counted
                 new_fires = max(0, matching - slots[i])
                 if new_fires:
                     slots[i] += new_fires
                     self._apply_bonus(bonus, new_fires, game)
 
-        # ── 2. Retroactive: previous cards' boosts that now target the new card ─
+        # ── §2. Retroactive: previously played cards' boosts targeting this card ─
         for prev in already_played:
             prev_slots = self._ensure_activation_slots(prev)
             for i, boost in enumerate(prev.boosts or []):
@@ -193,17 +242,17 @@ class Player:
                 has_target_id = target_id is not None and target_id != 0
 
                 if has_target_id:
+                    # target_id: always fire — no cap for ID-targeted boosts
                     ids = target_id if isinstance(target_id, list) else [target_id]
-                    # Fire once if the new card is one of the targets and not yet activated
-                    if card.id in ids and prev_slots[i] == 0:
-                        prev_slots[i] = 1
+                    if card.id in ids:
+                        prev_slots[i] += 1
                         self._apply_bonus(bonus, 1, game)
                 else:
+                    # target_type: fire only if cap not yet reached
                     target_type = boost.get("target_type")
                     if not target_type:
                         continue
                     types = target_type if isinstance(target_type, list) else [target_type]
-                    # Fire once more if the new card matches the type and cap allows
                     if card.card_color_type in types:
                         target_count = int(boost.get("target_count") or 0)
                         if not target_count or prev_slots[i] < target_count:
@@ -213,15 +262,37 @@ class Player:
     _PRODUCTION_ONLY = {"HR", "data_centers", "ad_campaigns"}
     _PRODUCTION_MAP = {"data_centers": "servers", "ad_campaigns": "ads"}
 
-    def collect_production(self, money_per_users: int = 20):
+    def collect_production(self, money_per_users: int = 20, data_per_users: int = 200) -> bool:
+        """Apply yearly production. Returns True if the player goes bankrupt this year.
+
+        Bankruptcy: negative money production drives money to 0 or below.
+        Users are always clamped to >= 0.
+        """
         for resource, amount in self.production.items():
             target = self._PRODUCTION_MAP.get(resource)
             if target:
                 self.resources[target] = self.resources.get(target, 0) + amount
             elif resource not in self._PRODUCTION_ONLY:
                 self.resources[resource] = self.resources.get(resource, 0) + amount
+
+        # User income from captured users (always non-negative)
         if money_per_users and self.users:
             self.resources["money"] = self.resources.get("money", 0) + self.users // money_per_users
+
+        # Data accumulation: configurable PB/yr per 100M users
+        if self.users and data_per_users:
+            data_gain = (self.users // 100) * data_per_users
+            self.resources["data"] = self.resources.get("data", 0) + data_gain
+
+        # Clamp users to zero
+        self.users = max(0, self.users)
+
+        # Check bankruptcy: negative money production that drives money <= 0
+        money_prod = self.production.get("money", 0)
+        if money_prod < 0 and self.resources.get("money", 0) <= 0:
+            self.resources["money"] = 0
+            return True
+        return False
 
     def can_afford(self, card: Card) -> bool:
         return self.resources.get("money", 0) >= card.cost
@@ -243,13 +314,34 @@ class Player:
         pool = getattr(self, self._get_pool(res))
         pool[res] = pool.get(res, 0) - amt
 
-    _COST_SKIP = {"fee", "fee_card_id", "payee_card_id"}
+    _COST_SKIP = {"fee", "fee_card_id", "fee_card_type", "fee_company_type", "payee_card_id"}
 
     def _owns_fee_card(self, card: Card) -> bool:
-        """True if this player has already played the card referenced by fee_card_id."""
-        if not card.fee or not card.fee_card_id:
+        """True if this player owns the fee target — meaning the fee is waived.
+        fee_card_id   → player has played that specific card.
+        fee_card_type → player has played any card of that type.
+        fee_company_type → player's chosen company is of that type."""
+        if not card.fee:
             return False
-        return any(c.id == card.fee_card_id for c in self.played_cards)
+        if card.fee_card_id:
+            return any(c.id == card.fee_card_id for c in self.played_cards)
+        if card.fee_card_type:
+            return any(c.card_color_type == card.fee_card_type for c in self.played_cards)
+        if card.fee_company_type:
+            return bool(self.company and self.company.card_color_type == card.fee_company_type)
+        return False
+
+    def check_requirements(self, card: "Card") -> str | None:
+        """Returns error string if card requirements are not met, else None."""
+        reqs = getattr(card, "requirements", None) or []
+        for req_type in reqs:
+            if not req_type:
+                continue
+            has_played = any(c.card_color_type == req_type for c in self.played_cards)
+            has_company = bool(self.company and self.company.card_color_type == req_type)
+            if not has_played and not has_company:
+                return f"Requirement not met: play a '{req_type}' card first."
+        return None
 
     def can_afford_costs(self, card: Card, use_optional: dict | None = None) -> str | None:
         costs = card.costs
@@ -368,7 +460,10 @@ class Player:
             "player_id": self.player_id,
             "name": self.name,
             "hand": [c.to_dict() for c in self.hand],
-            "played_cards": [c.to_dict() for c in self.played_cards],
+            "played_cards": [
+                {**c.to_dict(), "boost_fires": self._boost_activations.get(c._instance_id, [])}
+                for c in self.played_cards
+            ],
             "resources": self.resources,
             "production": self.production,
             "users": self.users,

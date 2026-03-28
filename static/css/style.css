@@ -597,6 +597,79 @@ body::after {
   text-align: center;
   text-transform: capitalize;
 }
+.card-requirements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .2rem;
+  padding: .15rem .4rem;
+  font-size: .6rem;
+  color: #f0c060;
+  background: rgba(240,192,96,.08);
+  border-top: 1px solid rgba(240,192,96,.2);
+  margin-top: .2rem;
+}
+.card-req-list { color: #f0c060; }
+
+/* Enhancement Tiers */
+.card-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .2rem;
+  padding: .15rem .4rem;
+  font-size: .6rem;
+  border-top: 1px solid rgba(100,200,255,.15);
+  margin-top: .2rem;
+}
+.card-tier-item {
+  padding: .1rem .3rem;
+  border-radius: 3px;
+  font-size: .58rem;
+  font-weight: 600;
+}
+.card-tier-item.tier-active {
+  background: rgba(100,200,100,.25);
+  color: #7eff7e;
+  border: 1px solid rgba(100,200,100,.4);
+}
+.card-tier-item.tier-unlocked {
+  background: rgba(100,200,255,.1);
+  color: #7eb8ff;
+  text-decoration: line-through;
+  opacity: .6;
+}
+.card-tier-item.tier-locked {
+  background: rgba(150,150,150,.1);
+  color: var(--text-dim);
+  border: 1px solid rgba(150,150,150,.2);
+}
+
+/* Tier indicator row on played cards */
+.played-mini-tier-row {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-top: .2rem;
+  font-size: .7rem;
+}
+.played-tier-stars {
+  color: #f0c060;
+  letter-spacing: .05em;
+}
+.tier-upgrade-btn {
+  font-size: .65rem;
+  padding: .1rem .4rem;
+  background: rgba(100,200,100,.15);
+  border: 1px solid rgba(100,200,100,.3);
+  color: #7eff7e;
+  cursor: pointer;
+}
+.tier-upgrade-btn:hover:not(:disabled) {
+  background: rgba(100,200,100,.3);
+}
+.tier-upgrade-disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
 
 .game-card .card-production { font-size: .7rem; color: var(--accent); padding: .1rem .6rem; }
 .game-card .card-immediate { font-size: .7rem; color: var(--warning); padding: .1rem .6rem; }
@@ -621,6 +694,27 @@ body::after {
 .card-fee-status.fee-waived { background: rgba(46,125,50,.25); color: #81c784; }
 .card-fee-status.fee-free   { background: rgba(100,100,100,.2); color: var(--text-dim); }
 .card-fee-status.fee-due    { background: rgba(230,126,34,.18); color: #e67e22; }
+
+/* Responsible-mining toggle */
+.card-rm-bar {
+  margin: .4rem .5rem .2rem;
+  display: flex;
+}
+.card-rm-btn {
+  width: 100%;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .3rem .5rem;
+  border-radius: 4px;
+  border: 1px solid #555;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-rm-btn:hover { filter: brightness(1.2); }
 
 /* Fee payment popup */
 .payment-info {
@@ -1048,11 +1142,24 @@ body::after {
 }
 
 .editor-card-wrapper {
-  transition: transform .1s;
+  transition: transform .1s, opacity .1s;
+  cursor: grab;
 }
+.editor-card-wrapper:active { cursor: grabbing; }
 
 .editor-card-wrapper:hover:not(.editor-card-locked) {
   transform: translateY(-2px);
+}
+
+.editor-card-wrapper.drag-source {
+  opacity: .35;
+  transform: scale(.97);
+}
+
+.editor-card-wrapper.drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+  transform: scale(1.03);
 }
 
 .editor-card-wrapper .game-card {
@@ -1234,6 +1341,115 @@ body::after {
   border-bottom: 1px solid var(--border);
 }
 
+.editor-stats-panel {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  justify-content: center;
+  padding: .6rem 1.5rem 1rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.editor-charts-toggle {
+  position: absolute;
+  top: .5rem;
+  right: .8rem;
+  font-size: .7rem;
+  padding: .2rem .55rem;
+  opacity: .7;
+}
+
+.editor-scroll-top-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+  z-index: 9999;
+}
+.editor-scroll-top-btn.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+/* Charts layout */
+.editor-charts-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem 2rem;
+  justify-content: center;
+  align-items: flex-start;
+  padding-bottom: .8rem;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  margin-bottom: .6rem;
+}
+.editor-charts-row:last-child {
+  border-bottom: none;
+}
+.editor-chart-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .4rem;
+}
+
+/* Events group banner in editor grid */
+.editor-group-banner {
+  width: 100%;
+  padding: .35rem .8rem;
+  margin: 1rem 0 .3rem;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #ff5ef3;
+  background: rgba(255,94,243,.06);
+  border-left: 3px solid #ff5ef3;
+  border-radius: 2px;
+}
+.editor-chart-title {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.editor-chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  font-size: .7rem;
+  color: var(--text);
+}
+.editor-legend-item {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.editor-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
 .editor-total-count {
   font-size: .78rem;
   color: var(--text-dim);
@@ -1289,6 +1505,31 @@ body::after {
 .editor-card-locked .editor-card-delete {
   display: none;
 }
+
+/* Disable toggle below editor cards */
+.editor-disable-btn {
+  display: block;
+  width: 100%;
+  margin-top: .35rem;
+  padding: .25rem .4rem;
+  font-size: .7rem;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 4px;
+  border: 1px solid rgba(46,204,113,.5);
+  background: rgba(46,204,113,.1);
+  color: #2ecc71;
+  cursor: pointer;
+  transition: background .15s, opacity .15s;
+  letter-spacing: .02em;
+}
+.editor-disable-btn:hover { background: rgba(46,204,113,.2); }
+.editor-disable-btn--off {
+  border-color: rgba(231,76,60,.5);
+  background: rgba(231,76,60,.12);
+  color: #e74c3c;
+}
+.editor-disable-btn--off:hover { background: rgba(231,76,60,.22); }
 
 .editor-lock-indicator {
   font-size: .6rem;
@@ -1564,7 +1805,7 @@ select.editor-dict-key:focus {
 
 .pie-tooltip {
   display: none;
-  position: absolute;
+  position: fixed;
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--accent);
@@ -1573,7 +1814,7 @@ select.editor-dict-key:focus {
   white-space: nowrap;
   letter-spacing: .3px;
   border-radius: 2px;
-  z-index: 20;
+  z-index: 9999;
   pointer-events: none;
 }
 
@@ -1687,7 +1928,7 @@ select.editor-dict-key:focus {
 }
 
 .board-tooltip {
-  position: absolute;
+  position: fixed;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 2px;
@@ -1695,7 +1936,7 @@ select.editor-dict-key:focus {
   font-size: .78rem;
   color: var(--text);
   pointer-events: none;
-  z-index: 100;
+  z-index: 9999;
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0,0,0,.4);
 }
@@ -1999,6 +2240,78 @@ select.editor-dict-key:focus {
 .param-input:focus { border-color: var(--accent); outline: none; }
 
 /* ── Responsive ──────────────────────────────────────────── */
+/* ── Die roll animation ──────────────────────────────────── */
+.die-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: .8rem;
+}
+.die-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  width: 64px; height: 64px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  user-select: none;
+}
+
+.court-threshold {
+  font-size: 1.05em;
+  font-weight: 800;
+  color: #ffdd57;
+  background: rgba(255,221,87,.15);
+  padding: .05em .3em;
+  border-radius: 3px;
+  letter-spacing: .03em;
+}
+.die-face.rolling {
+  animation: die-shake .15s ease-in-out infinite;
+}
+@keyframes die-shake {
+  0%, 100% { transform: rotate(-8deg); }
+  50%       { transform: rotate(8deg); }
+}
+
+/* ── Card-played notification popup ─────────────────────── */
+.card-played-popup {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: .6rem .8rem;
+  z-index: 9999;
+  width: 260px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.6);
+  font-size: .85rem;
+}
+.card-played-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .5rem;
+}
+.card-played-header span {
+  font-size: .78rem;
+  color: var(--text-dim);
+  flex: 1;
+}
+.card-played-header .btn {
+  flex-shrink: 0;
+  padding: .1rem .4rem;
+  font-size: .75rem;
+}
+#card-played-body .game-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 @media (max-width: 700px) {
   .game-layout { flex-direction: column; }
   .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
