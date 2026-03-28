@@ -1,18 +1,11 @@
 - name: Metaverse
   id: 13
-  description: null
+  description: blablbalabblablbalabblablbalabblablbalab
   type: software platform
   number: 1
   build: null
   factory_refund: 0
   dc_production_bonus: 0
-  tiers:
-  - users: 100
-    data_cost: 0
-  - users: 250
-    data_cost: 200
-  - users: 500
-    data_cost: 400
   effect:
     users: 100
     money: 0
@@ -37,6 +30,14 @@
     ad_campaigns: 0
     fee: 0
     fee_card_id: null
+  requirements: null
+  tiers:
+  - users: 150
+    money: 0
+    data_cost: 200
+  - users: 250
+    money: 0
+    data_cost: 400
   boosts: null
 - name: Machine Learning Service
   id: 14
@@ -48,10 +49,10 @@
   dc_production_bonus: 0
   tiers:
   - users: 60
-    data_cost: 0
-  - users: 120
+    money: 0
     data_cost: 200
-  - users: 200
+  - users: 80
+    money: 0
     data_cost: 400
   costs:
     engineers: 2
@@ -77,13 +78,6 @@
   build: null
   factory_refund: 0
   dc_production_bonus: 0
-  tiers:
-  - users: 200
-    data_cost: 0
-  - users: 600
-    data_cost: 200
-  - users: 1500
-    data_cost: 600
   costs:
     engineers: 0
     suits: 0
@@ -99,6 +93,14 @@
     fee_card_id: 16
   effect:
     users: 200
+  requirements: null
+  tiers:
+  - users: 400
+    money: 0
+    data_cost: 200
+  - users: 900
+    money: 0
+    data_cost: 600
   boosts:
   - target_id: null
     target_type:

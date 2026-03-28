@@ -16,13 +16,18 @@ PROJECTS_FILES = {
     "cyber_attacks.yaml": "cyber_attack",
     "fuck_ups.yaml": "fuck_up",
     "platform.yaml": "platform",
-    "build.yaml": "build",
 }
 
 BOOSTERS_FILES = {
     "leverage.yaml": "leverage",
     "innovation.yaml": "innovation",
 }
+
+BUILD_FILES = {
+    "build.yaml": "build",
+}
+
+BUILD_ROW_SIZE = 5  # number of shared build cards visible at once
 
 COMPANY_FILE = "company.yaml"
 EVENTS_FILES = {
@@ -62,6 +67,8 @@ class Game:
     players: dict[str, Player] = field(default_factory=dict)
     projects_deck: list[Card] = field(default_factory=list)
     boosters_deck: list[Card] = field(default_factory=list)
+    build_deck: list[Card] = field(default_factory=list)
+    shared_build_row: list[Card | None] = field(default_factory=list)  # 5 face-up build cards
     regulation_deck: list[Card] = field(default_factory=list)
     company_cards: list[Card] = field(default_factory=list)
     discard_pile: list[Card] = field(default_factory=list)
@@ -108,9 +115,30 @@ class Game:
         random.shuffle(cards)
         return cards
 
+    def _refill_build_row(self):
+        """Draw from build_deck to fill any empty slots in shared_build_row.
+        Row size is read from params so it can be changed at runtime."""
+        row_size = P("build_row_size", 5)
+        # Resize the row if the param changed
+        if len(self.shared_build_row) < row_size:
+            self.shared_build_row.extend([None] * (row_size - len(self.shared_build_row)))
+        elif len(self.shared_build_row) > row_size:
+            # Trim excess — push trimmed cards back to top of build_deck
+            excess = self.shared_build_row[row_size:]
+            self.shared_build_row = self.shared_build_row[:row_size]
+            self.build_deck = [c for c in excess if c is not None] + self.build_deck
+        for i in range(row_size):
+            if self.shared_build_row[i] is None:
+                if not self.build_deck:
+                    self._refill_deck(self.build_deck, "build")
+                if self.build_deck:
+                    self.shared_build_row[i] = self.build_deck.pop(0)
+
     def load_all_decks(self, cards_dir: Path = CARDS_DIR):
         self.projects_deck = self._load_deck(PROJECTS_FILES, "projects", cards_dir)
         self.boosters_deck = self._load_deck(BOOSTERS_FILES, "boosters", cards_dir)
+        self.build_deck = self._load_deck(BUILD_FILES, "build", cards_dir)
+        self._refill_build_row()
         self.regulation_deck = self._load_deck(
             EVENTS_FILES, "regulation", cards_dir
         )
@@ -212,6 +240,8 @@ class Game:
         self.clear_ready()
         self.draft_discard = []
         self.drafted_fuckups = {}
+        # Refresh shared build row at start of each year
+        self._refill_build_row()
         for player in self.players.values():
             player.draft_pool = []
             player.year_done = False
@@ -523,6 +553,8 @@ class Game:
             "phase": self.phase.value,
             "projects_remaining": len(self.projects_deck),
             "boosters_remaining": len(self.boosters_deck),
+            "build_remaining": len(self.build_deck),
+            "shared_build_row": [c.to_dict() if c else None for c in self.shared_build_row],
             "current_player_id": self.current_player_id,
             "turn_order": self.turn_order,
             "start_player_id": self.turn_order[self.dealer_index] if self.turn_order else None,

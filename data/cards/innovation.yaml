@@ -1,7 +1,3 @@
-# ============================================================
-# INNOVATION CARDS (BOOSTERS deck)
-# ============================================================
-
 - name: AI Assistant
   id: 27
   image: ''
@@ -30,6 +26,7 @@
   - target_id: 19
     bonus:
       engineers: 2
+  disabled: true
 - name: Cloud Migration
   id: 28
   image: ''
@@ -60,6 +57,7 @@
   - target_id: 21
     bonus:
       users: 2
+  disabled: true
 - name: AI Assistant 2
   id: 29
   description: Automate routine tasks, boosting engineer output.
@@ -84,6 +82,7 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: []
+  disabled: true
 - name: Cloud Migration 2
   id: 30
   image: ''
@@ -108,6 +107,7 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: []
+  disabled: true
 - name: New Card
   id: 31
   image: null
@@ -132,6 +132,7 @@
   boosts: []
   factory_refund: null
   dc_production_bonus: null
+  disabled: true
 - name: New Card
   id: 32
   image: null
@@ -156,6 +157,7 @@
   boosts: []
   factory_refund: null
   dc_production_bonus: null
+  disabled: true
 - name: New Card
   id: 33
   image: null
@@ -180,6 +182,7 @@
   boosts: []
   factory_refund: null
   dc_production_bonus: null
+  disabled: true
 - name: New Card
   id: 34
   image: null
@@ -206,3 +209,4 @@
   boosts: []
   factory_refund: null
   dc_production_bonus: null
+  disabled: true

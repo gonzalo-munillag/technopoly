@@ -2,16 +2,20 @@
   id: 65
   description: Large companies are fined for anti-competitive practices.
   tag: antitrust
-  image: null
   targets_all: 1
   target_id: null
   target_type: null
+  court_threshold: 4
+  factory_refund: 0
+  dc_production_bonus: 0
   compliance:
     money: -3
   court_penalty:
     money: -8
     reputation: -3
-  court_threshold: 4
+  requirements: null
+  tiers: null
+  boosts: null
 - name: Anti-Monopoly Ruling 2
   id: 66
   description: Large companies are fined for anti-competitive practices.
@@ -26,6 +30,7 @@
     money: -8
     reputation: -3
   boosts: null
+  disabled: true
 - name: Cybersecurity Mandate
   id: 67
   description: All companies must meet minimum cybersecurity standards.
@@ -41,6 +46,7 @@
     money: -12
     reputation: -4
   court_threshold: 5
+  disabled: true
 - name: Platform Licensing Act
   id: 68
   description: Search engines must acquire a government license or shut down.
@@ -55,6 +61,7 @@
     money: -10
     reputation: -2
   court_threshold: 4
+  disabled: true
 - name: 'Climate Change: Rising see level'
   id: 69
   tag: null
@@ -70,6 +77,7 @@
   court_penalty: null
   requirements: null
   boosts: null
+  disabled: true
 - name: Green Deal
   id: 70
   tag: null
@@ -84,6 +92,7 @@
   court_penalty: null
   requirements: null
   boosts: null
+  disabled: true
 - name: New Regulation
   id: 71
   tag: ''
@@ -95,3 +104,4 @@
   compliance: {}
   court_penalty: {}
   court_threshold: 4
+  disabled: true

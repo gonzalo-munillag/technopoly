@@ -6,6 +6,8 @@ money_per_users: 10
 data_per_users: 200
 projects_draw: 3
 boosters_draw: 3
+# build_row_size: number of shared build cards visible below the board (replaces immediately when played)
+build_row_size: 5
 draft_cost: 3
 cards_per_turn: 2
 company_offers: 3

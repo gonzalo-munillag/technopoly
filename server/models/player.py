@@ -68,31 +68,46 @@ class Player:
     def upgrade_card_tier(self, instance_id: str, game=None) -> dict:
         """Upgrade a played card to the next tier by spending data.
 
-        Tiers list format: [{users, data_cost}, ...]
-          tiers[0] = tier 1 (base, applied on play)
-          tiers[1] = tier 2 (upgrade costs tiers[1].data_cost, gains tiers[1].users - tiers[0].users)
-          tiers[2] = tier 3 (upgrade costs tiers[2].data_cost, gains tiers[2].users - tiers[1].users)
+        Tiers list format: [{users, money, data_cost}, ...]  — values are INCREMENTAL.
+          current_tier == 0: card not yet played (all locked)
+          current_tier == 1: card played, no tier purchased yet
+          current_tier == 2: T1 purchased  (tiers[0] applied)
+          current_tier == 3: T2 purchased  (tiers[1] applied)
+          ...
+        Purchasing T1 costs tiers[0].data_cost and gives tiers[0].users + tiers[0].money.
         """
         card = next((c for c in self.played_cards if c._instance_id == instance_id), None)
         if not card:
             return {"ok": False, "error": "Card not found in played cards."}
         tiers = card.tiers or []
-        if not tiers or card.current_tier <= 0:
+        if not tiers:
             return {"ok": False, "error": "Card has no tier system."}
-        next_idx = card.current_tier  # 1-based current → 0-based index of next tier
+        if card.current_tier == 0:
+            return {"ok": False, "error": "Play the card before purchasing a tier."}
+        next_idx = card.current_tier - 1  # 0-based index of tier to purchase
         if next_idx >= len(tiers):
             return {"ok": False, "error": "Already at maximum tier."}
-        data_cost = tiers[next_idx].get("data_cost", 0)
+        tier = tiers[next_idx]
+        data_cost = tier.get("data_cost", 0)
         if self.resources.get("data", 0) < data_cost:
             return {"ok": False, "error": f"Not enough data — need {data_cost}PB to upgrade."}
         self.resources["data"] = self.resources.get("data", 0) - data_cost
-        prev_users = tiers[next_idx - 1].get("users", 0)
-        new_users = tiers[next_idx].get("users", 0)
-        users_diff = max(0, new_users - prev_users)
-        if users_diff > 0:
-            self.gain_users(users_diff, game)
+        # Incremental users gained
+        users_gained = tier.get("users", 0)
+        if users_gained > 0:
+            self.gain_users(users_gained, game)
+        # Incremental money production gained
+        money_gained = tier.get("money", 0)
+        if money_gained:
+            self.production["money"] = self.production.get("money", 0) + money_gained
         card.current_tier += 1
-        return {"ok": True, "users_gained": users_diff, "new_tier": card.current_tier, "card_name": card.name}
+        return {
+            "ok": True,
+            "users_gained": users_gained,
+            "money_gained": money_gained,
+            "new_tier": card.current_tier,
+            "card_name": card.name,
+        }
 
     def remove_from_hand(self, card_name: str) -> Card | None:
         """Remove a card from hand without adding to played_cards."""
@@ -472,6 +487,7 @@ class Player:
             "ready": self.ready,
             "draft_pool": [c.to_dict() for c in self.draft_pool],
             "regulation_resolved": self.regulation_resolved,
+            "went_to_court": self.went_to_court,
             "has_fuckups": self.has_pending_fuckups(),
             "year_done": self.year_done,
             "hiring_done": self.hiring_done,

@@ -22,3 +22,19 @@
     ad_campaigns: 0
   boosts: null
   disabled: true
+
+- name: Firewall Shield
+  id: 0
+  description: >
+    Deploy enterprise-grade firewalls and intrusion detection systems,
+    protecting your infrastructure from cyber attacks this year.
+  type: cyber defense
+  number: 2
+  costs:
+    money: 20
+    engineers: 1
+  effect:
+    reputation: 1
+  boosts: null
+  requirements: null
+  tiers: null

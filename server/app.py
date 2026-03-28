@@ -659,6 +659,94 @@ def on_play_card(data):
     _check_win_condition()
 
 
+@socketio.on("play_build_card")
+def on_play_build_card(data):
+    """Play a card from the shared build row (counts toward cards_per_turn limit)."""
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.PLAYER_TURNS:
+        return
+    if player_id != game.current_player_id:
+        emit("error", {"message": "It's not your turn."})
+        return
+    player = game.players.get(player_id)
+    if not player:
+        return
+    if player.pending_tile:
+        emit("error", {"message": "You must place your tile on the board first."})
+        return
+
+    cpt = P("cards_per_turn", 2)
+    if player.cards_played_this_turn >= cpt:
+        emit("error", {"message": f"You can only play {cpt} cards per turn."})
+        return
+
+    row_index = data.get("row_index")
+    if row_index is None or row_index < 0 or row_index >= len(game.shared_build_row):
+        emit("error", {"message": "Invalid build row index."})
+        return
+
+    card = game.shared_build_row[row_index]
+    if card is None:
+        emit("error", {"message": "No card in that slot."})
+        return
+
+    # Check requirements and costs
+    req_err = player.check_requirements(card)
+    if req_err:
+        emit("error", {"message": req_err})
+        return
+    err = player.can_afford_costs(card, {})
+    if err:
+        emit("error", {"message": err})
+        return
+
+    try:
+        player.pay_costs(card, {})
+
+        # Remove from shared row and refill slot
+        game.shared_build_row[row_index] = None
+        game._refill_build_row()
+
+        # Apply card effects (move to played_cards, apply effects)
+        card.deck = "build"
+        player.played_cards.append(card)
+        player.apply_card_effects(card, game)
+        player.cards_played_this_turn += 1
+        if card.tiers:
+            card.current_tier = 1
+
+        socketio.emit("card_played_notification", {
+            "player_name": player.name,
+            "player_id": player_id,
+            "card_name": card.name,
+            "card": card.to_dict(),
+        }, room="game")
+
+        if card.tile_type:
+            player.pending_tile = card.tile_type
+            player.pending_tile_meta = {
+                "factory_refund": card.factory_refund,
+                "dc_production_bonus": card.dc_production_bonus,
+            }
+            socketio.emit("game_state", game.to_dict(), room="game")
+            _send_private_states()
+            _check_win_condition()
+            return
+
+        # No tile to place — check if player has exhausted their hand
+        if len(player.hand) == 0:
+            player.year_done = True
+            _advance_to_next_or_end_year()
+        else:
+            socketio.emit("game_state", game.to_dict(), room="game")
+            _send_private_states()
+        _check_win_condition()
+
+    except Exception as exc:
+        emit("error", {"message": f"Build card error: {exc}"})
+
+
 @socketio.on("buy_resource")
 def on_buy_resource(data):
     _touch_activity()
@@ -703,7 +791,10 @@ def on_buy_resource(data):
 def on_upgrade_card_tier(data):
     _touch_activity()
     player_id = connected_players.get(request.sid)
-    if not player_id or game.phase != Phase.PLAYER_TURNS:
+    if not player_id:
+        return
+    if game.phase != Phase.PLAYER_TURNS:
+        emit("error", {"message": "Tier upgrades can only be purchased during the Player Turns phase."})
         return
     if player_id != game.current_player_id:
         emit("error", {"message": "It's not your turn."})
@@ -714,7 +805,9 @@ def on_upgrade_card_tier(data):
     instance_id = data.get("instance_id", "")
     result = player.upgrade_card_tier(instance_id, game)
     if result["ok"]:
-        _broadcast()
+        socketio.emit("game_state", game.to_dict(), room="game")
+        _send_private_states()
+        _check_win_condition()
     else:
         emit("error", {"message": result["error"]})
 
@@ -813,8 +906,8 @@ def on_place_tile(data):
 
     row, col = data.get("row"), data.get("col")
 
-    # Check tile requirements against player's played card subtypes (c.type = "social platform", etc.)
-    played_types = {c.type for c in player.played_cards if c.type}
+    # Check tile requirements against player's played card subtypes (card_color_type = "social platform", etc.)
+    played_types = {c.card_color_type for c in player.played_cards if c.card_color_type}
     if not game.board.player_meets_requirements(row, col, played_types):
         tile = game.board.get_tile(row, col)
         reqs = tile.get("requirements", []) if tile else []
@@ -927,10 +1020,33 @@ def on_edit_board_tile(data):
     build_bonuses = data.get("build_bonuses")
     adjacency_bonuses = data.get("adjacency_bonuses")
     requirements = data.get("requirements") or []
+    only_build = data.get("only_build") or []
     if not game.board.set_tile_terrain(
-        row, col, terrain, name, build_bonuses, adjacency_bonuses, requirements
+        row, col, terrain, name, build_bonuses, adjacency_bonuses, requirements, only_build
     ):
         emit("error", {"message": "Invalid tile or terrain type."})
+        return
+    _save_board_config()
+    board_data = game.board.to_list()
+    for sid in editor_sids:
+        socketio.emit("board_editor_data", board_data, room=sid)
+    if game.started:
+        socketio.emit("board_update", board_data, room="game")
+
+
+@socketio.on("edit_board_terrain_type")
+def on_edit_board_terrain_type(data):
+    """Apply only_build (and optionally requirements) to ALL tiles of a given terrain type."""
+    if request.sid not in editor_sids:
+        return
+    terrain = data.get("terrain")
+    only_build = data.get("only_build") or []
+    requirements = data.get("requirements") or []
+    if not terrain:
+        return
+    count = game.board.set_terrain_type_properties(terrain, only_build=only_build, requirements=requirements)
+    if count == 0:
+        emit("error", {"message": f"No tiles found with terrain '{terrain}'."})
         return
     _save_board_config()
     board_data = game.board.to_list()
@@ -1239,7 +1355,7 @@ def _build_card_trees() -> dict:
         })
 
     platform_ids = {cid for cid, ct in card_type_by_id.items() if ct == "platform"}
-    booster_types = {"leverage", "innovation", "build"}
+    booster_types = {"leverage", "innovation"}
     booster_ids = {cid for cid, ct in card_type_by_id.items() if ct in booster_types}
 
     unconnected_platforms = len(platform_ids - platform_ids_with_connections)
@@ -1622,6 +1738,8 @@ def on_save_params(data):
         yaml.dump(data, f, default_flow_style=False, sort_keys=False)
     load_params()
     game.total_users = P("total_users", 500)
+    # Resize + refill build row if build_row_size changed
+    game._refill_build_row()
     socketio.emit("params_data", load_params(), room="editors")
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()

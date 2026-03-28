@@ -1,10 +1,3 @@
-# ============================================================
-# BUILD CARDS (BOOSTERS deck)
-# Cards that allow placing tiles on the board.
-# ============================================================
-
-# ── OFFICES (commercial zone) ── increase HR production ──────
-
 - name: Headquarters
   id: 35
   description: null
@@ -20,6 +13,8 @@
     reputation: 2
     suits: 5
     engineers: 5
+  requirements: null
+  tiers: null
   boosts: null
 - name: Home Office Gear
   id: 36
@@ -155,6 +150,7 @@
     fee_card_id: null
   effect: null
   boosts: null
+  disabled: true
 - name: Colocation Data Center
   id: 42
   description: "INT NOTE: fee to HW vendor. \nThird-party facilities where multiple\
@@ -179,6 +175,7 @@
     fee_card_id: null
   effect: null
   boosts: null
+  disabled: true
 - name: Edge Data Center
   id: 43
   description: "INT NOTE: fee to HW vendor. \nSmaller distributed data center closer\
@@ -204,6 +201,7 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: null
+  disabled: true
 - name: Brand-Owned Store
   id: 44
   description: Sell only one brand’s products. Apple Store
@@ -212,6 +210,7 @@
   build: store
   factory_refund: 0
   dc_production_bonus: 0
+  disabled: 'true'
   costs:
     engineers: 0
     suits: 2
@@ -229,6 +228,7 @@
     ad_campaigns: 0
   requirements:
   - hardware manufacturer
+  tiers: null
   boosts: null
 - name: Electronics Retailer
   id: 45
@@ -259,6 +259,7 @@
   requirements:
   - hardware manufacturer
   boosts: null
+  disabled: true
 - name: Authorized Reseller
   id: 46
   description: 'Official partners of brands
@@ -289,6 +290,7 @@
   requirements:
   - hardware manufacturer
   boosts: null
+  disabled: true
 - name: Nuclear Power Plant
   id: 47
   description: Build and operate power infrastructure. Essential for data centers.
@@ -312,6 +314,7 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: null
+  disabled: true
 - name: Natural Gas Power Plant
   id: 48
   description: Harness the sun. Clean energy and good PR.
@@ -336,6 +339,7 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: null
+  disabled: true
 - name: PV Power plant
   id: 49
   description: Photovoltaic Power plant
@@ -359,6 +363,7 @@
     fee_card_id: null
   effect: null
   boosts: null
+  disabled: true
 - name: Solar Power Plant
   id: 50
   description: null
@@ -384,6 +389,7 @@
     fee_company_type: null
   effect: null
   boosts: null
+  disabled: true
 - name: Wind Power Plant
   id: 51
   description: null
@@ -409,6 +415,7 @@
     fee_company_type: null
   effect: null
   boosts: null
+  disabled: true
 - name: Hydroelectric Power Plant
   id: 52
   description: null
@@ -436,6 +443,7 @@
   requirements: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Biomass Power Plant
   id: 53
   description: null
@@ -461,6 +469,7 @@
     fee_company_type: null
   effect: null
   boosts: null
+  disabled: true
 - name: Geothermal Power Plant
   id: 54
   description: null
@@ -486,6 +495,7 @@
     fee_company_type: null
   effect: null
   boosts: null
+  disabled: true
 - name: Coal Power Plant
   id: 55
   description: null
@@ -511,6 +521,7 @@
     fee_company_type: null
   effect: null
   boosts: null
+  disabled: true
 - name: Digital Banner Ads
   id: 56
   description: Targeted advertising infrastructure reaching billions of eyeballs.
@@ -536,6 +547,7 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: null
+  disabled: true
 - name: Video Ads
   id: 57
   description: null
@@ -561,6 +573,7 @@
     fee_company_type: null
   effect: null
   boosts: null
+  disabled: true
 - name: Influencer Advertising
   id: 58
   description: Pay a soulless influencer to advertise your ads.
@@ -586,6 +599,7 @@
     fee_company_type: null
   effect: null
   boosts: null
+  disabled: true
 - name: Billboard Blitz
   id: 59
   image: ''
@@ -610,6 +624,7 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: null
+  disabled: true
 - name: Lobbying Group
   id: 60
   description: Influence government policy in your favor. Build a lobbying operation.
@@ -635,6 +650,7 @@
     ad_campaigns: 0
   requirements: null
   boosts: null
+  disabled: true
 - name: Grassroots Lobbying
   id: 61
   description: mobilize public to pressure officials
@@ -660,7 +676,9 @@
     fee_company_type: null
   effect: null
   requirements: null
+  tiers: null
   boosts: null
+  disabled: true
 - name: Corporate Lobbying
   id: 62
   description: companies influencing regulation
@@ -687,6 +705,7 @@
   effect: null
   requirements: null
   boosts: null
+  disabled: true
 - name: Rare Metal Mine
   id: 63
   description: null
@@ -708,6 +727,7 @@
   requirements: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Hydroelectric Power Plant
   id: 64
   description: 'Build a hydroelectric dam on a lake tile. Generates clean power, boosting
@@ -727,3 +747,4 @@
   requirements: null
   tiers: null
   boosts: null
+  disabled: true

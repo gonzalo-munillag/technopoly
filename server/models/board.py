@@ -82,7 +82,7 @@ _NO_BUILD_TERRAINS = {"government", "city", "wall"}
 # Terrains open to normal non-commercial, non-lake, non-offshore tiles
 _OPEN_TERRAINS = {"empty", "sun", "wind", "gas_reserve", "coal", "natural_park"}
 # Tiles restricted to commercial terrain only
-_COMMERCIAL_ONLY = {"store", "lobby_group"}
+_COMMERCIAL_ONLY = {"store", "lobby_group", "office"}
 # Tiles restricted to rare_metal_mine terrain only
 _MINE_ONLY = {"rare_metal_mine"}
 # Tiles restricted to lake terrain only
@@ -103,7 +103,8 @@ _SATELLITE_STACKABLE = {"data_center", "power_plant"}
 def _make_tile(row: int, col: int, terrain: str = "empty",
                name: str = "", build_bonuses: dict | None = None,
                adjacency_bonuses: dict | None = None,
-               requirements: list | None = None) -> dict:
+               requirements: list | None = None,
+               only_build: list | None = None) -> dict:
     adj = adjacency_bonuses
     if adj is None and terrain in _DEFAULT_ADJACENCY:
         adj = dict(_DEFAULT_ADJACENCY[terrain])
@@ -119,6 +120,7 @@ def _make_tile(row: int, col: int, terrain: str = "empty",
         "build_bonuses": bb or {"immediate": {}, "production": {}},
         "adjacency_bonuses": adj or {},
         "requirements": requirements or [],  # list of card types player must have played
+        "only_build": only_build or [],      # list of tile types allowed to be built here
     }
 
 
@@ -142,7 +144,8 @@ class Board:
                          name: str = "",
                          build_bonuses: dict | None = None,
                          adjacency_bonuses: dict | None = None,
-                         requirements: list | None = None) -> bool:
+                         requirements: list | None = None,
+                         only_build: list | None = None) -> bool:
         t = self._tiles.get((row, col))
         if not t or terrain not in VALID_TERRAINS:
             return False
@@ -159,7 +162,23 @@ class Board:
             t["adjacency_bonuses"] = dict(_DEFAULT_ADJACENCY[terrain])
         if requirements is not None:
             t["requirements"] = requirements
+        if only_build is not None:
+            t["only_build"] = only_build
         return True
+
+    def set_terrain_type_properties(self, terrain: str,
+                                    only_build: list | None = None,
+                                    requirements: list | None = None) -> int:
+        """Apply only_build and/or requirements to ALL tiles with the given terrain. Returns count updated."""
+        count = 0
+        for t in self._tiles.values():
+            if t["terrain"] == terrain:
+                if only_build is not None:
+                    t["only_build"] = list(only_build)
+                if requirements is not None:
+                    t["requirements"] = list(requirements)
+                count += 1
+        return count
 
     MAX_ROWS = 14
     MIN_ROW = -8  # allow up to 8 rows of "space" above the USA map
@@ -194,6 +213,9 @@ class Board:
             reqs = t.get("requirements") or []
             if reqs:
                 entry["requirements"] = reqs
+            ob = t.get("only_build") or []
+            if ob:
+                entry["only_build"] = ob
             if t.get("secondary_tile"):
                 entry["secondary_tile"] = t["secondary_tile"]
             out.append(entry)
@@ -212,6 +234,7 @@ class Board:
                     cfg.get("build_bonuses"),
                     cfg.get("adjacency_bonuses"),
                     cfg.get("requirements"),
+                    cfg.get("only_build"),
                 )
                 new_keys.add(key)
         for key, tile in self._tiles.items():
@@ -226,6 +249,7 @@ class Board:
                 if "adjacency_bonuses" in saved:
                     tile["adjacency_bonuses"] = saved["adjacency_bonuses"]
                 tile["requirements"] = saved.get("requirements") or []
+                tile["only_build"] = saved.get("only_build") or []
                 if "secondary_tile" in saved:
                     tile["secondary_tile"] = saved["secondary_tile"]
 
@@ -292,13 +316,19 @@ class Board:
         # sea → data_center only
         if terrain == "sea":
             return tile_type in _SEA_BUILDABLE
-        # store and lobby_group → commercial only
+        # store, lobby_group, office → commercial only
         if tile_type in _COMMERCIAL_ONLY:
             return terrain == "commercial"
         if terrain == "commercial":
             return False
         # everything else → open terrains
-        return terrain in _OPEN_TERRAINS
+        if terrain not in _OPEN_TERRAINS:
+            return False
+        # Per-tile only_build whitelist (set in board editor) overrides open-terrain logic
+        only_build = t.get("only_build") or []
+        if only_build and tile_type not in only_build:
+            return False
+        return True
 
     def left_right_slots(self, row: int, col: int) -> dict:
         """Check if the left (col-1) or right (col+1) slot is free."""

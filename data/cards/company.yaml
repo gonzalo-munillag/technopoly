@@ -63,7 +63,7 @@
   disabled: true
 - name: DeepMind Industries
   id: 4
-  type: ai
+  type: null
   description: An AI research lab turned corporate juggernaut. Their algorithms know
     you better than you know yourself.
   factory_refund: 0
@@ -76,14 +76,17 @@
     servers: 300
     reputation: 1
     users: 2
+    data: 2000
   starting_production:
     HR: 1
     data_centers: 2
     ad_campaigns: 0
+  requirements: null
+  tiers: null
   boosts: null
 - name: IronGate
   id: 5
-  type: cybersec
+  type: null
   description: Cybersecurity firm forged in paranoia. Trust no one, encrypt everything.
   factory_refund: 0
   dc_production_bonus: 0
@@ -95,14 +98,17 @@
     servers: 200
     reputation: 6
     users: 1
+    data: 2000
   starting_production:
     HR: 1
     data_centers: 1
     ad_campaigns: 0
+  requirements: null
+  tiers: null
   boosts: null
 - name: GreenByte
   id: 6
-  type: cleantech
+  type: null
   description: Sustainable tech venture turning sunlight into server uptime and good
     PR.
   factory_refund: 0
@@ -112,13 +118,16 @@
     suits: 100
     ads: 100
     money: 2000
-    servers: 0
+    servers: 100
     reputation: 7
     users: 3
+    data: 2000
   starting_production:
     HR: 2
     data_centers: 1
     ad_campaigns: 1
+  requirements: null
+  tiers: null
   boosts: null
 - name: Chip Designer
   id: 7
@@ -137,10 +146,11 @@
     servers: 200
     reputation: 0
     users: 100
+    data: 2000
   starting_production:
-    HR: 0
-    data_centers: 0
-    ad_campaigns: 0
+    HR: 1
+    data_centers: 1
+    ad_campaigns: 1
   requirements: null
   tiers: null
   boosts: null
@@ -163,10 +173,11 @@
     servers: 100
     reputation: 0
     users: 100
+    data: 2000
   starting_production:
-    HR: 0
-    data_centers: 0
-    ad_campaigns: 0
+    HR: 1
+    data_centers: 1
+    ad_campaigns: 1
   requirements: null
   tiers: null
   boosts: null
@@ -189,10 +200,11 @@
     servers: 100
     reputation: 0
     users: 100
+    data: 2000
   starting_production:
-    HR: 0
-    data_centers: 0
-    ad_campaigns: 0
+    HR: 1
+    data_centers: 1
+    ad_campaigns: 1
   requirements: null
   tiers: null
   boosts: null

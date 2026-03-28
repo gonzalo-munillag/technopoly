@@ -614,36 +614,59 @@ body::after {
 .card-tiers {
   display: flex;
   flex-wrap: wrap;
-  gap: .2rem;
-  padding: .15rem .4rem;
-  font-size: .6rem;
+  align-items: center;
+  gap: .25rem;
+  padding: .2rem .4rem;
   border-top: 1px solid rgba(100,200,255,.15);
   margin-top: .2rem;
 }
-.card-tier-item {
-  padding: .1rem .3rem;
-  border-radius: 3px;
-  font-size: .58rem;
-  font-weight: 600;
+
+/* Tier buttons on cards */
+.card-tier-btn {
+  padding: .15rem .4rem;
+  border-radius: 4px;
+  font-size: .6rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: default;
+  transition: filter .15s, background .15s;
+  white-space: nowrap;
 }
-.card-tier-item.tier-active {
-  background: rgba(100,200,100,.25);
-  color: #7eff7e;
-  border: 1px solid rgba(100,200,100,.4);
+/* Already purchased — bright blue, no strikethrough */
+.card-tier-btn.tier-btn-owned {
+  background: rgba(50,160,255,.35);
+  color: #60d0ff;
+  border-color: rgba(50,160,255,.8);
+  font-weight: 700;
+  opacity: 1;
 }
-.card-tier-item.tier-unlocked {
-  background: rgba(100,200,255,.1);
-  color: #7eb8ff;
-  text-decoration: line-through;
-  opacity: .6;
+/* Next available AND affordable — clickable */
+.card-tier-btn.tier-btn-available {
+  background: rgba(46,204,113,.18);
+  color: #2ecc71;
+  border-color: rgba(46,204,113,.5);
+  cursor: pointer;
 }
-.card-tier-item.tier-locked {
+.card-tier-btn.tier-btn-available:not([disabled]):hover {
+  filter: brightness(1.3);
+  background: rgba(46,204,113,.32);
+}
+/* Next available but can't afford */
+.card-tier-btn.tier-btn-cant {
+  background: rgba(231,76,60,.15);
+  color: #e74c3c;
+  border-color: rgba(231,76,60,.4);
+  opacity: .85;
+}
+/* Higher tiers locked (earlier tier not yet bought) */
+.card-tier-btn.tier-btn-locked {
   background: rgba(150,150,150,.1);
   color: var(--text-dim);
-  border: 1px solid rgba(150,150,150,.2);
+  border-color: rgba(150,150,150,.2);
+  opacity: .5;
 }
 
-/* Tier indicator row on played cards */
+/* Tier indicator row on played cards (sidebar) */
 .played-mini-tier-row {
   display: flex;
   align-items: center;
@@ -654,21 +677,6 @@ body::after {
 .played-tier-stars {
   color: #f0c060;
   letter-spacing: .05em;
-}
-.tier-upgrade-btn {
-  font-size: .65rem;
-  padding: .1rem .4rem;
-  background: rgba(100,200,100,.15);
-  border: 1px solid rgba(100,200,100,.3);
-  color: #7eff7e;
-  cursor: pointer;
-}
-.tier-upgrade-btn:hover:not(:disabled) {
-  background: rgba(100,200,100,.3);
-}
-.tier-upgrade-disabled {
-  opacity: .4;
-  cursor: not-allowed;
 }
 
 .game-card .card-production { font-size: .7rem; color: var(--accent); padding: .1rem .6rem; }
@@ -1040,8 +1048,7 @@ body::after {
   pointer-events: none;
   opacity: 0;
   transition: opacity .3s;
-  z-index: 9999;
-  z-index: 200;
+  z-index: 10000;
   border: 1px solid #e57373;
 }
 .floating-error.visible { opacity: 1; }
@@ -1359,9 +1366,17 @@ body::after {
   position: absolute;
   top: .5rem;
   right: .8rem;
-  font-size: .7rem;
-  padding: .2rem .55rem;
-  opacity: .7;
+  font-size: .85rem;
+  padding: .35rem .8rem;
+  background: #c8a000;
+  color: #1a1a1a;
+  border-color: #e6b800;
+  font-weight: 700;
+  opacity: 1;
+}
+.editor-charts-toggle:hover {
+  background: #e6b800;
+  border-color: #ffd000;
 }
 
 .editor-scroll-top-btn {
@@ -1889,18 +1904,23 @@ select.editor-dict-key:focus {
 
 .board-modal-content {
   width: 95%;
-  max-width: 900px;
+  max-width: 1000px;
   max-height: 92vh;
   position: relative;
   overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .board-container {
   position: relative;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
   padding: 1rem;
   display: flex;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .board-svg {
@@ -1969,6 +1989,93 @@ select.editor-dict-key:focus {
   min-height: 0;
 }
 
+/* ── Build Market Row ─────────────────────────────── */
+.build-row-section {
+  padding: 1.2rem 1rem 1rem;
+  border-top: 2px solid rgba(201, 162, 39, .3);
+  margin-top: .5rem;
+}
+
+.build-row-header {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  margin-bottom: .8rem;
+}
+
+.build-row-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.build-row-remaining {
+  font-size: .75rem;
+  color: var(--text-muted);
+}
+
+.build-row-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: flex-start;
+}
+
+.build-row-cards .game-card {
+  cursor: default;
+  flex-shrink: 0;
+}
+
+.build-row-cards .game-card.build-playable {
+  cursor: pointer;
+  outline: 2px solid var(--accent);
+  box-shadow: 0 0 8px rgba(201, 162, 39, .4);
+  transition: box-shadow .15s, outline .15s;
+}
+
+.build-row-cards .game-card.build-playable:hover {
+  box-shadow: 0 0 16px rgba(201, 162, 39, .7);
+}
+
+.build-row-slot-empty {
+  width: 238px;
+  height: 333px;
+  border: 2px dashed rgba(255,255,255,.12);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,.2);
+  font-size: .8rem;
+}
+
+.build-row-played-label {
+  display: inline-block;
+  background: rgba(201,162,39,.25);
+  color: var(--accent);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  padding: .15rem .4rem;
+  border-radius: 2px;
+  margin-top: .3rem;
+}
+
+.build-market-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+.build-market-modal.active { display: flex; }
+
+/* ── End Build Market Row ──────────────────────────── */
+
 .board-placed-msg {
   padding: .5rem;
   background: rgba(201, 162, 39, .15);
@@ -2034,6 +2141,32 @@ select.editor-dict-key:focus {
   border-radius: 8px;
   padding: .6rem;
   margin-top: .2rem;
+}
+
+.only-build-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .3rem 1rem;
+  margin-top: .4rem;
+  padding-left: .1rem;
+}
+
+.only-build-cb-label {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .82rem;
+  cursor: pointer;
+  line-height: 1.3;
+  justify-content: flex-start;
+}
+
+.only-build-cb-label input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
 }
 
 .board-bonus-sub {

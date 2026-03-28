@@ -203,6 +203,13 @@
         </div>
         <div id="board-info-bar" class="board-info-bar"></div>
         <div id="board-container" class="board-container"></div>
+        <div id="build-row-section" class="build-row-section hidden">
+          <div class="build-row-header">
+            <span class="build-row-title">⚒️ Build Market</span>
+            <span id="build-row-remaining" class="build-row-remaining"></span>
+          </div>
+          <div id="build-row-cards" class="build-row-cards"></div>
+        </div>
       </div>
     </div>
 
@@ -212,11 +219,13 @@
         <div class="modal-header">
           <h2 id="board-editor-title">Board Editor</h2>
           <button id="fetch-data-board-editor" class="btn btn-sm edit-cards-btn">Fetch Data</button>
+          <button id="edit-terrain-type-btn" class="btn btn-sm edit-cards-btn">Edit by Terrain Type</button>
           <button id="close-board-editor" class="btn btn-sm">&times;</button>
         </div>
         <p class="phase-hint" style="padding:0 1rem .5rem;">Click any tile to edit its terrain and properties.</p>
         <div id="board-editor-container" class="board-container"></div>
         <div id="board-tile-form" class="board-tile-form hidden"></div>
+        <div id="terrain-type-form" class="board-tile-form hidden"></div>
       </div>
     </div>
 

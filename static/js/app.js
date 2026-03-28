@@ -81,7 +81,7 @@ const PHASE_LABELS = {
 const CARD_TYPE_GROUPS = [
   { key: "company", label: "Company" },
   { key: "platform", label: "Platform" },
-  { key: "cyber_attack", label: "Cyber Attacks" },
+  { key: "cyber_attack", label: "Cyber Warfare" },
   { key: "innovation", label: "Innovation" },
   { key: "leverage", label: "Leverage" },
   { key: "fuck_up", label: "Fuck-ups" },
@@ -91,7 +91,7 @@ const CARD_TYPE_GROUPS = [
 ];
 
 const DRAFT_SECTIONS = [
-  { deck: "projects", label: "Projects", types: ["platform", "cyber_attack", "build"] },
+  { deck: "projects", label: "Projects", types: ["platform", "cyber_attack"] },
   { deck: "boosters", label: "Boosters", types: ["leverage", "innovation"] },
 ];
 
@@ -258,6 +258,9 @@ socket.on("game_state", (state) => {
   if (state.started) _applyGameScreenUI();
   renderGameState(state);
   renderUsersPie();
+  if (!boardModal.classList.contains("hidden")) {
+    renderBuildRow();
+  }
 });
 
 socket.on("your_state", (data) => {
@@ -268,6 +271,8 @@ socket.on("your_state", (data) => {
   renderUsersPie();
   renderHand(data.hand);
   renderDraft(data.draft_pool, data.drafted_fuckups);
+  // Re-render hand modal live if it's open (e.g. after a tier purchase)
+  if (!handModal.classList.contains("hidden")) renderHandModal();
   cardsPlayedInfo.textContent = `(${data.cards_played_this_turn}/2 played)`;
 
   if (lastGameState?.phase === "company_pick" && data.company_offers?.length) {
@@ -290,6 +295,9 @@ socket.on("your_state", (data) => {
 
   if (hadPending && !data.pending_tile && !boardModal.classList.contains("hidden")) {
     renderBoard();
+  }
+  if (!boardModal.classList.contains("hidden")) {
+    renderBuildRow();
   }
 });
 
@@ -326,9 +334,13 @@ function updateRegulationUI() {
     regulationActions.classList.add("hidden");
     regProceedBtn.classList.add("hidden");
     const allResolved = Object.values(lastGameState.players).every(p => p.regulation_resolved);
+    const iWentToCourt = lastPrivateState.went_to_court || myWentToCourt;
     if (allResolved) {
       regulationWaiting.classList.add("hidden");
-      regStartYearBtn.classList.remove("hidden");
+      if (iWentToCourt && !dieRolling) {
+        regStartYearBtn.classList.remove("hidden");
+      }
+      // else: acceptance player waits silently, or die still spinning
     } else {
       regulationWaiting.textContent = "Waiting for others to resolve their compliance...";
       regulationWaiting.classList.remove("hidden");
@@ -817,6 +829,7 @@ const dieFace = document.getElementById("die-face");
 const DIE_FACES = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
 let dieRolling = false;
 let pendingCourtResult = null;
+let pendingStartYearBtn = false;  // show Start Year after die finishes
 
 function startDieRoll() {
   dieContainer.classList.remove("hidden");
@@ -836,6 +849,11 @@ function startDieRoll() {
       if (pendingCourtResult) {
         applyCourtDieResult(pendingCourtResult);
         pendingCourtResult = null;
+      }
+      // Show Start Year button if it was deferred while die was rolling
+      if (pendingStartYearBtn) {
+        pendingStartYearBtn = false;
+        regStartYearBtn.classList.remove("hidden");
       }
     }
   }, 150);
@@ -909,6 +927,12 @@ socket.on("regulation_result", (data) => {
 
 socket.on("regulation_all_resolved", (data) => {
   regulationWaiting.classList.add("hidden");
+  // If the die is still rolling we KNOW this player went to court (die only spins during court).
+  // myWentToCourt may not be set yet because applyRegulationResult hasn't run — defer.
+  if (dieRolling) {
+    pendingStartYearBtn = true;
+    return;
+  }
   // Only court players get the Start Year button
   if (myWentToCourt) {
     regStartYearBtn.classList.remove("hidden");
@@ -1197,7 +1221,7 @@ function renderPlayedCards(cards) {
     tagSpan.textContent = c.tag || c.card_type;
     div.appendChild(tagSpan);
 
-    // Tier indicator for tiered cards
+    // Tier indicator (star summary only — upgrade happens in "Show All Cards")
     const cardTiers = c.tiers || [];
     if (cardTiers.length > 0 && c.current_tier > 0) {
       const tierRow = document.createElement("div");
@@ -1211,28 +1235,6 @@ function renderPlayedCards(cards) {
       tierSpan.className = "played-tier-stars";
       tierSpan.textContent = tierStr;
       tierRow.appendChild(tierSpan);
-
-      // Upgrade button — only shown on own turn in PLAYER_TURNS phase
-      const nextIdx = c.current_tier;
-      const canUpgrade = nextIdx < maxTier;
-      const myTurn = lastGameState?.current_player_id === myPlayerId;
-      const phase = lastGameState?.phase;
-      if (canUpgrade && myTurn && phase === "player_turns") {
-        const nextTier = cardTiers[nextIdx];
-        const cost = nextTier?.data_cost ?? 0;
-        const myData = lastPrivateState?.resources?.data ?? 0;
-        const canAfford = myData >= cost;
-        const btn = document.createElement("button");
-        btn.className = "btn btn-sm tier-upgrade-btn" + (canAfford ? "" : " tier-upgrade-disabled");
-        btn.title = canAfford ? `Upgrade to tier ${nextIdx + 1}` : `Need ${cost}PB data`;
-        btn.textContent = `⬆ ${cost}PB`;
-        btn.disabled = !canAfford;
-        btn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          socket.emit("upgrade_card_tier", { instance_id: c.instance_id });
-        });
-        tierRow.appendChild(btn);
-      }
       div.appendChild(tierRow);
     }
 
@@ -1322,7 +1324,7 @@ function renderPlayersCards(state) {
 }
 
 // ── Show Hand modal ─────────────────────────────────────────
-showHandBtn.addEventListener("click", () => {
+function renderHandModal() {
   if (!lastPrivateState) return;
   handModalBody.innerHTML = "";
 
@@ -1362,7 +1364,10 @@ showHandBtn.addEventListener("click", () => {
     section.appendChild(grid);
     handModalBody.appendChild(section);
   });
+}
 
+showHandBtn.addEventListener("click", () => {
+  renderHandModal();
   handModal.classList.remove("hidden");
 });
 
@@ -1665,6 +1670,8 @@ const CARD_SUBTYPE_EMOJIS = {
   "rare metal mine":          "🔩",
   "hydroelectric power plant":"💧",
   "satellite":                "🛰️",
+  "network":                  "🕵️",
+  "cyber defense":            "🛡️",
 };
 
 const CARD_TYPE_TINTS = {
@@ -1684,6 +1691,8 @@ const CARD_TYPE_TINTS = {
   "rare metal mine":              "#2a3a42",  // dark steel blue-grey
   "hydroelectric power plant":   "#0d3a50",
   "satellite":                   "#0a0a1a",
+  "network":                     "#1a1a2e",  // dark indigo
+  "cyber defense":               "#0a2a1a",  // dark teal-green
 };
 
 const CARD_DECK_EMOJIS = {
@@ -1797,21 +1806,11 @@ function createCardElement(card, options = {}) {
     buildHtml = `<div class="card-build-badge">🏗️ ${label}</div>`;
   }
 
-  // Enhancement tiers
+  // Enhancement tiers — rendered as interactive buttons in createCardElement post-process
   let tiersHtml = "";
   const cardTiers = card.tiers || [];
   if (cardTiers.length > 0) {
-    const curTier = card.current_tier || 0;
-    tiersHtml = `<div class="card-tiers"><span class="card-section-label">Tiers</span>`;
-    cardTiers.forEach((t, i) => {
-      const tierNum = i + 1;
-      const isActive = curTier === tierNum;
-      const isUnlocked = curTier > tierNum;
-      const cls = isActive ? "tier-active" : isUnlocked ? "tier-unlocked" : "tier-locked";
-      const dataCost = t.data_cost ? ` (${t.data_cost}PB)` : "";
-      tiersHtml += `<span class="card-tier-item ${cls}" title="Tier ${tierNum}: ${t.users}M users${dataCost}">T${tierNum}: ${t.users}M👥${dataCost}</span>`;
-    });
-    tiersHtml += `</div>`;
+    tiersHtml = `<div class="card-tiers" data-instance-id="${card.instance_id || ""}"><span class="card-section-label">Tiers</span></div>`;
   }
 
   // Requirements
@@ -1889,6 +1888,85 @@ function createCardElement(card, options = {}) {
     });
   }
 
+  // Inject tier buttons into .card-tiers container
+  const tiersContainer = el.querySelector(".card-tiers");
+  if (tiersContainer && cardTiers.length > 0) {
+    // current_tier semantics:
+    //   0 = card not yet played  → all grayed
+    //   1 = card played, no tier bought yet → T1 green/red, rest locked
+    //   2 = T1 bought → T1 blue, T2 green/red, rest locked
+    //   3 = T2 bought → T1/T2 blue, T3 green/red
+    const curTier = card.current_tier || 0;
+    const notPlayed = curTier === 0;
+    const myData = lastPrivateState?.resources?.data ?? 0;
+    const myTurn = lastGameState?.current_player_id === myPlayerId;
+    const phase = lastGameState?.phase;
+    const isMyCard = (lastGameState?.players?.[myPlayerId]?.played_cards || [])
+      .some(c => c.instance_id === card.instance_id);
+    const canInteract = isMyCard && myTurn && phase === "player_turns";
+
+    cardTiers.forEach((t, i) => {
+      const tierNum = i + 1;
+      // T1 purchased when curTier >= 2 (i=0 → purchased = curTier >= 2)
+      const purchased = curTier >= tierNum + 1;
+      // T1 is next to buy when curTier === 1 (i=0 → isNext = curTier === 1)
+      const isNext = curTier === tierNum;
+      const locked = notPlayed || curTier < tierNum;
+
+      const cost = t.data_cost ?? 0;
+      const usersGain = t.users ?? 0;
+      const moneyGain = t.money ?? 0;
+      const canAfford = myData >= cost;
+
+      // Build label: T1: 200PB → +150M👥 +5B💰/yr
+      let label = `T${tierNum}: ${cost}PB`;
+      if (usersGain) label += ` → +${usersGain}M👥`;
+      if (moneyGain) label += ` +$${moneyGain}B/yr`;
+
+      // Hover tooltip always shows current data
+      const dataHint = `You have ${myData}PB`;
+
+      const btn = document.createElement("button");
+      btn.className = "card-tier-btn";
+      btn.textContent = label;
+
+      if (locked) {
+        btn.classList.add("tier-btn-locked");
+        btn.disabled = true;
+        btn.title = notPlayed
+          ? `Play this card first — ${dataHint}`
+          : `Unlock T${tierNum - 1} first — ${dataHint}`;
+      } else if (purchased) {
+        btn.classList.add("tier-btn-owned");
+        btn.disabled = true;
+        btn.title = `Tier ${tierNum} purchased ✓`;
+      } else if (isNext) {
+        btn.classList.add(canAfford ? "tier-btn-available" : "tier-btn-cant");
+        btn.title = canAfford
+          ? `Purchase T${tierNum} for ${cost}PB — ${dataHint}`
+          : `Need ${cost}PB to purchase — ${dataHint}`;
+        if (canAfford) {
+          // Click always goes to server — it validates turn/phase and returns an error if needed.
+          // Immediately disable after click to prevent double-firing while server processes.
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            btn.disabled = true;
+            socket.emit("upgrade_card_tier", { instance_id: card.instance_id });
+          });
+        } else {
+          btn.disabled = true;
+        }
+      } else {
+        // Fallback (shouldn't happen)
+        btn.classList.add("tier-btn-locked");
+        btn.disabled = true;
+        btn.title = dataHint;
+      }
+
+      tiersContainer.appendChild(btn);
+    });
+  }
+
   return el;
 }
 
@@ -1902,6 +1980,7 @@ const PARAM_LABELS = {
   data_per_users: "PB/yr per 100M users",
   projects_draw: "Cards from Projects Deck",
   boosters_draw: "Cards from Boosters Deck",
+  build_row_size: "Shared Build Row Size (cards below board)",
   draft_cost: "Cost to Keep a Card ($)",
   cards_per_turn: "Cards Playable per Turn",
   company_offers: "Company Cards per Player",
@@ -2194,7 +2273,7 @@ const DICT_KEY_OPTIONS = {
 const EDITOR_TYPE_LABELS = {
   company: "Company",
   platform: "Platform",
-  cyber_attack: "Cyber Attacks",
+  cyber_attack: "Cyber Warfare",
   fuck_up: "Fuck-ups",
   leverage: "Leverage",
   innovation: "Innovation",
@@ -2430,7 +2509,7 @@ function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = 
   if (editorChartsCollapsed) return;
 
   const TYPE_LABELS = {
-    platform: "Platform", cyber_attack: "Cyber Attacks", fuck_up: "Fuck-ups", build: "Build",
+    platform: "Platform", cyber_attack: "Cyber Warfare", fuck_up: "Fuck-ups", build: "Build",
     leverage: "Leverage", innovation: "Innovation",
     company: "Company", regulation: "Regulation", world_event: "World Events",
   };
@@ -2470,10 +2549,11 @@ function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = 
   ];
   makeChart("Overall", overallSlices, row1);
 
-  // Per-deck breakdown (Projects, Boosters)
+  // Per-deck breakdown (Projects, Boosters) — exclude Build from row 1
   const deckTypeMap = {};
   for (const [ct, n] of Object.entries(typeCounts)) {
     const deck = DECK_MAP[ct] || ct;
+    if (deck === "Build") continue;  // shown separately in row 2
     if (!deckTypeMap[deck]) deckTypeMap[deck] = [];
     deckTypeMap[deck].push({ ct, n });
   }
@@ -2487,7 +2567,7 @@ function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = 
     makeChart(deck, slices, row1);
   }
 
-  // ── Row 2: Platform by type, Build by build, Events breakdown ─
+  // ── Row 2: Platform by type, Cyber Warfare breakdown, Events breakdown ─
   const row2 = document.createElement("div");
   row2.className = "editor-charts-row";
   panel.appendChild(row2);
@@ -2504,9 +2584,23 @@ function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = 
       label: t, value: n,
       color: CHART_PALETTES.platform[i % CHART_PALETTES.platform.length],
     }));
-  makeChart("Platform — by Type", platformSlices, row2);
+  makeChart("Platform", platformSlices, row2);
 
-  // Build breakdown — count by build field
+  // Cyber Warfare — split by card type (network attack vs cyber defense)
+  const cyberTypeCounts = {};
+  for (const card of (allCards.cyber_attack || [])) {
+    const t = card.type || "network";
+    const label = t === "cyber defense" ? "Cyber Defense 🛡️" : "Cyber Attacks 🕵️";
+    cyberTypeCounts[label] = (cyberTypeCounts[label] || 0) + 1;
+  }
+  const cyberSlices = Object.entries(cyberTypeCounts)
+    .map(([label, n]) => ({
+      label, value: n,
+      color: label.includes("Defense") ? "#0a9a5a" : "#4a2a8a",
+    }));
+  makeChart("Cyber Warfare", cyberSlices, row2);
+
+  // Build — by tile type (build field)
   const buildTypeCounts = {};
   for (const card of (allCards.build || [])) {
     const b = card.build || "(none)";
@@ -2518,14 +2612,14 @@ function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = 
       label: b.replace(/_/g, " "), value: n,
       color: CHART_PALETTES.build[i % CHART_PALETTES.build.length],
     }));
-  makeChart("Build — by Tile", buildSlices, row2);
+  makeChart("Build", buildSlices, row2);
 
-  // Events breakdown — regulation vs world_event
+  // Events — regulation vs world_event
   const eventsSlices = [
     ...(extraCounts.regulation  ? [{ label: "Regulation ⚖️",   value: extraCounts.regulation,  color: "#ff5ef3" }] : []),
     ...(extraCounts.world_event ? [{ label: "World Events 🌍",  value: extraCounts.world_event, color: "#00d4aa" }] : []),
   ];
-  makeChart("Events — Breakdown", eventsSlices, row2);
+  makeChart("Events", eventsSlices, row2);
 }
 
 // ── Editor Grid ──────────────────────────────────────────────
@@ -2540,8 +2634,9 @@ function renderEditorGrid() {
   const query = (editorSearch.value || "").toLowerCase().trim();
 
   const DECK_MAP = {
-    platform: "Projects", cyber_attack: "Projects", fuck_up: "Projects", build: "Projects",
+    platform: "Projects", cyber_attack: "Projects", fuck_up: "Projects",
     leverage: "Boosters", innovation: "Boosters",
+    build: "Build",
   };
   let totalCards = 0;
   const typeCounts = {};
@@ -2851,6 +2946,7 @@ const TYPE_OPTIONS = [
   "online marketplace", "search service", "store", "power plant",
   "data center", "office", "ad campaign", "lobby", "rare metal mine",
   "hydroelectric power plant", "satellite",
+  "network", "cyber defense",
 ];
 
 // Fields that are always numeric (even when their current value is null)
@@ -3082,7 +3178,7 @@ function buildTiersField(tiers) {
 
   const hint = document.createElement("div");
   hint.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-bottom:.4rem";
-  hint.textContent = "Tier 1 = base (applied on play). Tiers 2+ unlock by spending data. Quadratic for social/search, linear for others.";
+  hint.textContent = "All tiers are purchasable by spending Data (PB). Values are incremental — what the player gains when buying that tier.";
   container.appendChild(hint);
 
   const list = document.createElement("div");
@@ -3101,7 +3197,7 @@ function buildTiersField(tiers) {
 
     const usersLbl = document.createElement("span");
     usersLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
-    usersLbl.textContent = "users:";
+    usersLbl.textContent = "+users (M):";
     row.appendChild(usersLbl);
 
     const usersInput = document.createElement("input");
@@ -3112,27 +3208,37 @@ function buildTiersField(tiers) {
     usersInput.style.cssText = "width:5rem;";
     row.appendChild(makeNumSpinner(usersInput, { min: 0 }));
 
+    const moneyLbl = document.createElement("span");
+    moneyLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
+    moneyLbl.textContent = "+$B/yr:";
+    row.appendChild(moneyLbl);
+
+    const moneyInput = document.createElement("input");
+    moneyInput.type = "number";
+    moneyInput.className = "editor-tier-money";
+    moneyInput.min = 0;
+    moneyInput.value = tierData?.money ?? 0;
+    moneyInput.style.cssText = "width:5rem;";
+    row.appendChild(makeNumSpinner(moneyInput, { min: 0 }));
+
     const dataLbl = document.createElement("span");
     dataLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
-    dataLbl.textContent = "data_cost (PB):";
+    dataLbl.textContent = "cost (PB):";
     row.appendChild(dataLbl);
 
     const costInput = document.createElement("input");
     costInput.type = "number";
     costInput.className = "editor-tier-cost";
     costInput.min = 0;
-    costInput.value = idx === 0 ? 0 : (tierData?.data_cost ?? 0);
+    costInput.value = tierData?.data_cost ?? 0;
     costInput.style.cssText = "width:5rem;";
-    costInput.disabled = idx === 0; // tier 1 is always free
-    row.appendChild(idx === 0 ? costInput : makeNumSpinner(costInput, { min: 0 }));
+    row.appendChild(makeNumSpinner(costInput, { min: 0 }));
 
-    if (idx > 0) {
-      const rmBtn = document.createElement("button");
-      rmBtn.className = "btn btn-sm editor-remove-btn";
-      rmBtn.textContent = "×";
-      rmBtn.addEventListener("click", () => row.remove());
-      row.appendChild(rmBtn);
-    }
+    const rmBtn = document.createElement("button");
+    rmBtn.className = "btn btn-sm editor-remove-btn";
+    rmBtn.textContent = "×";
+    rmBtn.addEventListener("click", () => row.remove());
+    row.appendChild(rmBtn);
 
     list.appendChild(row);
   }
@@ -3145,7 +3251,7 @@ function buildTiersField(tiers) {
   addBtn.style.marginTop = ".4rem";
   addBtn.addEventListener("click", () => {
     const rows = list.querySelectorAll(".editor-tier-row");
-    addTierRow({}, rows.length);
+    addTierRow({ users: 0, money: 0, data_cost: 0 }, rows.length);
   });
   container.appendChild(addBtn);
 
@@ -3183,6 +3289,7 @@ const BOOST_TYPE_OPTIONS = [
   "online marketplace", "search service", "store", "power plant",
   "data center", "office", "ad campaign", "lobby", "rare metal mine",
   "hydroelectric power plant", "satellite",
+  "network", "cyber defense",
 ];
 
 function buildBoostEntry(boost) {
@@ -3334,10 +3441,11 @@ function collectFormData(fieldsEl, originalCard) {
   if (tiersContainer) {
     const tierRows = tiersContainer.querySelectorAll(".editor-tier-row");
     const tiersArr = [];
-    tierRows.forEach((row, i) => {
+    tierRows.forEach((row) => {
       const users = Number(row.querySelector(".editor-tier-users")?.value) || 0;
-      const dataCost = i === 0 ? 0 : (Number(row.querySelector(".editor-tier-cost")?.value) || 0);
-      tiersArr.push({ users, data_cost: dataCost });
+      const money = Number(row.querySelector(".editor-tier-money")?.value) || 0;
+      const dataCost = Number(row.querySelector(".editor-tier-cost")?.value) || 0;
+      tiersArr.push({ users, money, data_cost: dataCost });
     });
     data.tiers = tiersArr.length > 0 ? tiersArr : null;
   }
@@ -3755,6 +3863,9 @@ const boardContainer = document.getElementById("board-container");
 const boardPending = document.getElementById("board-pending");
 const boardInfoBar = document.getElementById("board-info-bar");
 const openBoardBtn = document.getElementById("open-board-btn");
+const buildRowSection = document.getElementById("build-row-section");
+const buildRowCards = document.getElementById("build-row-cards");
+const buildRowRemaining = document.getElementById("build-row-remaining");
 
 let boardTiles = [];
 const HEX_SIZE = 24;
@@ -3833,7 +3944,7 @@ const TILE_FULL_NAMES = {
 //   everything else       → empty, sun, wind, gas_reserve, coal, natural_park
 //   lake/sea/gov/city/wall/rare_metal_mine terrain → blocked for non-mine tiles
 const _NO_BUILD = new Set(["government", "city", "wall"]);
-const _COMMERCIAL_ONLY = new Set(["store", "lobby_group"]);
+const _COMMERCIAL_ONLY = new Set(["store", "lobby_group", "office"]);
 const _OPEN_TERRAINS = new Set(["empty", "sun", "wind", "gas_reserve", "coal", "natural_park"]);
 const _SPACE_TILES_FE = new Set(["satellite"]);
 const _SPACE_TERRAIN_TILES_FE = {
@@ -4265,6 +4376,65 @@ function renderBoard() {
 
   boardContainer.appendChild(svg);
   boardContainer.appendChild(tooltip);
+
+  renderBuildRow();
+}
+
+function renderBuildRow() {
+  if (!buildRowSection || !buildRowCards) return;
+
+  const gs = lastGameState;
+  const row = gs?.shared_build_row;
+
+  if (!row || gs?.phase === "company_pick" || gs?.phase === "year_start_draft") {
+    buildRowSection.classList.add("hidden");
+    return;
+  }
+
+  buildRowSection.classList.remove("hidden");
+
+  const remaining = gs.build_remaining ?? 0;
+  if (buildRowRemaining) {
+    buildRowRemaining.textContent = `(${remaining} left in deck)`;
+  }
+
+  const isMyTurn = gs?.current_player_id === myPlayerId;
+  const isPlayerTurns = gs?.phase === "player_turns";
+  const me = lastPrivateState;
+  const cpt = gs?.params?.cards_per_turn ?? 2;
+  const playedThisTurn = me?.cards_played_this_turn ?? 0;
+  const canPlay = isMyTurn && isPlayerTurns && playedThisTurn < cpt && !me?.pending_tile;
+
+  buildRowCards.innerHTML = "";
+  row.forEach((card, rowIdx) => {
+    if (!card) {
+      const empty = document.createElement("div");
+      empty.className = "build-row-slot-empty";
+      empty.textContent = "Empty";
+      buildRowCards.appendChild(empty);
+      return;
+    }
+
+    const cardEl = createCardElement(card, { showId: false });
+    if (canPlay) {
+      cardEl.classList.add("build-playable");
+      cardEl.title = "Click to play this card";
+      cardEl.addEventListener("click", () => {
+        const costs = card.costs || {};
+        const parts = [];
+        if (costs.money) parts.push(`💰 $${costs.money}B`);
+        if (costs.engineers) parts.push(`🔧 ${costs.engineers} Eng`);
+        if (costs.suits) parts.push(`👔 ${costs.suits} Suits`);
+        const costStr = parts.length ? parts.join(", ") : "free";
+        showConfirmDialog(
+          `Play "${card.name}" from the Build Market?`,
+          () => socket.emit("play_build_card", { row_index: rowIdx }),
+          { detail: `Cost: ${costStr}`, confirmText: "Build", cancelText: "Cancel" }
+        );
+      });
+    }
+    buildRowCards.appendChild(cardEl);
+  });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -4275,9 +4445,11 @@ const boardEditorModal = document.getElementById("board-editor-modal");
 const closeBoardEditor = document.getElementById("close-board-editor");
 const boardEditorContainer = document.getElementById("board-editor-container");
 const boardTileForm = document.getElementById("board-tile-form");
+const terrainTypeForm = document.getElementById("terrain-type-form");
 const boardEditorTitle = document.getElementById("board-editor-title");
 const editBoardBtn = document.getElementById("edit-board-btn");
 const editBoardLobbyBtn = document.getElementById("edit-board-lobby-btn");
+const editTerrainTypeBtn = document.getElementById("edit-terrain-type-btn");
 
 let editorBoardTiles = [];
 let selectedEditorTile = null;
@@ -4667,12 +4839,50 @@ function renderBoardTileForm(tile) {
   reqSection.appendChild(reqContainer);
   form.appendChild(reqSection);
 
+  // --- Only Build ---
+  const onlyBuildSection = document.createElement("div");
+  onlyBuildSection.className = "editor-field board-bonus-section";
+  const onlyBuildTitle = document.createElement("label");
+  onlyBuildTitle.textContent = "Allowed build types (✓ = allowed, uncheck to block)";
+  onlyBuildSection.appendChild(onlyBuildTitle);
+  const onlyBuildGrid = document.createElement("div");
+  onlyBuildGrid.className = "only-build-grid";
+  // Empty only_build means ALL are allowed → show all checked
+  const savedOnlyBuild = tile.only_build || [];
+  const allAllowed = savedOnlyBuild.length === 0;
+  const BUILDABLE_TILE_TYPES = [
+    ["power_plant", "⚡ Power Plant"],
+    ["data_center", "🖥️ Data Center"],
+    ["store", "🏪 Store"],
+    ["ad_campaign", "📢 Ad Campaign"],
+    ["office", "🏢 Office"],
+    ["lobby_group", "💻 Lobby Group"],
+    ["rare_metal_mine", "🔩 Rare Metal Mine"],
+    ["hydroelectric_power_plant", "💧 Hydro Plant"],
+    ["satellite", "🛰️ Satellite"],
+    ["factory", "🏭 Hardware Factory"],
+  ];
+  BUILDABLE_TILE_TYPES.forEach(([val, lbl]) => {
+    const cbLabel = document.createElement("label");
+    cbLabel.className = "only-build-cb-label";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = val;
+    // If nothing was saved (all allowed), check all; otherwise check only saved ones
+    cb.checked = allAllowed || savedOnlyBuild.includes(val);
+    cbLabel.appendChild(cb);
+    cbLabel.appendChild(document.createTextNode(lbl));
+    onlyBuildGrid.appendChild(cbLabel);
+  });
+  onlyBuildSection.appendChild(onlyBuildGrid);
+  form.appendChild(onlyBuildSection);
+
   // --- Hint ---
   const hint = document.createElement("p");
   hint.style.fontSize = ".75rem";
   hint.style.color = "var(--text-dim)";
   hint.style.margin = ".5rem 0";
-  hint.innerHTML = "<strong>Store/Lobby</strong> → commercial | <strong>Power/DC/etc.</strong> → open terrains | <strong>🔩Mine</strong> → rare_metal_mine | <strong>💧Hydro</strong> → 🌊lake | <strong>Offshore (wind/solar)</strong> → power_plant (−$100B) | <strong>🌊Sea</strong> → data_center (−$150B) | <strong>🌌Space</strong> → solar/satellite (−$200–300B) | <strong>🌳Park</strong> = −2⭐ | <strong>Gov/City/Wall</strong> → no build";
+  hint.innerHTML = "<strong>Store/Lobby/Office</strong> → commercial only | <strong>Power/DC/Factory/etc.</strong> → open terrains | <strong>🔩Mine</strong> → rare_metal_mine | <strong>💧Hydro</strong> → 🌊lake | <strong>Offshore (wind/solar)</strong> → power_plant (−$100B) | <strong>🌊Sea</strong> → data_center (−$150B) | <strong>🌌Space</strong> → satellite (−$200B) | <strong>🌳Park</strong> = −2⭐ | <strong>Gov/City/Wall</strong> → no build";
   form.appendChild(hint);
 
   boardTileForm.appendChild(form);
@@ -4746,6 +4956,10 @@ function renderBoardTileForm(tile) {
     };
     const adjacencyBonuses = _collectResRows(adjContainer);
     const requirements = _collectReqRows(reqContainer);
+    const checkedTypes = Array.from(onlyBuildGrid.querySelectorAll("input[type=checkbox]:checked"))
+      .map(cb => cb.value);
+    // All checked = all allowed → save [] (no restriction); partial = explicit whitelist
+    const only_build = checkedTypes.length === BUILDABLE_TILE_TYPES.length ? [] : checkedTypes;
     socket.emit("edit_board_tile", {
       row: tile.row,
       col: tile.col,
@@ -4754,6 +4968,7 @@ function renderBoardTileForm(tile) {
       build_bonuses: buildBonuses,
       adjacency_bonuses: adjacencyBonuses,
       requirements,
+      only_build,
     });
     selectedEditorTile = null;
     boardTileForm.classList.add("hidden");
@@ -4794,3 +5009,121 @@ function renderBoardTileForm(tile) {
   });
 }
 
+// ── Edit by Terrain Type panel ────────────────────────────────
+const TERRAIN_OPTIONS = [
+  "empty", "city", "lake", "sea", "offshore_wind", "offshore_solar",
+  "government", "commercial", "sun", "wind", "gas_reserve", "coal",
+  "wall", "rare_metal_mine", "natural_park", "space",
+];
+
+const BUILDABLE_TILE_TYPE_OPTIONS = [
+  ["power_plant", "⚡ Power Plant"],
+  ["data_center", "🖥️ Data Center"],
+  ["store", "🏪 Store"],
+  ["ad_campaign", "📢 Ad Campaign"],
+  ["office", "🏢 Office"],
+  ["lobby_group", "💻 Lobby Group"],
+  ["rare_metal_mine", "🔩 Rare Metal Mine"],
+  ["hydroelectric_power_plant", "💧 Hydro Plant"],
+  ["satellite", "🛰️ Satellite"],
+  ["factory", "🏭 Hardware Factory"],
+];
+
+function renderTerrainTypeForm() {
+  terrainTypeForm.classList.remove("hidden");
+  boardTileForm.classList.add("hidden");
+  terrainTypeForm.innerHTML = "";
+
+  const title = document.createElement("h3");
+  title.textContent = "Edit all tiles of a terrain type";
+  title.style.marginBottom = ".8rem";
+  terrainTypeForm.appendChild(title);
+
+  const hint = document.createElement("p");
+  hint.style.cssText = "font-size:.75rem;color:var(--text-dim);margin:.3rem 0 .8rem;";
+  hint.textContent = "Changes apply to every tile on the board with the selected terrain. Leave 'Allowed build types' empty to allow all.";
+  terrainTypeForm.appendChild(hint);
+
+  // Terrain selector
+  const terrainRow = document.createElement("div");
+  terrainRow.className = "editor-field";
+  const terrainLabel = document.createElement("label");
+  terrainLabel.textContent = "Terrain type";
+  terrainRow.appendChild(terrainLabel);
+  const terrainSel = document.createElement("select");
+  terrainSel.className = "editor-dict-key";
+  terrainSel.style.width = "100%";
+  TERRAIN_OPTIONS.forEach(t => {
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, " ");
+    terrainSel.appendChild(o);
+  });
+  terrainRow.appendChild(terrainSel);
+  terrainTypeForm.appendChild(terrainRow);
+
+  // Only build checkboxes — pre-filled from first matching tile
+  const onlyBuildSection = document.createElement("div");
+  onlyBuildSection.className = "editor-field board-bonus-section";
+  const obLabel = document.createElement("label");
+  obLabel.textContent = "Allowed build types (✓ = allowed, uncheck to block)";
+  onlyBuildSection.appendChild(obLabel);
+  const obGrid = document.createElement("div");
+  obGrid.className = "only-build-grid";
+
+  function refreshOnlyBuildCheckboxes() {
+    const terrain = terrainSel.value;
+    const matchingTile = editorBoardTiles.find(t => t.terrain === terrain);
+    const savedOb = (matchingTile?.only_build) || [];
+    const allAllowedOb = savedOb.length === 0;
+    obGrid.innerHTML = "";
+    BUILDABLE_TILE_TYPE_OPTIONS.forEach(([val, lbl]) => {
+      const cbLabel = document.createElement("label");
+      cbLabel.className = "only-build-cb-label";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = val;
+      cb.checked = allAllowedOb || savedOb.includes(val);
+      cbLabel.appendChild(cb);
+      cbLabel.appendChild(document.createTextNode(lbl));
+      obGrid.appendChild(cbLabel);
+    });
+  }
+  refreshOnlyBuildCheckboxes();
+  terrainSel.addEventListener("change", refreshOnlyBuildCheckboxes);
+  onlyBuildSection.appendChild(obGrid);
+  terrainTypeForm.appendChild(onlyBuildSection);
+
+  // Actions
+  const actions = document.createElement("div");
+  actions.className = "editor-form-actions";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn btn-sm btn-accent";
+  saveBtn.textContent = "Apply to all tiles of this terrain";
+  saveBtn.addEventListener("click", () => {
+    const checkedOb = Array.from(obGrid.querySelectorAll("input[type=checkbox]:checked"))
+      .map(cb => cb.value);
+    const only_build = checkedOb.length === BUILDABLE_TILE_TYPE_OPTIONS.length ? [] : checkedOb;
+    socket.emit("edit_board_terrain_type", {
+      terrain: terrainSel.value,
+      only_build,
+    });
+    terrainTypeForm.classList.add("hidden");
+  });
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn btn-sm";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", () => terrainTypeForm.classList.add("hidden"));
+
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+  terrainTypeForm.appendChild(actions);
+
+  requestAnimationFrame(() => {
+    terrainTypeForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
+}
+
+editTerrainTypeBtn.addEventListener("click", renderTerrainTypeForm);
