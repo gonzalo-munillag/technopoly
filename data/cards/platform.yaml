@@ -1,6 +1,6 @@
 - name: Metaverse
   id: 13
-  description: blablbalabblablbalabblablbalabblablbalab
+  description: 'int note: this should get a boost with VR/AR glasses'
   type: software platform
   number: 1
   build: null
@@ -10,13 +10,13 @@
     users: 100
     money: 0
     engineers: 0
-    suits: null
     servers: 0
     ads: 0
     reputation: 0
     HR: 0
     data_centers: 0
     ad_campaigns: 0
+    suits: 0
   costs:
     users: 0
     money: 50
@@ -32,15 +32,349 @@
     fee_card_id: null
   requirements: null
   tiers:
-  - users: 150
+  - users: 20
+    money: 0
+    data_cost: 400
+  - users: 40
+    money: 0
+    data_cost: 800
+  - users: 80
+    money: 0
+    data_cost: 1600
+  boosts: null
+- name: Social Network
+  id: 14
+  description: null
+  type: social platform
+  number: 3
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 4
+    money: 0
+    servers: 4
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 200
+    fee_card_id: 15
+  effect:
+    users: 200
+  requirements: null
+  tiers:
+  - users: 200
     money: 0
     data_cost: 200
-  - users: 250
+  - users: 400
+    money: 0
+    data_cost: 600
+  - users: 800
+    money: 0
+    data_cost: 1000
+  boosts:
+  - target_id: null
+    target_type:
+    - software platform
+    - online marketplace
+    bonus:
+      users: 10
+    target_count: 3
+- name: App Store
+  id: 15
+  description: null
+  type: online marketplace
+  number: 3
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  effect:
+    users: 20
+  costs:
+    engineers: 4
+    suits: 4
+    ads: 3
+    money: 0
+    servers: 5
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 400
+    fee_card_id: 16
+  requirements: null
+  tiers:
+  - users: 40
+    money: 0
+    data_cost: 150
+  - users: 80
     money: 0
     data_cost: 400
   boosts: null
+- name: Operating System
+  id: 16
+  description: null
+  type: software platform
+  number: 3
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  effect:
+    users: 20
+  costs:
+    engineers: 6
+    suits: 0
+    ads: 3
+    money: 500
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  requirements: null
+  tiers:
+  - users: 50
+    money: 5
+    data_cost: 250
+  - users: 100
+    money: 10
+    data_cost: 600
+  boosts:
+  - target_id: 15
+    target_type: null
+    bonus:
+      users: 30
+      money: 500
+- name: Web Browser Engine
+  id: 17
+  description: null
+  type: software engine
+  number: 1
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 7
+    suits: 5
+    ads: 0
+    money: 500
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  requirements: null
+  tiers:
+  - users: 0
+    money: 2
+    data_cost: 200
+  - users: 0
+    money: 2
+    data_cost: 200
+  boosts:
+  - target_id: 18
+    target_type: null
+    bonus:
+      users: 20
+  - target_id: 19
+    target_type: null
+    bonus:
+      users: 20
+- name: Web Browser
+  id: 18
+  description: null
+  type: software platform
+  number: 1
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 5
+    suits: 5
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    fee: 400
+    fee_card_id: 17
+  effect:
+    users: 50
+  requirements: null
+  tiers:
+  - users: 20
+    money: 0
+    data_cost: 400
+  - users: 20
+    money: 0
+    data_cost: 400
+  - users: 20
+    money: 0
+    data_cost: 400
+  boosts: null
+- name: In-App Browser
+  id: 19
+  description: null
+  type: software service
+  number: 1
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 4
+    suits: 4
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 200
+    fee_card_id: 17
+  effect:
+    users: 30
+  requirements: null
+  tiers:
+  - users: 10
+    money: 0
+    data_cost: 200
+  - users: 20
+    money: 0
+    data_cost: 400
+  - users: 30
+    money: 0
+    data_cost: 600
+  boosts:
+  - target_id: null
+    target_type:
+    - social platform
+    - software platform
+    bonus:
+      users: 20
+    target_count: 3
+- name: Online Search Engine
+  id: 20
+  description: null
+  type: software engine
+  number: 1
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 10
+    suits: 10
+    ads: 0
+    money: 1500
+    servers: 10
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 0
+  requirements: null
+  tiers:
+  - users: 20
+    money: 2
+    data_cost: 200
+  - users: 40
+    money: 2
+    data_cost: 400
+  - users: 40
+    money: 4
+    data_cost: 600
+  boosts:
+  - target_id: 18
+    target_type: null
+    bonus:
+      users: 30
+  - target_id: 19
+    target_type: null
+    bonus:
+      users: 30
+- name: VR/AR Headsets
+  id: 21
+  description: null
+  type: hardware manufacturer
+  number: 1
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  disabled: 'true'
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  requirements: null
+  tiers: null
+  boosts:
+  - target_id: 13
+    target_type: null
+    bonus:
+      users: 100
+- name: Quantum Computer
+  id: 22
+  description: null
+  type: hardware manufacturer
+  number: 1
+  build: factory
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect: null
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true
 - name: Machine Learning Service
-  id: 14
+  id: 23
   description: null
   type: software service
   number: 1
@@ -70,100 +404,9 @@
   effect:
     users: 60
   boosts: null
-- name: Social Network
-  id: 15
-  description: null
-  type: social platform
-  number: 3
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 4
-    money: 0
-    servers: 4
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 200
-    fee_card_id: 16
-  effect:
-    users: 200
-  requirements: null
-  tiers:
-  - users: 400
-    money: 0
-    data_cost: 200
-  - users: 900
-    money: 0
-    data_cost: 600
-  boosts:
-  - target_id: null
-    target_type:
-    - software platform
-    - online marketplace
-    bonus:
-      users: 10
-    target_count: 3
-- name: App Store
-  id: 16
-  description: null
-  type: online marketplace
-  number: 3
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
-  effect:
-    users: 20
-  costs:
-    engineers: 4
-    suits: 4
-    ads: 3
-    money: 0
-    servers: 5
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 400
-    fee_card_id: 17
-  boosts: null
-- name: Operating System
-  id: 17
-  description: null
-  type: software platform
-  number: 3
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
-  effect:
-    users: 20
-  costs:
-    engineers: 6
-    suits: 0
-    ads: 3
-    money: 500
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  boosts:
-  - target_id: 16
-    target_type: null
-    bonus:
-      users: 30
-      money: 500
+  disabled: true
 - name: Mainframe Computer
-  id: 18
+  id: 24
   description: '- INT NOTE: give some boost to an existing data center
 
     Designed for reliability and massive transaction processing.
@@ -192,34 +435,8 @@
   tiers: null
   boosts: null
   disabled: true
-- name: Quantum Computer
-  id: 19
-  description: null
-  type: hardware manufacturer
-  number: 1
-  build: factory
-  factory_refund: 0
-  dc_production_bonus: 0
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect: null
-  requirements: null
-  tiers: null
-  boosts: null
-  disabled: true
 - name: Supercomputer
-  id: 20
+  id: 25
   description: null
   type: hardware manufacturer
   number: 1
@@ -245,13 +462,14 @@
   boosts: null
   disabled: true
 - name: Content Delivery Network
-  id: 21
+  id: 26
   description: null
   type: software service
   number: 1
   build: null
   factory_refund: 0
   dc_production_bonus: 0
+  disabled: 'true'
   costs:
     engineers: 0
     suits: 0
@@ -267,9 +485,8 @@
     fee_card_id: null
   effect: null
   boosts: null
-  disabled: true
 - name: Semiconductor Equipment
-  id: 22
+  id: 27
   description: 'Equipment to manufacture chips
 
 
@@ -295,6 +512,96 @@
     users: 0
     fee: 0
     fee_card_id: null
+  effect: null
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Satellite Factory
+  id: 28
+  description: 'internal comment: you can produce satellites with this card, one per
+    generation'
+  type: hardware manufacturer
+  number: 1
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  disabled: 'true'
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  requirements: null
+  tiers: null
+  boosts: null
+- name: Rocket Manufacturer
+  id: 29
+  description: Design and manufacture orbital launch vehicles. Build a launching pad
+    to reach space.
+  type: hardware manufacturer
+  number: 1
+  build: launching_pad
+  factory_refund: 0
+  dc_production_bonus: 0
+  disabled: 'false'
+  costs:
+    engineers: 3
+    suits: 1
+    ads: 0
+    money: 8
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 50
+    reputation: 2
+    money: 0
+    data_centers: 0
+    ad_campaigns: 0
+  requirements: null
+  tiers: null
+  boosts: null
+- name: System on a Chip
+  id: 30
+  description: SoC is an integrated circuit that combines CPU, RAM, input/output,
+    and often GPU, connectivity (Wifi, cellular, USB, Bluetooth), and neural, media,
+    crypto accelerators—onto a single chip.
+  type: chip enterprise
+  number: 1
+  build: null
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
   effect: null
   requirements: null
   tiers: null

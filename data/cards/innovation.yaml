@@ -1,5 +1,5 @@
 - name: AI Assistant
-  id: 27
+  id: 36
   image: ''
   description: Automate routine tasks, boosting engineer output.
   type: ai
@@ -23,12 +23,12 @@
     data_centers: 0
     ad_campaigns: 0
   boosts:
-  - target_id: 19
+  - target_id: 22
     bonus:
       engineers: 2
   disabled: true
 - name: Cloud Migration
-  id: 28
+  id: 37
   image: ''
   description: Move to the cloud for scalable server capacity.
   type: infrastructure
@@ -51,15 +51,15 @@
     data_centers: 0
     ad_campaigns: 0
   boosts:
-  - target_id: 18
+  - target_id: 24
     bonus:
       users: 3
-  - target_id: 21
+  - target_id: 26
     bonus:
       users: 2
   disabled: true
 - name: AI Assistant 2
-  id: 29
+  id: 38
   description: Automate routine tasks, boosting engineer output.
   type: ai
   number: 2
@@ -84,7 +84,7 @@
   boosts: []
   disabled: true
 - name: Cloud Migration 2
-  id: 30
+  id: 39
   image: ''
   description: Move to the cloud for scalable server capacity.
   type: infrastructure
@@ -107,106 +107,4 @@
     data_centers: 0
     ad_campaigns: 0
   boosts: []
-  disabled: true
-- name: New Card
-  id: 31
-  image: null
-  description: ''
-  type: ''
-  number: 1
-  build: null
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect: {}
-  boosts: []
-  factory_refund: null
-  dc_production_bonus: null
-  disabled: true
-- name: New Card
-  id: 32
-  image: null
-  description: ''
-  type: ''
-  number: 1
-  build: null
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect: {}
-  boosts: []
-  factory_refund: null
-  dc_production_bonus: null
-  disabled: true
-- name: New Card
-  id: 33
-  image: null
-  description: ''
-  type: ''
-  number: 1
-  build: null
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect: {}
-  boosts: []
-  factory_refund: null
-  dc_production_bonus: null
-  disabled: true
-- name: New Card
-  id: 34
-  image: null
-  description: ''
-  type: ''
-  number: 1
-  build: null
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-    fee_card_type: null
-    fee_company_type: null
-  effect: {}
-  boosts: []
-  factory_refund: null
-  dc_production_bonus: null
   disabled: true

@@ -76,7 +76,7 @@
     servers: 300
     reputation: 1
     users: 2
-    data: 2000
+    data: 500
   starting_production:
     HR: 1
     data_centers: 2
@@ -98,7 +98,7 @@
     servers: 200
     reputation: 6
     users: 1
-    data: 2000
+    data: 500
   starting_production:
     HR: 1
     data_centers: 1
@@ -131,7 +131,7 @@
   boosts: null
 - name: Chip Designer
   id: 7
-  type: hardware manufacturer
+  type: chip enterprise
   description: 'Design the chips (CPU, GPU, ASIC), don’t manufacture
 
 
@@ -156,7 +156,7 @@
   boosts: null
 - name: Chip Manufacturer
   id: 8
-  type: hardware manufacturer
+  type: chip enterprise
   description: 'Physically produce chips from designs
 
 
@@ -183,7 +183,7 @@
   boosts: null
 - name: IDM
   id: 9
-  type: hardware manufacturer
+  type: chip enterprise
   description: 'Integrated Device Manufacturers
 
     Design + manufacture chips

@@ -1,14 +1,10 @@
-# total_users: total user pool in M (5000 = 5000M users)
 total_users: 5000
-# money_per_users: how many M users needed to earn 1B/yr (10 = 10M→$1B/yr; 100M users→$10B/yr)
 money_per_users: 10
-# data_per_users: PB of data produced per 100M users per year (200 = 100M→200PB/yr)
 data_per_users: 200
 projects_draw: 3
 boosters_draw: 3
-# build_row_size: number of shared build cards visible below the board (replaces immediately when played)
 build_row_size: 5
-draft_cost: 3
+draft_cost: 1
 cards_per_turn: 2
 company_offers: 3
 buy_server_engineers: 1

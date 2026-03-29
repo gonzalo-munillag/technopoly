@@ -398,3 +398,273 @@
     effect: null
     requirements: null
     boosts: null
+- card_type: build
+  card_data:
+    name: Rooftop Solar Array
+    id: 52
+    description: Distributed solar panels across facilities. Lower cost, good for
+      tight grids.
+    type: pv power plant
+    number: 2
+    build: pv_power_plant
+    factory_refund: 0
+    dc_production_bonus: 1
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 2
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect:
+      money: 0
+      reputation: 1
+      data_centers: 0
+      ad_campaigns: 0
+    boosts: null
+    disabled: false
+- card_type: build
+  card_data:
+    name: Hydroelectric Power Plant
+    id: 55
+    description: null
+    type: power plant
+    number: 2
+    build: hydroelectric_power_plant
+    factory_refund: 0
+    dc_production_bonus: 0
+    disabled: 'true'
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect: null
+    requirements: null
+    tiers: null
+    boosts: null
+- card_type: build
+  card_data:
+    name: Solar Thermal Power Plant
+    id: 69
+    description: null
+    type: power plant
+    number: 1
+    build: solar_thermal
+    factory_refund: 0
+    dc_production_bonus: 0
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect: null
+    requirements: null
+    tiers: null
+    boosts: null
+    disabled: true
+- card_type: build
+  card_data:
+    name: Orbital Data Center
+    id: 68
+    description: Place a data center in orbit. Immune to terrestrial disruptions.
+      Space terrain only. Costs $200B extra. Produces +3 DC/yr.
+    type: satellite data center
+    number: 1
+    build: satellite_dc
+    factory_refund: 0
+    dc_production_bonus: 0
+    costs:
+      engineers: 3
+      suits: 2
+      money: 80
+      data_centers: 0
+      ad_campaigns: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect:
+      data_centers: 3
+      ad_campaigns: 0
+    requirements: null
+    tiers: null
+    boosts: null
+    disabled: true
+- card_type: build
+  card_data:
+    name: Satellite Solar Array
+    id: 67
+    description: Deploy a solar power satellite in orbit. Powers adjacent orbital
+      data centers. Space terrain only. Costs $200B extra.
+    type: satellite solar
+    number: 1
+    build: satellite_solar
+    factory_refund: 0
+    dc_production_bonus: 2
+    costs:
+      engineers: 3
+      suits: 1
+      money: 50
+      data_centers: 0
+      ad_campaigns: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect:
+      reputation: 2
+      data_centers: 0
+      ad_campaigns: 0
+    requirements: null
+    tiers: null
+    boosts: null
+    disabled: true
+- card_type: innovation
+  card_data:
+    name: New Card
+    id: 37
+    image: null
+    description: ''
+    type: ''
+    number: 1
+    build: null
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect: {}
+    boosts: []
+    factory_refund: null
+    dc_production_bonus: null
+    disabled: true
+- card_type: innovation
+  card_data:
+    name: New Card
+    id: 36
+    image: null
+    description: ''
+    type: ''
+    number: 1
+    build: null
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+    effect: {}
+    boosts: []
+    factory_refund: null
+    dc_production_bonus: null
+    disabled: true
+- card_type: innovation
+  card_data:
+    name: New Card
+    id: 34
+    image: null
+    description: ''
+    type: ''
+    number: 1
+    build: null
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+    effect: {}
+    boosts: []
+    factory_refund: null
+    dc_production_bonus: null
+    disabled: true
+- card_type: innovation
+  card_data:
+    name: New Card
+    id: 34
+    image: null
+    description: ''
+    type: ''
+    number: 1
+    build: null
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+    effect: {}
+    boosts: []
+    factory_refund: null
+    dc_production_bonus: null
+    disabled: true
+- card_type: regulation
+  card_data:
+    name: New Regulation
+    id: 74
+    tag: ''
+    description: ''
+    image: null
+    targets_all: 1
+    target_id: null
+    target_type: null
+    compliance: {}
+    court_penalty: {}
+    court_threshold: 4

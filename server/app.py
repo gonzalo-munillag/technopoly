@@ -70,11 +70,23 @@ _watchdog_thread = threading.Thread(target=_inactivity_watchdog, daemon=True)
 _watchdog_thread.start()
 
 BOARD_CONFIG_FILE = CARDS_DIR / "board_config.yaml"
+TILE_TYPE_FILE    = CARDS_DIR.parent / "tile_type.yaml"
 
 if BOARD_CONFIG_FILE.exists():
     with open(BOARD_CONFIG_FILE) as _f:
         _cfg = yaml.safe_load(_f) or []
     game.board.load_config(_cfg)
+
+# ── Tile-type config (terrain-level defaults) ────────────────
+_tile_type_config: dict = {}
+if TILE_TYPE_FILE.exists():
+    with open(TILE_TYPE_FILE) as _f:
+        _tile_type_config = yaml.safe_load(_f) or {}
+
+def _save_tile_type_config():
+    with open(TILE_TYPE_FILE, "w") as _f:
+        yaml.dump(_tile_type_config, _f,
+                  default_flow_style=False, allow_unicode=True, sort_keys=False)
 
 CARD_TYPE_FILES = {
     "company": "company.yaml",
@@ -395,12 +407,6 @@ def _begin_player_turns():
         player.reset_turn()
         player.year_done = False
 
-    current = game.players.get(game.current_player_id)
-    if current and len(current.hand) == 0:
-        current.year_done = True
-        _advance_to_next_or_end_year()
-        return
-
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
 
@@ -476,10 +482,14 @@ def _check_regulation_done():
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
     else:
-        # Court players still need to click Start Year
-        socketio.emit("regulation_all_resolved", {
-            "court_player_ids": [p.player_id for p in game.court_players()]
-        }, room="game")
+        # Court players still need to click Start Year.
+        # Broadcast to the whole room (so other players see the waiting state)
+        # AND emit directly to each court player's SID so the button is guaranteed.
+        court_pids = [p.player_id for p in game.court_players()]
+        socketio.emit("regulation_all_resolved", {"court_player_ids": court_pids}, room="game")
+        for sid, pid in connected_players.items():
+            if pid in court_pids:
+                socketio.emit("prompt_start_year", {}, room=sid)
 
 
 @socketio.on("start_year_after_regulation")
@@ -564,8 +574,9 @@ def on_play_card(data):
             socketio.emit("game_state", game.to_dict(), room="game")
             _send_private_states()
         else:
-            if len(player.hand) == 0:
-                player.year_done = True
+            # Fuck-up played — end this turn so next player goes, but don't
+            # force year_done (player may still want to use the build market
+            # or enhance cards on a future turn this year).
             _advance_to_next_or_end_year()
         _check_win_condition()
         return
@@ -650,10 +661,7 @@ def on_play_card(data):
         _check_win_condition()
         return
 
-    if len(player.hand) == 0:
-        player.year_done = True
-        _advance_to_next_or_end_year()
-    else:
+    if not _maybe_auto_end_turn(player):
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
     _check_win_condition()
@@ -734,11 +742,8 @@ def on_play_build_card(data):
             _check_win_condition()
             return
 
-        # No tile to place — check if player has exhausted their hand
-        if len(player.hand) == 0:
-            player.year_done = True
-            _advance_to_next_or_end_year()
-        else:
+        # No tile to place — auto-end if action limit reached, else let player decide
+        if not _maybe_auto_end_turn(player):
             socketio.emit("game_state", game.to_dict(), room="game")
             _send_private_states()
         _check_win_condition()
@@ -805,11 +810,24 @@ def on_upgrade_card_tier(data):
     instance_id = data.get("instance_id", "")
     result = player.upgrade_card_tier(instance_id, game)
     if result["ok"]:
+        player.cards_played_this_turn += 1
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
         _check_win_condition()
+        _maybe_auto_end_turn(player)
     else:
         emit("error", {"message": result["error"]})
+
+
+def _maybe_auto_end_turn(player):
+    """Auto-advance after playing if the card limit is reached and no tile is pending."""
+    cpt = P("cards_per_turn", 2)
+    if (player.cards_played_this_turn >= cpt
+            and not player.pending_tile
+            and not player.has_pending_fuckups()):
+        _advance_to_next_or_end_year()
+        return True
+    return False
 
 
 @socketio.on("end_turn")
@@ -881,6 +899,7 @@ def _handle_year_end():
 @socketio.on("get_board")
 def on_get_board():
     emit("board_state", game.board.to_list())
+    emit("tile_type_config", _tile_type_config)
 
 
 @socketio.on("place_tile")
@@ -978,10 +997,7 @@ def on_place_tile(data):
             socketio.emit("game_state", game.to_dict(), room="game")
             _send_private_states()
     elif is_turns_phase:
-        if len(player.hand) == 0:
-            player.year_done = True
-            _advance_to_next_or_end_year()
-        else:
+        if not _maybe_auto_end_turn(player):
             socketio.emit("game_state", game.to_dict(), room="game")
             _send_private_states()
     _check_win_condition()
@@ -1007,6 +1023,7 @@ def on_get_board_editor():
     if request.sid not in editor_sids:
         return
     emit("board_editor_data", game.board.to_list())
+    emit("tile_type_config", _tile_type_config)
 
 
 @socketio.on("edit_board_tile")
@@ -1020,7 +1037,13 @@ def on_edit_board_tile(data):
     build_bonuses = data.get("build_bonuses")
     adjacency_bonuses = data.get("adjacency_bonuses")
     requirements = data.get("requirements") or []
-    only_build = data.get("only_build") or []
+    # only_build: None=all allowed, []=none, [...]= whitelist
+    # Use key-existence check so None (all allowed) is distinguished from "not provided"
+    if "only_build" in data:
+        only_build = data["only_build"]   # explicitly provided, may be None/[]/[...]
+    else:
+        from server.models.board import _UNSET as _OB_UNSET
+        only_build = _OB_UNSET             # sentinel: don't touch the existing value
     if not game.board.set_tile_terrain(
         row, col, terrain, name, build_bonuses, adjacency_bonuses, requirements, only_build
     ):
@@ -1036,24 +1059,51 @@ def on_edit_board_tile(data):
 
 @socketio.on("edit_board_terrain_type")
 def on_edit_board_terrain_type(data):
-    """Apply only_build (and optionally requirements) to ALL tiles of a given terrain type."""
+    """Save terrain-type defaults to tile_type.yaml.
+    Also applies the settings to any existing board tiles of that terrain
+    so bonus calculations stay consistent."""
     if request.sid not in editor_sids:
         return
     terrain = data.get("terrain")
-    only_build = data.get("only_build") or []
-    requirements = data.get("requirements") or []
+    from server.models.board import _UNSET as _OB_UNSET
+    only_build        = data["only_build"] if "only_build" in data else _OB_UNSET
+    requirements      = data.get("requirements")
+    build_bonuses     = data.get("build_bonuses")
+    adjacency_bonuses = data.get("adjacency_bonuses")
     if not terrain:
         return
-    count = game.board.set_terrain_type_properties(terrain, only_build=only_build, requirements=requirements)
-    if count == 0:
-        emit("error", {"message": f"No tiles found with terrain '{terrain}'."})
-        return
+
+    # ── 1. Persist in tile_type.yaml ──────────────────────────
+    entry = _tile_type_config.get(terrain, {})
+    if only_build is not _OB_UNSET:
+        entry["only_build"] = only_build
+    if requirements is not None:
+        entry["requirements"] = requirements
+    if build_bonuses is not None:
+        entry["build_bonuses"] = build_bonuses
+    if adjacency_bonuses is not None:
+        entry["adjacency_bonuses"] = adjacency_bonuses
+    _tile_type_config[terrain] = entry
+    _save_tile_type_config()
+
+    # ── 2. Also apply to existing board tiles ─────────────────
+    game.board.set_terrain_type_properties(
+        terrain,
+        only_build=only_build,
+        requirements=requirements,
+        build_bonuses=build_bonuses,
+        adjacency_bonuses=adjacency_bonuses,
+    )
     _save_board_config()
+
+    # ── 3. Broadcast updated state ────────────────────────────
     board_data = game.board.to_list()
     for sid in editor_sids:
         socketio.emit("board_editor_data", board_data, room=sid)
+        socketio.emit("tile_type_config", _tile_type_config, room=sid)
     if game.started:
         socketio.emit("board_update", board_data, room="game")
+        socketio.emit("tile_type_config", _tile_type_config, room="game")
 
 
 @socketio.on("set_placed_tile_editor")
@@ -1715,7 +1765,7 @@ def on_permanent_delete_card(data):
 
 @socketio.on("get_card_trees")
 def on_get_card_trees():
-    if request.sid not in editor_sids:
+    if not _ensure_editor(request.sid):
         return
     result = _build_card_trees()
     result["locks"] = _get_locks_for_client(request.sid)

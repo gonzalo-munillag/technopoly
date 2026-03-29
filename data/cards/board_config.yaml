@@ -4,44 +4,91 @@
   name: ''
 - row: 0
   col: 4
-  terrain: rare_metal_mine
+  terrain: empty
   name: ''
 - row: 0
   col: 5
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 0
   col: 6
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 0
   col: 7
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 0
   col: 8
   terrain: empty
   name: ''
+  only_build: []
 - row: 0
   col: 9
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 0
   col: 10
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 0
   col: 11
   terrain: lake
   name: ''
+  only_build:
+  - hydroelectric_power_plant
 - row: 0
   col: 12
   terrain: empty
   name: ''
+  only_build:
+  - hydroelectric_power_plant
 - row: 1
   col: 2
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 1
   col: 3
   terrain: rare_metal_mine
@@ -50,41 +97,111 @@
   col: 4
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 1
   col: 5
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
+- row: 1
+  col: 6
+  terrain: empty
+  name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
+- row: 1
+  col: 7
+  terrain: empty
+  name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 1
   col: 8
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 1
   col: 9
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 1
   col: 10
   terrain: lake
   name: ''
+  only_build:
+  - hydroelectric_power_plant
 - row: 1
   col: 11
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 1
   col: 12
   terrain: lake
   name: ''
+  only_build:
+  - hydroelectric_power_plant
 - row: 1
   col: 13
-  terrain: empty
+  terrain: mountain
   name: ''
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: 1
   terrain: natural_park
   name: ''
+  build_bonuses: &id001
+  - build_type: null
+    immediate:
+      reputation: -3
+    production: {}
 - row: 2
   col: 2
   terrain: coal
@@ -97,263 +214,622 @@
   col: 4
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: 5
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: 6
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: 7
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: 8
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: 9
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 2
   col: 10
   terrain: city
   name: CHI
-  build_bonuses:
+  build_bonuses: &id002
+  - build_type: null
     immediate:
       users: 10
-    production:
-      HR: 1
+    production: {}
+  only_build:
+  - ad_campaign
 - row: 2
   col: 11
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: 12
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: 13
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: 14
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 3
   col: 0
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: 1
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
 - row: 3
   col: 2
   terrain: coal
   name: ''
 - row: 3
   col: 3
-  terrain: empty
+  terrain: lake
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: 4
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: 5
-  terrain: lake
+  terrain: empty
   name: ''
+  only_build:
+  - hydroelectric_power_plant
 - row: 3
   col: 6
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: 7
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: 8
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: 9
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 3
   col: 10
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 3
   col: 11
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: 12
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: 13
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 3
   col: 14
   terrain: government
   name: WDC
 - row: 4
   col: 0
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 4
   col: 1
   terrain: lake
   name: ''
+  only_build:
+  - hydroelectric_power_plant
 - row: 4
   col: 2
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
 - row: 4
   col: 3
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 4
   col: 4
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 4
   col: 5
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 4
   col: 6
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 4
   col: 7
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 4
   col: 8
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 4
   col: 9
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 4
   col: 10
-  terrain: commercial
+  terrain: empty
   name: ''
 - row: 4
   col: 11
-  terrain: commercial
+  terrain: empty
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 4
   col: 12
-  terrain: commercial
+  terrain: mountain
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 4
   col: 13
-  terrain: commercial
+  terrain: mountain
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 5
   col: 1
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
 - row: 5
   col: 2
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 5
   col: 3
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 5
   col: 4
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 5
   col: 5
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 5
   col: 6
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 5
   col: 7
   terrain: lake
   name: ''
+  only_build:
+  - hydroelectric_power_plant
 - row: 5
   col: 8
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 5
   col: 9
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 5
   col: 10
-  terrain: commercial
+  terrain: empty
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 5
   col: 11
-  terrain: commercial
+  terrain: mountain
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 5
   col: 12
-  terrain: commercial
+  terrain: mountain
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 5
   col: 13
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 6
   col: 2
-  terrain: empty
+  terrain: lake
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 6
   col: 3
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 6
   col: 4
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 6
   col: 5
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 6
   col: 6
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 6
   col: 7
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 6
   col: 8
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 6
   col: 9
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 6
   col: 10
-  terrain: commercial
+  terrain: empty
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 6
   col: 11
-  terrain: commercial
+  terrain: mountain
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 6
   col: 12
-  terrain: commercial
+  terrain: mountain
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 7
   col: 3
   terrain: wind
@@ -364,9 +840,10 @@
   name: ''
 - row: 7
   col: 5
-  terrain: wind
+  terrain: empty
   name: ''
   build_bonuses:
+  - build_type: null
     immediate:
       users: 10
     production: {}
@@ -374,253 +851,502 @@
   col: 6
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 7
   col: 7
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 7
   col: 8
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 7
   col: 9
-  terrain: commercial
+  terrain: empty
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 7
   col: 10
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 8
   col: 5
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 8
   col: 6
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 8
   col: 7
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 1
   col: 14
   terrain: city
   name: NY
-  build_bonuses:
-    immediate:
-      users: 10
-    production:
-      HR: 1
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+  build_bonuses: *id002
+  only_build:
+  - ad_campaign
 - row: 0
   col: 13
   terrain: lake
   name: ''
+  only_build:
+  - hydroelectric_power_plant
 - row: 0
   col: 14
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 0
   col: 2
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 0
   col: 15
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 4
   col: 14
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 4
   col: 15
-  terrain: commercial
+  terrain: sea
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 5
   col: 14
-  terrain: commercial
+  terrain: sea
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 6
   col: 13
   terrain: city
-  name: CLT
+  name: CHL
   build_bonuses:
+  - build_type: null
     immediate:
       users: 10
-    production:
-      HR: 1
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+    production: {}
+  only_build:
+  - ad_campaign
 - row: 8
   col: 11
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 4
   col: -1
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 4
   col: -2
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 1
   col: 1
   terrain: natural_park
   name: ''
-  build_bonuses:
-    immediate: &id003
-      reputation: -2
-    production: &id004 {}
+  build_bonuses: *id001
 - row: 1
   col: 0
   terrain: lake
   name: ''
+  only_build:
+  - hydroelectric_power_plant
 - row: 0
   col: 1
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 0
   col: 0
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 0
   col: -1
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 0
   col: -2
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 0
   col: -3
   terrain: city
   name: SEA
-  build_bonuses:
-    immediate:
-      users: 10
-    production:
-      HR: 1
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+  build_bonuses: *id002
+  only_build:
+  - ad_campaign
 - row: 1
   col: -1
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 1
   col: -2
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 1
   col: -3
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 2
   col: -1
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: -2
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: -1
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: 0
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: -2
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 2
   col: -3
-  terrain: empty
+  terrain: sea
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 3
   col: -3
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 4
   col: -3
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 5
   col: -2
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 5
   col: -3
   terrain: city
   name: SF
-  build_bonuses:
-    immediate:
-      users: 10
-    production:
-      HR: 1
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+  build_bonuses: *id002
+  only_build:
+  - ad_campaign
 - row: 6
   col: -2
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 7
   col: -2
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 7
   col: 0
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 7
   col: -1
-  terrain: commercial
+  terrain: empty
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 6
   col: -1
   terrain: city
   name: LV
-  build_bonuses:
-    immediate:
-      users: 10
-    production:
-      HR: 1
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+  build_bonuses: *id002
+  only_build:
+  - ad_campaign
 - row: 5
   col: -1
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 6
   col: 0
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 5
   col: 0
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 6
   col: 1
-  terrain: empty
+  terrain: mountain
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 7
   col: 1
-  terrain: empty
+  terrain: natural_park
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 7
   col: 2
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 8
   col: 2
-  terrain: gas_reserve
+  terrain: empty
   name: ''
 - row: 8
   col: 3
@@ -630,62 +1356,97 @@
   col: 4
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 9
   col: 3
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 9
   col: 4
   terrain: city
   name: ATX
-  build_bonuses:
-    immediate:
-      users: 10
-    production:
-      HR: 1
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+  build_bonuses: *id002
+  only_build:
+  - ad_campaign
 - row: 6
   col: 14
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 7
   col: 13
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 7
   col: 11
   terrain: city
   name: ATL
-  build_bonuses:
-    immediate:
-      users: 10
-    production:
-      HR: 1
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+  build_bonuses: *id002
+  only_build:
+  - ad_campaign
 - row: 7
   col: 12
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 8
   col: 12
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 8
   col: 13
-  terrain: commercial
+  terrain: sea
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 9
   col: 12
-  terrain: commercial
+  terrain: launching_pad
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 10
   col: 5
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 9
   col: 2
   terrain: gas_reserve
@@ -694,58 +1455,116 @@
   col: 4
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 11
   col: 4
-  terrain: empty
+  terrain: launching_pad
   name: ''
+  only_build:
+  - launching_pad
 - row: 9
   col: 5
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 10
   col: 13
-  terrain: commercial
+  terrain: empty
   name: ''
+  only_build:
+  - launching_pad
 - row: 9
   col: 11
-  terrain: commercial
+  terrain: sea
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 8
   col: 8
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 8
   col: 9
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 8
   col: 10
-  terrain: commercial
+  terrain: empty
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 8
   col: 1
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 11
   col: 13
-  terrain: city
-  name: MIA
+  terrain: sea
+  name: ''
   build_bonuses:
+  - build_type: null
     immediate:
       users: 10
-    production:
-      HR: 1
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+    production: {}
+  only_build:
+  - ad_campaign
 - row: 8
   col: -1
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 8
   col: 0
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 9
   col: 0
   terrain: sun
@@ -758,281 +1577,320 @@
   col: -3
   terrain: city
   name: LA
-  build_bonuses:
-    immediate:
-      users: 10
-    production:
-      HR: 1
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+  build_bonuses: *id002
+  only_build:
+  - ad_campaign
 - row: 8
   col: -2
   terrain: commercial
   name: ''
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 6
   col: -3
-  terrain: commercial
+  terrain: launching_pad
   name: ''
+  only_build:
+  - launching_pad
 - row: 9
   col: -1
-  terrain: sun
+  terrain: empty
   name: ''
 - row: 10
   col: 3
   terrain: empty
   name: ''
+  only_build:
+  - power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - ad_campaign
+  - factory
 - row: 9
   col: 6
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: &id001
+  build_bonuses: &id003
+  - build_type: null
+    immediate:
       money: -150
-    production: &id002 {}
+    production: {}
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 0
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 1
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
-- row: 2
-  col: -4
-  terrain: sea
-  name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 3
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 4
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 5
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 6
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 7
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 8
   col: -3
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 11
   col: 5
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 10
   col: 6
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 9
   col: 7
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 9
   col: 8
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 9
   col: 9
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 9
   col: 10
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 10
   col: 11
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 10
   col: 12
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 11
   col: 12
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
-- row: 11
-  col: 14
-  terrain: sea
-  name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 10
   col: 14
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 9
   col: 13
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 8
   col: 14
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 7
   col: 14
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 6
   col: 15
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 5
   col: 15
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 4
   col: 16
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 3
   col: 15
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 2
   col: 15
-  terrain: city
-  name: PHI
+  terrain: commercial
+  name: ''
   build_bonuses:
+  - build_type: null
     immediate:
       users: 10
-    production:
-      HR: 1
-  adjacency_bonuses:
-    users: 2
-    suits: 1
+    production: {}
+  only_build:
+  - ad_campaign
 - row: 2
   col: 16
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 1
   col: 15
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 0
   col: 16
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
-- row: 12
-  col: 13
-  terrain: sea
-  name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
-- row: 12
-  col: 14
-  terrain: sea
-  name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 10
   col: 2
   terrain: natural_park
   name: ''
-  build_bonuses:
-    immediate: *id003
-    production: *id004
+  build_bonuses: *id001
 - row: 11
   col: 3
   terrain: gas_reserve
@@ -1075,128 +1933,150 @@
   name: ''
 - row: 10
   col: 7
-  terrain: offshore_wind
+  terrain: sea
   name: ''
   build_bonuses:
-    immediate: &id005
+  - build_type: null
+    immediate:
       money: -100
-    production: &id006 {}
+    production: {}
+  only_build: []
 - row: 10
   col: 8
   terrain: offshore_wind
   name: ''
   build_bonuses:
-    immediate: *id005
-    production: *id006
+    immediate: &id004
+      money: -100
+    production: &id005 {}
+  only_build: []
 - row: 10
   col: 9
   terrain: offshore_wind
   name: ''
   build_bonuses:
-    immediate: *id005
-    production: *id006
+    immediate: *id004
+    production: *id005
+  only_build: []
 - row: 10
   col: 10
-  terrain: offshore_wind
+  terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id005
-    production: *id006
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 11
   col: 6
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 11
   col: 7
-  terrain: offshore_solar
+  terrain: sea
   name: ''
-  build_bonuses:
-    immediate:
-      money: -150
-    production: {}
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 11
   col: 8
   terrain: offshore_solar
   name: ''
-  build_bonuses:
+  build_bonuses: &id006
+  - build_type: pv_power_plant
     immediate:
       money: -150
     production: {}
+  only_build:
+  - pv_power_plant
 - row: 11
   col: 9
   terrain: offshore_solar
   name: ''
-  build_bonuses:
-    immediate:
-      money: -150
-    production: {}
+  build_bonuses: *id006
+  only_build:
+  - pv_power_plant
 - row: 11
   col: 10
-  terrain: offshore_solar
+  terrain: sea
   name: ''
   build_bonuses:
+  - build_type: pv_power_plant
     immediate:
       money: -150
     production: {}
+  only_build:
+  - pv_power_plant
 - row: 11
   col: 11
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 12
   col: 6
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 12
   col: 7
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 12
   col: 8
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 12
   col: 9
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 12
   col: 10
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 12
   col: 11
   terrain: sea
   name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
-- row: 12
-  col: 12
-  terrain: sea
-  name: ''
-  build_bonuses:
-    immediate: *id001
-    production: *id002
+  build_bonuses: *id003
+  only_build:
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: -3
   col: 4
   terrain: space
@@ -1205,6 +2085,9 @@
     immediate: &id007
       money: -200
     production: &id008 {}
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 3
   terrain: space
@@ -1212,6 +2095,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 5
   terrain: space
@@ -1219,6 +2105,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 2
   terrain: space
@@ -1226,6 +2115,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 1
   terrain: space
@@ -1233,6 +2125,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 0
   terrain: space
@@ -1240,6 +2135,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: -1
   terrain: space
@@ -1247,6 +2145,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: -2
   terrain: space
@@ -1254,6 +2155,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: -3
   terrain: space
@@ -1261,6 +2165,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 6
   terrain: space
@@ -1268,6 +2175,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 7
   terrain: space
@@ -1275,6 +2185,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 8
   terrain: space
@@ -1282,6 +2195,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 9
   terrain: space
@@ -1289,6 +2205,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 10
   terrain: space
@@ -1296,6 +2215,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 11
   terrain: space
@@ -1303,6 +2225,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 12
   terrain: space
@@ -1310,6 +2235,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 13
   terrain: space
@@ -1317,6 +2245,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -3
   col: 14
   terrain: space
@@ -1324,6 +2255,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 13
   terrain: space
@@ -1331,6 +2265,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 14
   terrain: space
@@ -1338,6 +2275,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 12
   terrain: space
@@ -1345,6 +2285,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 11
   terrain: space
@@ -1352,6 +2295,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 10
   terrain: space
@@ -1359,6 +2305,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 9
   terrain: space
@@ -1366,6 +2315,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 8
   terrain: space
@@ -1373,6 +2325,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 7
   terrain: space
@@ -1380,6 +2335,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 6
   terrain: space
@@ -1387,14 +2345,19 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 5
   terrain: space
   name: ''
   build_bonuses:
-    immediate:
-      money: -200
-    production: {}
+    immediate: *id007
+    production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 4
   terrain: space
@@ -1402,6 +2365,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 3
   terrain: space
@@ -1409,6 +2375,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 2
   terrain: space
@@ -1416,6 +2385,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 1
   terrain: space
@@ -1423,6 +2395,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: 0
   terrain: space
@@ -1430,6 +2405,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: -1
   terrain: space
@@ -1437,6 +2415,9 @@
   build_bonuses:
     immediate: *id007
     production: *id008
+  only_build:
+  - satellite_solar
+  - satellite_dc
 - row: -2
   col: -2
   terrain: space
@@ -1444,11 +2425,24 @@
   build_bonuses:
     immediate: *id007
     production: *id008
-- row: 1
-  col: 6
-  terrain: empty
+  only_build:
+  - satellite_solar
+  - satellite_dc
+- row: -2
+  col: -7
+  terrain: natural_park
   name: ''
-- row: 1
-  col: 7
-  terrain: empty
+  build_bonuses: *id001
+- row: -2
+  col: -6
+  terrain: rare_metal_mine
+  name: ''
+- row: -3
+  col: -6
+  terrain: natural_park
+  name: ''
+  build_bonuses: *id001
+- row: -3
+  col: -7
+  terrain: gas_reserve
   name: ''

@@ -328,10 +328,12 @@ class Game:
 
     def draw_regulation(self):
         self.phase = Phase.REGULATION
-        cards = self.draw_from(self.regulation_deck, 1)
+        cards = self.draw_from(self.regulation_deck, 1, "regulation")
         self.current_regulation = cards[0] if cards else None
         for player in self.players.values():
             player.regulation_resolved = False
+            player.went_to_court = False
+            player.court_start_ready = False
 
     def any_player_affected(self) -> bool:
         if not self.current_regulation:
@@ -408,6 +410,11 @@ class Game:
 
     def advance_past_regulation(self):
         """After regulation resolved, begin draft for this year."""
+        # Move resolved event card to discard so the events deck can be reshuffled
+        # when regulation/world-event cards run out.
+        if self.current_regulation is not None:
+            self.discard_pile.append(self.current_regulation)
+            self.current_regulation = None
         self.begin_year_draft()
 
     # ── player turns phase ───────────────────────────────────
@@ -419,8 +426,8 @@ class Game:
         return self.turn_order[self.current_turn_index % len(self.turn_order)]
 
     def next_turn(self) -> str | None:
-        """Advance to next active player. Skips year_done and empty-hand
-        players (marks them year_done). Returns None when all are done."""
+        """Advance to next active player. Skips year_done players.
+        Returns None when all are done."""
         if not self.turn_order:
             return None
         current = self.players.get(self.current_player_id)
@@ -435,9 +442,6 @@ class Game:
             if not player:
                 continue
             if player.year_done:
-                continue
-            if len(player.hand) == 0:
-                player.year_done = True
                 continue
             return pid
         return None
@@ -534,7 +538,8 @@ class Game:
         m: dict[int, str] = {}
         for deck in (self.projects_deck, self.boosters_deck,
                      self.regulation_deck, self.company_cards,
-                     self.discard_pile, self.draft_discard):
+                     self.discard_pile, self.draft_discard,
+                     self.build_deck, self.shared_build_row):
             for c in deck:
                 if c.id:
                     m[c.id] = c.name

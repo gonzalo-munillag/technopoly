@@ -330,15 +330,39 @@ function updateRegulationUI() {
   if (!lastGameState || !lastPrivateState) return;
   if (lastGameState.phase !== "regulation") return;
 
+  // Local guard: once this player has chosen (Accept/Go to Court), never
+  // re-open the choice buttons for this same event due to state timing races.
+  if (myRegulationCommitted && !lastPrivateState.regulation_resolved) {
+    regulationActions.classList.add("hidden");
+    regProceedBtn.classList.add("hidden");
+    if (myWentToCourt || dieRolling) {
+      // Court flow: wait for die/result
+      regulationWaiting.classList.add("hidden");
+    } else {
+      // Compliance flow: immediate waiting state
+      regulationWaiting.textContent = "Waiting for others to resolve their compliance...";
+      regulationWaiting.classList.remove("hidden");
+    }
+    return;
+  }
+
   if (lastPrivateState.regulation_resolved) {
     regulationActions.classList.add("hidden");
     regProceedBtn.classList.add("hidden");
     const allResolved = Object.values(lastGameState.players).every(p => p.regulation_resolved);
-    const iWentToCourt = lastPrivateState.went_to_court || myWentToCourt;
+    const iWentToCourt = myWentToCourt
+      || lastPrivateState.went_to_court
+      || (myPlayerId && lastGameState.players?.[myPlayerId]?.went_to_court);
     if (allResolved) {
-      regulationWaiting.classList.add("hidden");
-      if (iWentToCourt && !dieRolling) {
+      if (iWentToCourt && !dieRolling && !_courtStartYearClicked) {
+        // Show "Start Year" only if this player hasn't already clicked it
+        regulationWaiting.classList.add("hidden");
         regStartYearBtn.classList.remove("hidden");
+      } else if (_courtStartYearClicked) {
+        // Already clicked — keep the waiting message, hide the button
+        regStartYearBtn.classList.add("hidden");
+        regulationWaiting.textContent = "Waiting for other players to resolve their court drama...";
+        regulationWaiting.classList.remove("hidden");
       }
       // else: acceptance player waits silently, or die still spinning
     } else {
@@ -349,7 +373,12 @@ function updateRegulationUI() {
   } else {
     regulationWaiting.classList.add("hidden");
     regStartYearBtn.classList.add("hidden");
-    if (lastPrivateState.regulation_affected) {
+    // Use the value from regulation_alert (authoritative) if available;
+    // fall back to private state only on reconnect when regulation_alert was missed.
+    const affected = myRegulationAffected !== null
+      ? myRegulationAffected
+      : lastPrivateState.regulation_affected;
+    if (affected) {
       regulationActions.classList.remove("hidden");
       regProceedBtn.classList.add("hidden");
     } else {
@@ -366,6 +395,10 @@ socket.on("game_ended", () => {
   myName = null;
   lastGameState = null;
   lastPrivateState = null;
+  myRegulationAffected = null;
+  myWentToCourt = false;
+  myRegulationCommitted = false;
+  _courtStartYearClicked = false;
 });
 
 socket.on("player_bankrupt", (data) => {
@@ -448,6 +481,7 @@ function getRepMod(rep) {
 // ── Render game state ───────────────────────────────────────
 function renderGameState(state) {
   lastGameState = state;
+  rebuildPlayerColors();
   rebuildCardIndex();
   yearBadge.textContent = `Year ${state.year}`;
   phaseBadge.textContent = PHASE_LABELS[state.phase] || state.phase;
@@ -456,8 +490,8 @@ function renderGameState(state) {
     const p = state.params;
     const bs = document.getElementById("buy-server-btn");
     const ba = document.getElementById("buy-ad-btn");
-    if (bs) bs.setAttribute("data-tip", `${p.buy_server_engineers ?? 1}🔧 + 💰$${p.buy_server_money ?? 1}M`);
-    if (ba) ba.setAttribute("data-tip", `${p.buy_ad_suits ?? 1}👔 + 💰$${p.buy_ad_money ?? 1}M`);
+    if (bs) bs.setAttribute("data-tip", `${p.buy_server_engineers ?? 1}🔧 + 💰$${p.buy_server_money ?? 1}B`);
+    if (ba) ba.setAttribute("data-tip", `${p.buy_ad_suits ?? 1}👔 + 💰$${p.buy_ad_money ?? 1}B`);
   }
   showPhaseArea(state.phase);
 
@@ -570,7 +604,7 @@ function renderDraft(pool, draftedFuckups) {
     const pd = lastGameState?.params?.projects_draw ?? 3;
     const bd = lastGameState?.params?.boosters_draw ?? 3;
     const dc = lastGameState?.params?.draft_cost ?? 3;
-    hintEl.textContent = `You drew ${pd} Projects + ${bd} Boosters. Pay ${dc} money to keep each card. Fuck-up cards are free and go straight to your hand.`;
+    hintEl.textContent = `You drew ${pd} Projects + ${bd} Boosters. Pay $${dc}B to keep each card. Fuck-up cards are free and go straight to your hand.`;
   }
 
   const draftRow = document.createElement("div");
@@ -594,7 +628,7 @@ function renderDraft(pool, draftedFuckups) {
       const keepBtn = document.createElement("button");
       keepBtn.className = "btn btn-sm btn-keep";
       const draftCost = lastGameState?.params?.draft_cost ?? 3;
-      keepBtn.textContent = `Keep ($${draftCost}M)`;
+      keepBtn.textContent = `Keep ($${draftCost}B)`;
       keepBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         socket.emit("keep_card", { card_name: card.name });
@@ -790,6 +824,19 @@ function renderRegulation(card) {
 }
 
 socket.on("regulation_alert", (data) => {
+  // Reset all per-event client state so previous year's choices don't bleed through
+  myWentToCourt = false;
+  myRegulationCommitted = false;
+  _courtStartYearClicked = false;
+  dieRolling = false;
+  pendingCourtResult = null;
+  pendingStartYearBtn = false;
+  myRegulationAffected = data.affected;  // authoritative source for this event
+  dieContainer.classList.add("hidden");
+  dieFace.classList.remove("rolling");
+  regStartYearBtn.classList.add("hidden");
+  regulationResultBox.classList.add("hidden");
+
   if (data.affected) {
     const compText = Object.entries(data.compliance)
       .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
@@ -826,7 +873,8 @@ socket.on("regulation_alert", (data) => {
 
 const dieContainer = document.getElementById("die-container");
 const dieFace = document.getElementById("die-face");
-const DIE_FACES = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+// \uFE0E = text variation selector — forces die pip chars to render as text, not emoji images
+const DIE_FACES = ["⚀\uFE0E", "⚁\uFE0E", "⚂\uFE0E", "⚃\uFE0E", "⚄\uFE0E", "⚅\uFE0E"];
 let dieRolling = false;
 let pendingCourtResult = null;
 let pendingStartYearBtn = false;  // show Start Year after die finishes
@@ -834,7 +882,7 @@ let pendingStartYearBtn = false;  // show Start Year after die finishes
 function startDieRoll() {
   dieContainer.classList.remove("hidden");
   dieFace.classList.add("rolling");
-  dieFace.textContent = "🎲";
+  dieFace.textContent = DIE_FACES[Math.floor(Math.random() * 6)];
   dieRolling = true;
   pendingCourtResult = null;
   let ticks = 0;
@@ -874,6 +922,7 @@ function applyRegulationResult(data) {
   const lostCards = (data.lost_cards || []);
   const lostMsg = lostCards.length ? `<p>Lost card(s): <strong>${lostCards.join(", ")}</strong></p>` : "";
   if (data.action === "accept") {
+    myRegulationCommitted = true;
     myWentToCourt = false;
     const compText = Object.entries(data.compliance || data.penalty || {})
       .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
@@ -881,6 +930,7 @@ function applyRegulationResult(data) {
     regulationWaiting.textContent = "Waiting for others to resolve their compliance...";
     regulationWaiting.classList.remove("hidden");
   } else {
+    myRegulationCommitted = true;
     myWentToCourt = true;
     const result = data.won ? "Won" : "Lost";
     let msg = `<p>Court roll: <strong>${data.roll}</strong> (needed <span class="court-threshold">&ge; ${data.threshold}</span>) — <strong>${result}!</strong></p>`;
@@ -892,14 +942,34 @@ function applyRegulationResult(data) {
       msg += `<p>No penalty — you beat the case and keep your cards!</p>`;
     }
     regulationResultBox.innerHTML = msg;
-    regulationWaiting.textContent = "Waiting for all court players to start the year...";
-    regulationWaiting.classList.remove("hidden");
+    // If all players already resolved (regulation_all_resolved may have fired while the die
+    // was still animating, at a moment when myWentToCourt was still false), show Start Year now.
+    const allAlreadyResolved = lastGameState &&
+      Object.values(lastGameState.players || {}).every(p => p.regulation_resolved);
+    if (allAlreadyResolved) {
+      regStartYearBtn.classList.remove("hidden");
+      regulationWaiting.classList.add("hidden");
+    } else {
+      regulationWaiting.textContent = "Waiting for all court players to start the year...";
+      regulationWaiting.classList.remove("hidden");
+    }
   }
   regProceedBtn.classList.add("hidden");
 }
 
-regAcceptBtn.addEventListener("click", () => socket.emit("regulation_accept"));
+regAcceptBtn.addEventListener("click", () => {
+  myRegulationCommitted = true;
+  myWentToCourt = false;
+  regulationActions.classList.add("hidden");  // prevent double-click
+  regulationWaiting.textContent = "Waiting for others to resolve their compliance...";
+  regulationWaiting.classList.remove("hidden");
+  socket.emit("regulation_accept");
+});
 regCourtBtn.addEventListener("click", () => {
+  myRegulationCommitted = true;
+  myWentToCourt = true;
+  regulationActions.classList.add("hidden");  // prevent double-click; die takes over
+  regulationWaiting.classList.add("hidden");
   startDieRoll();
   socket.emit("regulation_court");
 });
@@ -911,6 +981,9 @@ regProceedBtn.addEventListener("click", () => {
 });
 
 let myWentToCourt = false;
+let myRegulationCommitted = false; // local latch: once chosen (accept/court), never show choice buttons again this event
+let _courtStartYearClicked = false;  // true once this player clicks "Start Year"
+let myRegulationAffected = null;    // set by regulation_alert; null means fall back to private state
 
 socket.on("regulation_result", (data) => {
   if (data.action === "court" && dieRolling) {
@@ -933,8 +1006,12 @@ socket.on("regulation_all_resolved", (data) => {
     pendingStartYearBtn = true;
     return;
   }
-  // Only court players get the Start Year button
-  if (myWentToCourt) {
+  // Check via all available sources: myWentToCourt (set after die), private-state, public game-state
+  const iAmCourtPlayer = myWentToCourt
+    || (lastPrivateState?.went_to_court)
+    || (myPlayerId && lastGameState?.players?.[myPlayerId]?.went_to_court)
+    || ((data?.court_player_ids || []).includes(myPlayerId));
+  if (iAmCourtPlayer) {
     regStartYearBtn.classList.remove("hidden");
   } else {
     regulationWaiting.textContent = "Waiting for court players to start the year...";
@@ -942,10 +1019,22 @@ socket.on("regulation_all_resolved", (data) => {
   }
 });
 
+// Direct server → court-player signal: show the Start Year button.
+// This is a redundant safety net alongside regulation_all_resolved.
+socket.on("prompt_start_year", () => {
+  if (dieRolling) {
+    pendingStartYearBtn = true;
+  } else {
+    regStartYearBtn.classList.remove("hidden");
+    regulationWaiting.classList.add("hidden");
+  }
+});
+
 regStartYearBtn.addEventListener("click", () => {
+  _courtStartYearClicked = true;
   socket.emit("start_year_after_regulation");
   regStartYearBtn.classList.add("hidden");
-  regulationWaiting.textContent = "Waiting for other court players to start the year...";
+  regulationWaiting.textContent = "Waiting for other players to resolve their court drama...";
   regulationWaiting.classList.remove("hidden");
 });
 
@@ -1064,7 +1153,7 @@ function showPaymentPopup(card, useOptional, callback) {
     const info = document.createElement("p");
     info.className = "payment-info";
     info.innerHTML = `No player has played <em>${feeCardName}</em> yet.<br>
-      Your fee of <strong>💰$${feeAmt}M</strong> goes to the <strong>bank</strong> (no one receives it).`;
+      Your fee of <strong>💰$${feeAmt}B</strong> goes to the <strong>bank</strong> (no one receives it).`;
     popup.appendChild(info);
 
     const actions = document.createElement("div");
@@ -1086,8 +1175,8 @@ function showPaymentPopup(card, useOptional, callback) {
     const info = document.createElement("p");
     info.className = "payment-info";
     info.innerHTML = feePayees.length === 1
-      ? `You owe <strong>💰$${feeAmt}M</strong> for <em>${feeCardName}</em>.<br>Click the player below to pay and play:`
-      : `You owe <strong>💰$${feeAmt}M</strong> for <em>${feeCardName}</em>.<br>Choose who receives the fee:`;
+      ? `You owe <strong>💰$${feeAmt}B</strong> for <em>${feeCardName}</em>.<br>Click the player below to pay and play:`
+      : `You owe <strong>💰$${feeAmt}B</strong> for <em>${feeCardName}</em>.<br>Choose who receives the fee:`;
     popup.appendChild(info);
 
     const btnRow = document.createElement("div");
@@ -1179,7 +1268,7 @@ function renderHand(hand) {
         badge.textContent = "💸 Fee waived (you own it)";
         badge.classList.add("fee-waived");
       } else if (payees.length === 0) {
-        badge.textContent = "💸 Fee: no one to pay";
+        badge.textContent = "💸 Fee: to the bank";
         badge.classList.add("fee-free");
       } else if (payees.length === 1) {
         badge.textContent = `💸 Fee → ${payees[0].name}`;
@@ -1221,20 +1310,20 @@ function renderPlayedCards(cards) {
     tagSpan.textContent = c.tag || c.card_type;
     div.appendChild(tagSpan);
 
-    // Tier indicator (star summary only — upgrade happens in "Show All Cards")
-    const cardTiers = c.tiers || [];
-    if (cardTiers.length > 0 && c.current_tier > 0) {
+    // Tier indicator (star summary — always shown when card has tiers, grayed until purchased)
+    const cardTiers = Array.isArray(c.tiers) ? c.tiers : [];
+    if (cardTiers.length > 0) {
       const tierRow = document.createElement("div");
       tierRow.className = "played-mini-tier-row";
       const maxTier = cardTiers.length;
-      let tierStr = "";
+      const curTier = c.current_tier ?? 0;  // 0 = just played, tiers start at 1
       for (let t = 1; t <= maxTier; t++) {
-        tierStr += t <= c.current_tier ? "★" : "☆";
+        const star = document.createElement("span");
+        // curTier=1→played/no buys; curTier=2→T1 bought; curTier=3→T2 bought, etc.
+        star.textContent = "★";
+        star.className = curTier >= t + 1 ? "mini-star mini-star-owned" : "mini-star mini-star-locked";
+        tierRow.appendChild(star);
       }
-      const tierSpan = document.createElement("span");
-      tierSpan.className = "played-tier-stars";
-      tierSpan.textContent = tierStr;
-      tierRow.appendChild(tierSpan);
       div.appendChild(tierRow);
     }
 
@@ -1378,7 +1467,7 @@ handModal.addEventListener("click", (e) => {
 
 // ── Sidebar renders ─────────────────────────────────────────
 const RESOURCE_ORDER = ["money", "data", "engineers", "suits", "servers", "ads"];
-const RESOURCE_WIDE = new Set(["money", "data"]);
+const RESOURCE_WIDE = new Set([]);  // all resources share the 2-column grid
 
 function renderResources(resources) {
   resourcesDiv.innerHTML = "";
@@ -1399,6 +1488,28 @@ function renderResources(resources) {
 // Fallback palette — matches _PLAYER_COLORS on the backend
 const PIE_PLAYER_COLORS = ["#f9c912","#00cfff","#4dff91","#ff5ef3","#ff4422","#ff9900","#b966ff","#00e5c3"];
 
+// Shared map pid → color, rebuilt every time game state arrives.
+// Used by pie chart AND board tile rendering so colors are always in sync.
+let playerColorMap = {};
+
+function rebuildPlayerColors() {
+  const players = lastGameState?.players || {};
+  let colorIdx = 0;
+  const usedColors = new Set();
+  const map = {};
+  for (const [pid, p] of Object.entries(players)) {
+    let color = p.color && p.color.startsWith("#") ? p.color : null;
+    if (!color || usedColors.has(color)) {
+      while (usedColors.has(PIE_PLAYER_COLORS[colorIdx % PIE_PLAYER_COLORS.length])) colorIdx++;
+      color = PIE_PLAYER_COLORS[colorIdx % PIE_PLAYER_COLORS.length];
+      colorIdx++;
+    }
+    usedColors.add(color);
+    map[pid] = color;
+  }
+  playerColorMap = map;
+}
+
 function renderUsersPie() {
   const canvas = document.getElementById("users-pie");
   const info = document.getElementById("users-info");
@@ -1411,19 +1522,9 @@ function renderUsersPie() {
 
   const slices = [];
   let myUsers = 0;
-  let colorIdx = 0;
-  const usedColors = new Set();
   for (const [pid, p] of Object.entries(players)) {
     const u = p.users || 0;
-    // Resolve color: use p.color if it's a valid, unique hex; otherwise pick from fallback palette
-    let color = p.color && p.color.startsWith("#") ? p.color : null;
-    if (!color || usedColors.has(color)) {
-      // Find a fallback color not already used
-      while (usedColors.has(PIE_PLAYER_COLORS[colorIdx % PIE_PLAYER_COLORS.length])) colorIdx++;
-      color = PIE_PLAYER_COLORS[colorIdx % PIE_PLAYER_COLORS.length];
-      colorIdx++;
-    }
-    usedColors.add(color);
+    const color = playerColorMap[pid] || PIE_PLAYER_COLORS[0];
     if (u > 0) slices.push({ pid, name: p.name, users: u, color });
     if (pid === myId) myUsers = u;
   }
@@ -1597,14 +1698,6 @@ function renderProduction(production) {
     productionDiv.appendChild(div);
   });
 
-  // Show money production only when non-zero (from factory_refund)
-  const moneyProd = production["money"] ?? 0;
-  if (moneyProd > 0) {
-    const div = document.createElement("div");
-    div.className = "resource-item resource-wide";
-    div.innerHTML = `<span class="label">💰 Factory income</span><span class="value">$${moneyProd}B/yr</span>`;
-    productionDiv.appendChild(div);
-  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -1656,6 +1749,7 @@ function cardNameById(id) {
 const CARD_SUBTYPE_EMOJIS = {
   "social platform":          "🐦",
   "hardware manufacturer":    "📱",
+  "chip enterprise":          "🔬",
   "software service":         "📜",
   "software platform":        "🏞️",
   "software engine":          "⚙️",
@@ -1663,20 +1757,25 @@ const CARD_SUBTYPE_EMOJIS = {
   "search service":           "🔍",
   "store":                    "🏪",
   "power plant":              "⚡",
+  "pv power plant":           "☀️",
+  "wind power plant":         "💨",
+  "solar thermal":            "🌡️",
   "data center":              "🗄️",
   "office":                   "🏢",
   "ad campaign":              "📢",
   "lobby":                    "🏛️",
   "rare metal mine":          "🔩",
   "hydroelectric power plant":"💧",
-  "satellite":                "🛰️",
-  "network":                  "🕵️",
+  "satellite solar":          "🛰️☀️",
+  "satellite data center":    "🛰️🖥️",
+  "cyber attack":             "🕵️",
   "cyber defense":            "🛡️",
 };
 
 const CARD_TYPE_TINTS = {
   "social platform":       "#1a2a3e",  // dark blue
   "hardware manufacturer": "#1a1108",  // dark charcoal-brown (was factory, now hw manufacturer)
+  "chip enterprise":       "#0f1a2e",  // dark navy-blue
   "software service":      "#3a1515",  // dark red
   "software platform":     "#251a3a",  // dark purple
   "software engine":       "#0f2a2a",  // dark aquamarine
@@ -1684,14 +1783,18 @@ const CARD_TYPE_TINTS = {
   "search service":        "#0f2a18",  // dark green
   "store":                 "#252525",  // dark neutral
   "power plant":           "#1e1208",  // dark brown
+  "pv power plant":        "#2a1e00",  // dark amber
+  "wind power plant":      "#0a2020",  // dark teal
+  "solar thermal":         "#2a0a00",  // dark deep red
   "data center":           "#1a1e22",  // dark slate
   "office":                "#0f1a3a",  // dark royal blue
   "ad campaign":           "#2e0f1e",  // dark pink
   "lobby":                 "#1a2a1a",  // dark forest green
   "rare metal mine":              "#2a3a42",  // dark steel blue-grey
   "hydroelectric power plant":   "#0d3a50",
-  "satellite":                   "#0a0a1a",
-  "network":                     "#1a1a2e",  // dark indigo
+  "satellite solar":             "#1a1a0a",  // dark amber-black
+  "satellite data center":       "#0a0a1a",  // near-black
+  "cyber attack":                "#1a1a2e",  // dark indigo
   "cyber defense":               "#0a2a1a",  // dark teal-green
 };
 
@@ -1757,8 +1860,9 @@ function createCardElement(card, options = {}) {
     boostsHtml = `<div class="card-boosts"><span class="card-section-label">Boosts</span><span class="card-effects-row">`;
     card.boosts.forEach((b, i) => {
       const bonusEntries = Object.entries(b.bonus || {}).filter(([, v]) => v);
-      if (!bonusEntries.length) return;
-      const bonusStr = bonusEntries.map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)}${emojiRes(k)}`).join(" ");
+      const bonusStr = bonusEntries.length
+        ? bonusEntries.map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)}${emojiRes(k)}`).join(" ")
+        : `<em style="opacity:.8">no bonus set</em>`;
       let targetStr = "";
       if (b.target_id) {
         const ids = Array.isArray(b.target_id) ? b.target_id : [b.target_id];
@@ -1808,7 +1912,8 @@ function createCardElement(card, options = {}) {
 
   // Enhancement tiers — rendered as interactive buttons in createCardElement post-process
   let tiersHtml = "";
-  const cardTiers = card.tiers || [];
+  const rawTiers = card.tiers;
+  const cardTiers = Array.isArray(rawTiers) ? rawTiers : [];
   if (cardTiers.length > 0) {
     tiersHtml = `<div class="card-tiers" data-instance-id="${card.instance_id || ""}"><span class="card-section-label">Tiers</span></div>`;
   }
@@ -1826,6 +1931,7 @@ function createCardElement(card, options = {}) {
   const costs = card.costs || {};
   const COST_SKIP = new Set(["fee", "fee_card_id", "fee_card_type", "fee_company_type", "payee_card_id"]);
   const hasCosts = Object.entries(costs).some(([k, v]) => v && !COST_SKIP.has(k));
+  const hasFeeSection = !!(costs.fee && (costs.fee_card_id || costs.fee_card_type || costs.fee_company_type));
   const myRes = lastPrivateState?.resources;
   const canAffordRes = (res, amt) => {
     if (!myRes || !amt) return null;
@@ -1837,7 +1943,7 @@ function createCardElement(card, options = {}) {
                                  : (myRes[res] ?? 0);
     return have >= amt;
   };
-  if (hasCosts) {
+  if (hasCosts || hasFeeSection) {
     costsHtml = `<div class="card-costs"><span class="card-section-label">Cost</span>`;
     for (const [res, amt] of Object.entries(costs)) {
       if (!amt || COST_SKIP.has(res)) continue;
@@ -1854,7 +1960,7 @@ function createCardElement(card, options = {}) {
       if (feeLabel) {
         const feeOk = myRes ? (myRes.money ?? 0) >= feeAmt : null;
         const feeCls = feeOk === null ? "" : feeOk ? " cost-ok" : " cost-nok";
-        costsHtml += `<span class="card-cost-item card-cost-fee${feeCls}">💸 $${feeAmt}M → <em>${feeLabel}</em></span>`;
+        costsHtml += `<span class="card-cost-item card-cost-fee${feeCls}">💸 $${feeAmt}B → <em>${feeLabel}</em></span>`;
       }
     }
     costsHtml += `</div>`;
@@ -1903,7 +2009,9 @@ function createCardElement(card, options = {}) {
     const phase = lastGameState?.phase;
     const isMyCard = (lastGameState?.players?.[myPlayerId]?.played_cards || [])
       .some(c => c.instance_id === card.instance_id);
-    const canInteract = isMyCard && myTurn && phase === "player_turns";
+    const actionsLeft = (lastGameState?.params?.cards_per_turn ?? 2)
+      - (lastPrivateState?.cards_played_this_turn ?? 0);
+    const canInteract = isMyCard && myTurn && phase === "player_turns" && actionsLeft > 0;
 
     cardTiers.forEach((t, i) => {
       const tierNum = i + 1;
@@ -1941,11 +2049,14 @@ function createCardElement(card, options = {}) {
         btn.disabled = true;
         btn.title = `Tier ${tierNum} purchased ✓`;
       } else if (isNext) {
-        btn.classList.add(canAfford ? "tier-btn-available" : "tier-btn-cant");
-        btn.title = canAfford
-          ? `Purchase T${tierNum} for ${cost}PB — ${dataHint}`
-          : `Need ${cost}PB to purchase — ${dataHint}`;
-        if (canAfford) {
+        const blocked = !canInteract && myTurn && phase === "player_turns";
+        const noActions = blocked && actionsLeft <= 0;
+        btn.classList.add(canAfford && canInteract ? "tier-btn-available" : "tier-btn-cant");
+        if (noActions) {
+          btn.title = `No actions left this turn`;
+          btn.disabled = true;
+        } else if (canAfford && canInteract) {
+          btn.title = `Purchase T${tierNum} for ${cost}PB — ${dataHint}`;
           // Click always goes to server — it validates turn/phase and returns an error if needed.
           // Immediately disable after click to prevent double-firing while server processes.
           btn.addEventListener("click", (e) => {
@@ -1954,6 +2065,9 @@ function createCardElement(card, options = {}) {
             socket.emit("upgrade_card_tier", { instance_id: card.instance_id });
           });
         } else {
+          btn.title = canAfford
+            ? `Purchase T${tierNum} for ${cost}PB — ${dataHint}`
+            : `Need ${cost}PB to purchase — ${dataHint}`;
           btn.disabled = true;
         }
       } else {
@@ -2064,22 +2178,33 @@ function renderParamsForm(params) {
   paramsBody.appendChild(form);
 }
 
+let _paramsModalIntent = false;  // true only when this client explicitly opened the modal
+
 document.getElementById("edit-params-btn").addEventListener("click", () => {
+  _paramsModalIntent = true;
   socket.emit("get_params");
 });
 document.getElementById("edit-params-lobby-btn").addEventListener("click", () => {
+  _paramsModalIntent = true;
   socket.emit("get_params");
 });
 document.getElementById("close-params-modal").addEventListener("click", () => {
+  _paramsModalIntent = false;
   paramsModal.classList.add("hidden");
 });
 paramsModal.addEventListener("click", (e) => {
-  if (e.target === paramsModal) paramsModal.classList.add("hidden");
+  if (e.target === paramsModal) {
+    _paramsModalIntent = false;
+    paramsModal.classList.add("hidden");
+  }
 });
 
 socket.on("params_data", (data) => {
   renderParamsForm(data);
-  paramsModal.classList.remove("hidden");
+  // Only open the modal if this client explicitly requested it
+  if (_paramsModalIntent) {
+    paramsModal.classList.remove("hidden");
+  }
 });
 
 // ── Fetch Data (browser writes to local filesystem) ─────────
@@ -2219,8 +2344,15 @@ function showFloatingSuccess(msg) {
 const cardPlayedPopup = document.getElementById("card-played-popup");
 const cardPlayedMsg   = document.getElementById("card-played-msg");
 const cardPlayedBody  = document.getElementById("card-played-body");
-document.getElementById("card-played-ok").addEventListener("click", () => cardPlayedPopup.classList.add("hidden"));
-cardPlayedPopup.addEventListener("click", (e) => { if (e.target === cardPlayedPopup) cardPlayedPopup.classList.add("hidden"); });
+let _cardPlayedTimer = null;
+
+function _hideCardPlayedPopup() {
+  cardPlayedPopup.classList.add("hidden");
+  if (_cardPlayedTimer) { clearTimeout(_cardPlayedTimer); _cardPlayedTimer = null; }
+}
+
+document.getElementById("card-played-ok").addEventListener("click", _hideCardPlayedPopup);
+cardPlayedPopup.addEventListener("click", (e) => { if (e.target === cardPlayedPopup) _hideCardPlayedPopup(); });
 
 socket.on("card_played_notification", (data) => {
   // Don't show to the player who played the card
@@ -2233,6 +2365,9 @@ socket.on("card_played_notification", (data) => {
     cardPlayedBody.textContent = data.card_name;
   }
   cardPlayedPopup.classList.remove("hidden");
+  // Auto-dismiss after 3 seconds; reset timer if another card is played quickly
+  if (_cardPlayedTimer) clearTimeout(_cardPlayedTimer);
+  _cardPlayedTimer = setTimeout(_hideCardPlayedPopup, 5000);
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -2311,12 +2446,14 @@ let _editorOpenIntent = false;  // true when user explicitly clicked "Edit Cards
 editCardsBtn.addEventListener("click", () => {
   editorContext = "grid";
   _editorOpenIntent = true;
+  editorSearch.value = "";   // clear any leftover search filter
   socket.emit("get_all_cards");
 });
 
 document.getElementById("edit-cards-lobby-btn").addEventListener("click", () => {
   editorContext = "grid";
   _editorOpenIntent = true;
+  editorSearch.value = "";   // clear any leftover search filter
   socket.emit("get_all_cards");
 });
 
@@ -2586,10 +2723,10 @@ function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = 
     }));
   makeChart("Platform", platformSlices, row2);
 
-  // Cyber Warfare — split by card type (network attack vs cyber defense)
+  // Cyber Warfare — split by card type (cyber attack vs cyber defense)
   const cyberTypeCounts = {};
   for (const card of (allCards.cyber_attack || [])) {
-    const t = card.type || "network";
+    const t = card.type || "cyber attack";
     const label = t === "cyber defense" ? "Cyber Defense 🛡️" : "Cyber Attacks 🕵️";
     cyberTypeCounts[label] = (cyberTypeCounts[label] || 0) + 1;
   }
@@ -2665,6 +2802,25 @@ function renderEditorGrid() {
   renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts, DECK_MAP,
     allCards: editorCards });
 
+  // Section navigation bar — quick jump links
+  const navBar = document.createElement("div");
+  navBar.className = "editor-section-nav";
+  for (const [ct, cards] of Object.entries(editorCards)) {
+    const n = (cards || []).length;
+    if (!n) continue;
+    const label = EDITOR_TYPE_LABELS[ct] || ct;
+    const link = document.createElement("button");
+    link.className = "editor-section-nav-link";
+    link.textContent = `${label} (${n})`;
+    link.dataset.sectionId = `editor-section-${ct}`;
+    link.addEventListener("click", () => {
+      const target = editorBody.querySelector(`[data-section-ct="${ct}"]`);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    navBar.appendChild(link);
+  }
+  editorBody.appendChild(navBar);
+
   // Track if we've already emitted the Events group banner
   let eventsGroupRendered = false;
 
@@ -2689,6 +2845,7 @@ function renderEditorGrid() {
 
     const section = document.createElement("div");
     section.className = "editor-section";
+    section.dataset.sectionCt = cardType;
 
     const headerRow = document.createElement("div");
     headerRow.className = "editor-section-header";
@@ -2705,6 +2862,7 @@ function renderEditorGrid() {
     addBtn.className = "btn btn-sm editor-add-card-btn";
     addBtn.textContent = "+ Add Card";
     addBtn.addEventListener("click", () => {
+      editorScrollTop = editorBody.scrollTop;  // remember position before opening new-card form
       editorContext = "grid";
       socket.emit("add_card", { card_type: cardType });
     });
@@ -2718,6 +2876,7 @@ function renderEditorGrid() {
     let dragSrcIndex = null;
 
     visible.forEach(({ card, index }) => {
+      try {
       const key = `${cardType}:${index}`;
       const lockStatus = editorLocksMap[key];
 
@@ -2829,6 +2988,9 @@ function renderEditorGrid() {
       }
 
       grid.appendChild(wrapper);
+      } catch (err) {
+        console.error(`Editor: failed to render card ${cardType}:${index}`, err);
+      }
     });
 
     section.appendChild(grid);
@@ -2937,16 +3099,17 @@ function renderEditorForm() {
 }
 
 const FIELD_OPTIONS = {
-  build: [null, "ad_campaign", "data_center", "factory", "hydroelectric_power_plant", "lobby_group", "office", "power_plant", "rare_metal_mine", "satellite", "store"],
+  build: [null, "ad_campaign", "data_center", "factory", "hydroelectric_power_plant", "launching_pad", "lobby_group", "office", "power_plant", "pv_power_plant", "rare_metal_mine", "satellite_dc", "satellite_solar", "solar_thermal", "store", "wind_power_plant"],
 };
 
 const TYPE_OPTIONS = [
-  "social platform", "hardware manufacturer", "software service",
+  "social platform", "hardware manufacturer", "chip enterprise", "software service",
   "software platform", "software engine",
   "online marketplace", "search service", "store", "power plant",
+  "pv power plant", "wind power plant", "solar thermal",
   "data center", "office", "ad campaign", "lobby", "rare metal mine",
-  "hydroelectric power plant", "satellite",
-  "network", "cyber defense",
+  "hydroelectric power plant", "satellite solar", "satellite data center",
+  "cyber attack", "cyber defense",
 ];
 
 // Fields that are always numeric (even when their current value is null)
@@ -3188,17 +3351,32 @@ function buildTiersField(tiers) {
   function addTierRow(tierData, idx) {
     const row = document.createElement("div");
     row.className = "editor-tier-row";
-    row.style.cssText = "display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;";
+    row.style.cssText = "display:flex;flex-direction:column;gap:.25rem;margin-bottom:.5rem;padding:.4rem .5rem;border:1px solid var(--border);border-radius:4px;";
+
+    // ── header row: label + remove button ──
+    const headerRow = document.createElement("div");
+    headerRow.style.cssText = "display:flex;align-items:center;justify-content:space-between;";
 
     const lbl = document.createElement("span");
-    lbl.style.cssText = "font-size:.75rem;color:var(--text-dim);min-width:3rem;";
-    lbl.textContent = `T${idx + 1}:`;
-    row.appendChild(lbl);
+    lbl.style.cssText = "font-size:.78rem;font-weight:600;color:var(--primary);";
+    lbl.textContent = `T${idx + 1}`;
+    headerRow.appendChild(lbl);
+
+    const rmBtn = document.createElement("button");
+    rmBtn.className = "btn btn-sm editor-remove-btn";
+    rmBtn.textContent = "×";
+    rmBtn.addEventListener("click", () => row.remove());
+    headerRow.appendChild(rmBtn);
+    row.appendChild(headerRow);
+
+    // ── gains row: users + money ──
+    const gainsRow = document.createElement("div");
+    gainsRow.style.cssText = "display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;";
 
     const usersLbl = document.createElement("span");
     usersLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
     usersLbl.textContent = "+users (M):";
-    row.appendChild(usersLbl);
+    gainsRow.appendChild(usersLbl);
 
     const usersInput = document.createElement("input");
     usersInput.type = "number";
@@ -3206,12 +3384,12 @@ function buildTiersField(tiers) {
     usersInput.min = 0;
     usersInput.value = tierData?.users ?? 0;
     usersInput.style.cssText = "width:5rem;";
-    row.appendChild(makeNumSpinner(usersInput, { min: 0 }));
+    gainsRow.appendChild(makeNumSpinner(usersInput, { min: 0 }));
 
     const moneyLbl = document.createElement("span");
-    moneyLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
+    moneyLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-left:.3rem;";
     moneyLbl.textContent = "+$B/yr:";
-    row.appendChild(moneyLbl);
+    gainsRow.appendChild(moneyLbl);
 
     const moneyInput = document.createElement("input");
     moneyInput.type = "number";
@@ -3219,12 +3397,17 @@ function buildTiersField(tiers) {
     moneyInput.min = 0;
     moneyInput.value = tierData?.money ?? 0;
     moneyInput.style.cssText = "width:5rem;";
-    row.appendChild(makeNumSpinner(moneyInput, { min: 0 }));
+    gainsRow.appendChild(makeNumSpinner(moneyInput, { min: 0 }));
+    row.appendChild(gainsRow);
+
+    // ── cost row ──
+    const costRow = document.createElement("div");
+    costRow.style.cssText = "display:flex;align-items:center;gap:.5rem;";
 
     const dataLbl = document.createElement("span");
     dataLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
-    dataLbl.textContent = "cost (PB):";
-    row.appendChild(dataLbl);
+    dataLbl.textContent = "Data cost (PB):";
+    costRow.appendChild(dataLbl);
 
     const costInput = document.createElement("input");
     costInput.type = "number";
@@ -3232,13 +3415,8 @@ function buildTiersField(tiers) {
     costInput.min = 0;
     costInput.value = tierData?.data_cost ?? 0;
     costInput.style.cssText = "width:5rem;";
-    row.appendChild(makeNumSpinner(costInput, { min: 0 }));
-
-    const rmBtn = document.createElement("button");
-    rmBtn.className = "btn btn-sm editor-remove-btn";
-    rmBtn.textContent = "×";
-    rmBtn.addEventListener("click", () => row.remove());
-    row.appendChild(rmBtn);
+    costRow.appendChild(makeNumSpinner(costInput, { min: 0 }));
+    row.appendChild(costRow);
 
     list.appendChild(row);
   }
@@ -3284,12 +3462,13 @@ function buildBoostsField(boosts) {
 
 const BOOST_TYPE_OPTIONS = [
   null,
-  "social platform", "hardware manufacturer", "software service",
+  "social platform", "hardware manufacturer", "chip enterprise", "software service",
   "software platform", "software engine",
   "online marketplace", "search service", "store", "power plant",
+  "pv power plant", "wind power plant", "solar thermal",
   "data center", "office", "ad campaign", "lobby", "rare metal mine",
-  "hydroelectric power plant", "satellite",
-  "network", "cyber defense",
+  "hydroelectric power plant", "satellite solar", "satellite data center",
+  "cyber attack", "cyber defense",
 ];
 
 function buildBoostEntry(boost) {
@@ -3487,10 +3666,18 @@ let treesData = null;
 let treesLocksMap = {};
 
 cardTreesBtn.addEventListener("click", () => {
+  editorModal.classList.add("hidden");
+  treesBody.innerHTML = '<p class="text-dim" style="padding:1rem;">Loading…</p>';
+  treesModal.classList.remove("hidden");
   socket.emit("get_card_trees");
 });
 
 closeTreesModal.addEventListener("click", () => {
+  // If currently editing a card from the trees view, go back to trees — not overview
+  if (editingKey && editorContext === "trees") {
+    _saveAndReturnToTrees();
+    return;
+  }
   if (editingKey) {
     const [ct, idx] = editingKey.split(":");
     socket.emit("unlock_card", { card_type: ct, index: parseInt(idx) });
@@ -3500,6 +3687,36 @@ closeTreesModal.addEventListener("click", () => {
   editorModal.classList.remove("hidden");
 });
 
+/** Save the currently edited tree card and re-fetch the tree view. */
+function _saveAndReturnToTrees() {
+  if (!editingKey) {
+    // Nothing to save — just refresh trees
+    treesBody.innerHTML = '<p class="text-dim" style="padding:1rem;">Loading…</p>';
+    socket.emit("get_card_trees");
+    return;
+  }
+  const [ct, idx] = editingKey.split(":");
+  const index = parseInt(idx);
+  const card = editorCards[ct]?.[index];
+  const fields = treesBody.querySelector(".editor-fields");
+
+  if (fields && card) {
+    socket.emit("save_card", { card_type: ct, index, card_data: collectFormData(fields, card) });
+  } else {
+    // Save failed to collect data — at least release the lock
+    socket.emit("unlock_card", { card_type: ct, index });
+  }
+
+  editingKey = null;
+  editorContext = "grid";
+  treesBody.innerHTML = '<p class="text-dim" style="padding:1rem;">Loading…</p>';
+  closeTreesModal.textContent = "Back to cards overview";
+
+  // Emit get_card_trees right after save_card — Socket.IO guarantees server processes
+  // events from the same client in order, so save will complete first.
+  socket.emit("get_card_trees");
+}
+
 treesModal.addEventListener("click", (e) => {
   if (e.target === treesModal) closeTreesModal.click();
 });
@@ -3508,14 +3725,25 @@ socket.on("card_trees", (data) => {
   treesData = data;
   treesLocksMap = data.locks || {};
   treesSearch.value = "";
-  renderTreesView();
+  editingKey = null;       // clear any stale edit state
+  editorContext = "grid";  // reset context so editor grid works normally
   treesModal.classList.remove("hidden");
+  editorModal.classList.add("hidden");
+  console.log("[card_trees] received:", data?.trees?.length, "trees,", data?.stats);
+  try {
+    renderTreesView();
+  } catch (err) {
+    console.error("[card_trees] renderTreesView error:", err);
+    treesBody.innerHTML = `<p style="color:#f44;padding:1rem;">Error rendering trees: ${err.message}</p>`;
+  }
 });
 
 treesSearch.addEventListener("input", () => renderTreesView());
 
 function renderTreesView() {
   if (!treesData) return;
+  // Restore the top button label when viewing the trees (not editing a card)
+  closeTreesModal.textContent = "Back to cards overview";
   const { trees, stats } = treesData;
   const query = (treesSearch.value || "").toLowerCase().trim();
 
@@ -3528,7 +3756,6 @@ function renderTreesView() {
   `;
 
   treesBody.innerHTML = "";
-  editingKey = null;
 
   if (trees.length === 0) {
     treesBody.innerHTML = '<p class="text-dim" style="padding:1rem;">No card connections found. Add boosts to leverage/innovation cards to create trees.</p>';
@@ -3560,6 +3787,7 @@ function renderTreesView() {
   filteredTrees.forEach((tree, treeIdx) => {
     const treeEl = document.createElement("div");
     treeEl.className = "tree-group";
+    try {
 
     const treeTitle = document.createElement("h3");
     treeTitle.className = "tree-title";
@@ -3668,6 +3896,13 @@ function renderTreesView() {
 
     treeEl.appendChild(treeLayout);
     treesBody.appendChild(treeEl);
+    } catch (treeErr) {
+      console.error(`[renderTreesView] error on tree ${treeIdx}:`, treeErr, tree);
+      const errEl = document.createElement("p");
+      errEl.style.cssText = "color:#f44;padding:.5rem 1rem;";
+      errEl.textContent = `Tree ${treeIdx + 1} render error: ${treeErr.message}`;
+      treesBody.appendChild(errEl);
+    }
   });
 }
 
@@ -3684,6 +3919,9 @@ function renderTreeEditForm() {
   const index = parseInt(idxStr);
   const card = editorCards[cardType]?.[index];
   if (!card) return;
+
+  // Update the top button to make clear it goes back to the tree
+  closeTreesModal.textContent = "← Back to trees (auto-saves)";
 
   treesBody.innerHTML = "";
 
@@ -3710,17 +3948,10 @@ function renderTreeEditForm() {
     fields.appendChild(buildBoostsField([]));
   }
 
-  function saveAndGoBackToTrees() {
-    const cardData = collectFormData(fields, card);
-    socket.emit("save_card", { card_type: cardType, index, card_data: cardData });
-    editingKey = null;
-    setTimeout(() => socket.emit("get_card_trees"), 300);
-  }
-
   const backBtn = document.createElement("button");
   backBtn.className = "btn btn-sm";
   backBtn.textContent = "\u2190 Back to trees (auto-saves)";
-  backBtn.addEventListener("click", saveAndGoBackToTrees);
+  backBtn.addEventListener("click", () => _saveAndReturnToTrees());
   form.appendChild(backBtn);
 
   const title = document.createElement("h3");
@@ -3736,12 +3967,7 @@ function renderTreeEditForm() {
   const saveBtn = document.createElement("button");
   saveBtn.className = "btn btn-sm btn-accent";
   saveBtn.textContent = "Save";
-  saveBtn.addEventListener("click", () => {
-    const cardData = collectFormData(fields, card);
-    socket.emit("save_card", { card_type: cardType, index, card_data: cardData });
-    editingKey = null;
-    setTimeout(() => socket.emit("get_card_trees"), 300);
-  });
+  saveBtn.addEventListener("click", () => _saveAndReturnToTrees());
 
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "btn btn-sm";
@@ -3749,6 +3975,9 @@ function renderTreeEditForm() {
   cancelBtn.addEventListener("click", () => {
     socket.emit("unlock_card", { card_type: cardType, index });
     editingKey = null;
+    editorContext = "grid";
+    treesBody.innerHTML = '<p class="text-dim" style="padding:1rem;">Loading…</p>';
+    closeTreesModal.textContent = "Back to cards overview";
     socket.emit("get_card_trees");
   });
 
@@ -3888,17 +4117,24 @@ const TERRAIN_COLORS = {
   offshore_wind:    "#0a2a6e",
   offshore_solar:   "#0a2a6e",
   space:            "#05050f",
+  launching_pad:    "#3a3a4a",  // dark charcoal (matching the build tile)
+  mountain:         "#4a3f38",  // stone grey-brown
 };
 
 const TILE_COLORS = {
   power_plant:               "#f1c40f",
+  pv_power_plant:            "#e8a020",  // amber-orange (solar)
+  wind_power_plant:          "#4fc3c0",  // teal-cyan (wind)
+  solar_thermal:             "#c0391b",  // deep red-orange (heat)
   factory:                   "#8b6914",
   data_center:               "#5dade2",
   store:                     "#27ae60",
   ads:                       "#e056a0",
   rare_metal_mine:           "#7a8a9a",
   hydroelectric_power_plant: "#1a7abf",
-  satellite:                 "#8888cc",
+  satellite_solar:           "#e8a020",  // amber (solar)
+  satellite_dc:              "#8888cc",  // slate-purple (data)
+  launching_pad:             "#3a3a4a",  // dark charcoal
 };
 
 function hexToRgba(hex, alpha) {
@@ -3914,6 +4150,9 @@ function hexToRgba(hex, alpha) {
 
 const TILE_LABELS = {
   power_plant:               "⚡",
+  pv_power_plant:            "☀️",
+  wind_power_plant:          "💨",
+  solar_thermal:             "🌡️",
   factory:                   "🏭",
   data_center:               "🖥️",
   store:                     "🏪",
@@ -3922,11 +4161,16 @@ const TILE_LABELS = {
   lobby_group:               "💻",
   rare_metal_mine:           "🔩",
   hydroelectric_power_plant: "💧",
-  satellite:                 "🛰️",
+  satellite_solar:           "🛰️☀️",
+  satellite_dc:              "🛰️🖥️",
+  launching_pad:             "🚀",
 };
 
 const TILE_FULL_NAMES = {
   power_plant:               "Power Plant",
+  pv_power_plant:            "PV Solar Power Plant",
+  wind_power_plant:          "Wind Power Plant",
+  solar_thermal:             "Solar Thermal Power Plant",
   factory:                   "Hardware Factory",
   data_center:               "Data Center",
   store:                     "Store",
@@ -3935,7 +4179,9 @@ const TILE_FULL_NAMES = {
   lobby_group:               "Lobby Group",
   rare_metal_mine:           "Rare Metal Mine",
   hydroelectric_power_plant: "Hydroelectric Power Plant",
-  satellite:                 "Satellite",
+  satellite_solar:           "Satellite Solar",
+  satellite_dc:              "Satellite Data Center",
+  launching_pad:             "Launching Pad",
 };
 
 // Placement rules (mirrors board.py can_place logic):
@@ -3943,23 +4189,18 @@ const TILE_FULL_NAMES = {
 //   store, lobby_group    → only on commercial terrain
 //   everything else       → empty, sun, wind, gas_reserve, coal, natural_park
 //   lake/sea/gov/city/wall/rare_metal_mine terrain → blocked for non-mine tiles
-const _NO_BUILD = new Set(["government", "city", "wall"]);
+const _NO_BUILD = new Set(["government", "city", "wall", "mountain"]);
 const _COMMERCIAL_ONLY = new Set(["store", "lobby_group", "office"]);
 const _OPEN_TERRAINS = new Set(["empty", "sun", "wind", "gas_reserve", "coal", "natural_park"]);
-const _SPACE_TILES_FE = new Set(["satellite"]);
+const _SPACE_TILES_FE = new Set(["satellite_solar", "satellite_dc"]);
 const _SPACE_TERRAIN_TILES_FE = {
-  "space": new Set(["satellite"]),
+  "space": new Set(["satellite_solar", "satellite_dc"]),
 };
-const _SATELLITE_STACKABLE_FE = new Set(["data_center", "power_plant"]);
-const _OFFSHORE_TERRAINS_FE = new Set(["offshore_wind", "offshore_solar"]);
+const _SPACE_TILE_TYPES_FE    = new Set(["satellite_solar", "satellite_dc"]);
+const _POWER_PLANT_TYPES_FE   = new Set(["power_plant", "pv_power_plant", "wind_power_plant", "solar_thermal", "satellite_solar"]);
 
-// canPlaceOn: checks terrain rules only (no placed_tile info here)
-// Pass placedTileType to check stacking on satellites
+// canPlaceOn: checks terrain rules (no stacking mechanic — satellite types are standalone)
 function canPlaceOn(tileType, terrain, placedTileType) {
-  // Stacking on an existing satellite
-  if (placedTileType === "satellite") {
-    return _SATELLITE_STACKABLE_FE.has(tileType);
-  }
   if (_NO_BUILD.has(terrain)) return false;
   // space tiles → space terrains only
   if (_SPACE_TILES_FE.has(tileType)) {
@@ -3973,8 +4214,14 @@ function canPlaceOn(tileType, terrain, placedTileType) {
   // rare_metal_mine → its terrain only
   if (tileType === "rare_metal_mine") return terrain === "rare_metal_mine";
   if (terrain === "rare_metal_mine") return false;
-  // offshore (wind/solar) → power_plant only
-  if (_OFFSHORE_TERRAINS_FE.has(terrain)) return tileType === "power_plant";
+  // launching_pad → launching_pad terrain only
+  if (tileType === "launching_pad") return terrain === "launching_pad";
+  if (terrain === "launching_pad") return false;
+  // offshore_wind → wind_power_plant only; offshore_solar → pv_power_plant only
+  if (terrain === "offshore_wind")  return tileType === "wind_power_plant";
+  if (terrain === "offshore_solar") return tileType === "pv_power_plant";
+  // solar_thermal cannot go on offshore terrain (heat-based, land only)
+  if (tileType === "solar_thermal" && (terrain === "offshore_wind" || terrain === "offshore_solar")) return false;
   // sea → data_center only
   if (terrain === "sea") return tileType === "data_center";
   // commercial tiles → commercial terrain only
@@ -3985,6 +4232,9 @@ function canPlaceOn(tileType, terrain, placedTileType) {
 
 const CLIENT_TILE_BASE_BONUSES = {
   power_plant:               {},
+  pv_power_plant:            {},
+  wind_power_plant:          {},
+  solar_thermal:             {},
   factory:                   {},
   data_center:               { production: { data_centers: 1 } },
   store:                     { production: { ad_campaigns: 1 } },
@@ -3993,19 +4243,37 @@ const CLIENT_TILE_BASE_BONUSES = {
   lobby_group:               {},
   rare_metal_mine:           { production: { money: 10 } },
   hydroelectric_power_plant: { production: { data_centers: 2 } },
-  satellite:                 { production: { data_centers: 2 } },
+  satellite_solar:           {},                                  // boosts adjacent DCs (power plant synergy)
+  satellite_dc:              { production: { data_centers: 3 } }, // orbital data center
+  launching_pad:             {},
 };
+
+// Normalize bonus data (old dict or new list) to list format for preview/display
+function _normBonusList(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object") {
+    if ("immediate" in raw || "production" in raw)
+      return [{ build_type: null, immediate: raw.immediate || {}, production: raw.production || {} }];
+    if (Object.keys(raw).length)
+      return [{ build_type: null, immediate: raw, production: {} }];
+  }
+  return [];
+}
 
 function previewPlacementBonuses(tile, tileType) {
   const base = CLIENT_TILE_BASE_BONUSES[tileType] || {};
   const immediate = Object.assign({}, base.immediate || {});
   const production = Object.assign({}, base.production || {});
 
-  const bb = tile.build_bonuses || {};
-  for (const [res, amt] of Object.entries(bb.immediate || {}))
-    immediate[res] = (immediate[res] || 0) + amt;
-  for (const [res, amt] of Object.entries(bb.production || {}))
-    production[res] = (production[res] || 0) + amt;
+  // Build bonuses — only apply entries matching this build type (or any)
+  for (const entry of _normBonusList(tile.build_bonuses)) {
+    if (!entry.build_type || entry.build_type === tileType) {
+      for (const [res, amt] of Object.entries(entry.immediate || {}))
+        immediate[res] = (immediate[res] || 0) + amt;
+      for (const [res, amt] of Object.entries(entry.production || {}))
+        production[res] = (production[res] || 0) + amt;
+    }
+  }
 
   const tilesByKey = {};
   boardTiles.forEach(t => { tilesByKey[`${t.row},${t.col}`] = t; });
@@ -4015,18 +4283,25 @@ function previewPlacementBonuses(tile, tileType) {
   for (const [dr, dc] of dirs) {
     const nb = tilesByKey[`${tile.row+dr},${tile.col+dc}`];
     if (!nb) continue;
-    for (const [res, amt] of Object.entries(nb.adjacency_bonuses || {}))
-      immediate[res] = (immediate[res] || 0) + amt;
+    // Adjacency bonuses — conditional on what type is being placed
+    for (const entry of _normBonusList(nb.adjacency_bonuses)) {
+      if (!entry.build_type || entry.build_type === tileType) {
+        for (const [res, amt] of Object.entries(entry.immediate || {}))
+          immediate[res] = (immediate[res] || 0) + amt;
+        for (const [res, amt] of Object.entries(entry.production || {}))
+          production[res] = (production[res] || 0) + amt;
+      }
+    }
     // Power plant ↔ data center synergy
     const pt = nb.placed_tile;
     if (pt) {
-      if (tileType === "power_plant" && pt.type === "data_center") {
+      if (_POWER_PLANT_TYPES_FE.has(tileType) && pt.type === "data_center") {
         const dcBonus = lastPrivateState?.pending_tile_meta?.dc_production_bonus ?? 1;
         production["data_centers"] = (production["data_centers"] || 0) + dcBonus;
       }
-      if (tileType === "data_center" && pt.type === "power_plant")
+      if (tileType === "data_center" && _POWER_PLANT_TYPES_FE.has(pt.type))
         production["data_centers"] = (production["data_centers"] || 0) + (pt.dc_production_bonus || 1);
-      if (tileType === "factory" && pt.type === "power_plant")
+      if (tileType === "factory" && _POWER_PLANT_TYPES_FE.has(pt.type))
         immediate["money"] = (immediate["money"] || 0) + (pt.factory_refund || 0);
     }
   }
@@ -4086,8 +4361,9 @@ function renderBoard() {
   const pending = lastPrivateState?.pending_tile;
   if (pending) {
     boardPending.classList.remove("hidden");
+    const myColor = lastGameState?.players?.[myPlayerId]?.color || TILE_COLORS[pending] || '#888';
     boardPending.innerHTML = `
-      <span class="pending-tile-icon" style="background:${TILE_COLORS[pending] || '#888'}">${TILE_LABELS[pending] || "?"}</span>
+      <span class="pending-tile-icon" style="background:${myColor};border:2px solid #fff;">${TILE_LABELS[pending] || "?"}</span>
       <span>Place: <strong>${TILE_FULL_NAMES[pending] || pending}</strong></span>
     `;
   } else {
@@ -4136,9 +4412,9 @@ function renderBoard() {
     let tileStroke = "#555";
     let tileStrokeWidth = "1.5";
     if (tile.placed_tile) {
-      const owner = lastGameState?.players?.[tile.placed_tile.owner_id];
-      if (owner?.color) {
-        fill = owner.color;
+      const ownerColor = playerColorMap[tile.placed_tile.owner_id];
+      if (ownerColor) {
+        fill = ownerColor;
         tileStroke = "#fff";
         tileStrokeWidth = "2";
       } else {
@@ -4158,11 +4434,6 @@ function renderBoard() {
     if (tile.placed_tile) {
       label = TILE_LABELS[tile.placed_tile.type] || "?";
       labelSize = "12";
-      // If a secondary tile is stacked on top, show both
-      if (tile.secondary_tile) {
-        label = `${TILE_LABELS[tile.secondary_tile.type] || "?"}/${label}`;
-        labelSize = "8";
-      }
     } else if (tile.name) {
       label = tile.name.length > 6 ? tile.name.slice(0, 6) : tile.name;
       labelSize = (tile.terrain === "lake" || tile.terrain === "sea") ? "6" : "7";
@@ -4205,6 +4476,12 @@ function renderBoard() {
     } else if (tile.terrain === "space") {
       label = "✨";
       labelSize = "10";
+    } else if (tile.terrain === "launching_pad") {
+      label = "🚀";
+      labelSize = "10";
+    } else if (tile.terrain === "mountain") {
+      label = "⛰️";
+      labelSize = "12";
     }
     if (label) {
       const txt = document.createElementNS(ns, "text");
@@ -4239,32 +4516,25 @@ function renderBoard() {
       let info = `<strong>(${tile.row},${tile.col})</strong>`;
       if (tile.terrain === "city") info += ` — ${tile.name || "City"} (City)`;
       else if (tile.terrain === "lake") info += ` — 🌊 ${tile.name || "Lake"} (hydroelectric only)`;
-      else if (tile.terrain === "sea")           info += ` — ${tile.name || "Sea"} (data center only, −$150B)`;
-      else if (tile.terrain === "offshore_wind") info += ` — 💨 ${tile.name || "Offshore Wind"} (power plant, −$100B)`;
-      else if (tile.terrain === "offshore_solar") info += ` — ☀️ ${tile.name || "Offshore Solar"} (power plant, −$100B)`;
-      else if (tile.terrain === "space") {
-        info += ` — ✨ ${tile.name || "Space"} (satellite only, −$200B)`;
-        if (tile.placed_tile?.type === "satellite" && !tile.secondary_tile)
-          info += `<br><span style="color:#f39c12">▸ Stack data center or power plant here</span>`;
-      }
+      else if (tile.terrain === "sea")           info += ` — ${tile.name || "Sea"} (data center only)`;
+      else if (tile.terrain === "offshore_wind")  info += ` — 💨 ${tile.name || "Offshore Wind"} (wind power plant only)`;
+      else if (tile.terrain === "offshore_solar") info += ` — ☀️ ${tile.name || "Offshore Solar"} (PV power plant only)`;
+      else if (tile.terrain === "space")          info += ` — ✨ ${tile.name || "Space"} (satellite solar or satellite DC)`;
       else if (tile.terrain === "sun")         info += ` — ☀️ ${tile.name || "Sun terrain"}`;
       else if (tile.terrain === "wind")        info += ` — 💨 ${tile.name || "Wind terrain"}`;
       else if (tile.terrain === "gas_reserve") info += ` — 🔥 ${tile.name || "Gas Reserve"}`;
       else if (tile.terrain === "coal")        info += ` — ⛏️ ${tile.name || "Coal terrain"}`;
       else if (tile.terrain === "wall")             info += ` — 🧱 ${tile.name || "Wall"} (cannot build)`;
       else if (tile.terrain === "rare_metal_mine")  info += ` — 🔩 ${tile.name || "Rare Metal Deposit"} (mine only)`;
-      else if (tile.terrain === "natural_park")     info += ` — 🌳 ${tile.name || "Natural Park"} (−2 🌟 if built here)`;
+      else if (tile.terrain === "natural_park")     info += ` — 🌳 ${tile.name || "Natural Park"}`;
+      else if (tile.terrain === "launching_pad")    info += ` — 🚀 ${tile.name || "Launching Pad"} (Rockets card required)`;
+      else if (tile.terrain === "mountain")          info += ` — ⛰️ ${tile.name || "Mountain"} (cannot build)`;
       else if (tile.terrain === "government") info += ` — ${tile.name || "Gov"} (cannot build)`;
       else if (tile.terrain === "commercial") info += ` — Commercial zone`;
       else if (tile.placed_tile) {
         const owner = lastGameState?.players?.[tile.placed_tile.owner_id];
         info += ` — ${TILE_FULL_NAMES[tile.placed_tile.type] || tile.placed_tile.type}`;
         if (owner) info += ` (${owner.name})`;
-        if (tile.secondary_tile) {
-          const owner2 = lastGameState?.players?.[tile.secondary_tile.owner_id];
-          info += ` + ${TILE_FULL_NAMES[tile.secondary_tile.type] || tile.secondary_tile.type}`;
-          if (owner2) info += ` (${owner2.name})`;
-        }
       } else {
         info += " — Empty";
       }
@@ -4289,34 +4559,22 @@ function renderBoard() {
           .map(c => c.type).filter(Boolean)
       );
       const reqsMet = tileReqs.every(r => myPlayedTypes.has(r));
-      const placedType = tile.placed_tile?.type || null;
-      const secondaryFilled = !!tile.secondary_tile;
-      const canStack = placedType === "satellite" && !secondaryFilled;
-      const isPlaceable = pending && reqsMet && (
-        canStack
-          ? canPlaceOn(pending, tile.terrain, placedType)
-          : (!tile.placed_tile && canPlaceOn(pending, tile.terrain))
-      );
+      const isPlaceable = pending && reqsMet && !tile.placed_tile && canPlaceOn(pending, tile.terrain);
 
       if (isPlaceable) {
         const preview = previewPlacementBonuses(tile, pending);
         const parts = [];
         for (const [res, amt] of Object.entries(preview.immediate))
-          if (amt) parts.push(`+${fmtCardVal(res, amt)} ${res}`);
+          if (amt) parts.push(`${amt > 0 ? "+" : ""}${fmtCardVal(res, amt)} ${res}`);
         for (const [res, amt] of Object.entries(preview.production))
-          if (amt) parts.push(`+${fmtCardVal(res, amt)} ${res}/yr`);
+          if (amt) parts.push(`${amt > 0 ? "+" : ""}${fmtCardVal(res, amt)} ${res}/yr`);
         info += `<br><strong style="color:#2ecc71">▸ ${TILE_FULL_NAMES[pending]}:</strong> `;
         info += parts.length ? parts.join(", ") : "no bonuses";
       } else {
-        const ab = Object.entries(tile.adjacency_bonuses || {});
-        if (ab.length) info += `<br>Adj: ${ab.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}`).join(", ")}`;
-        const bb = tile.build_bonuses || {};
-        const bImm = Object.entries(bb.immediate || {});
-        const bProd = Object.entries(bb.production || {});
-        if (bImm.length || bProd.length) {
-          info += `<br>Build: `;
-          info += [...bImm.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}`), ...bProd.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}/yr`)].join(", ");
-        }
+        const buildStr = _formatConditionalBonuses(tile.build_bonuses, "Build");
+        if (buildStr) info += `<br>${buildStr}`;
+        const adjStr = _formatConditionalBonuses(tile.adjacency_bonuses, "Adj");
+        if (adjStr) info += `<br>${adjStr}`;
       }
 
       tooltip.innerHTML = info;
@@ -4338,13 +4596,7 @@ function renderBoard() {
       tooltip.classList.add("hidden");
     });
 
-    const _ptType = tile.placed_tile?.type || null;
-    const _canStack = _ptType === "satellite" && !tile.secondary_tile;
-    const _placeable = pending && (
-      _canStack
-        ? canPlaceOn(pending, tile.terrain, _ptType)
-        : (!tile.placed_tile && canPlaceOn(pending, tile.terrain))
-    );
+    const _placeable = pending && !tile.placed_tile && canPlaceOn(pending, tile.terrain);
     if (_placeable) {
       poly.classList.add("board-hex-placeable");
       g.style.cursor = "pointer";
@@ -4355,9 +4607,9 @@ function renderBoard() {
         const preview = previewPlacementBonuses(tile, pending);
         const parts = [];
         for (const [res, amt] of Object.entries(preview.immediate))
-          if (amt) parts.push(`+${fmtCardVal(res, amt)} ${res}`);
+          if (amt) parts.push(`${amt > 0 ? "+" : ""}${fmtCardVal(res, amt)} ${res}`);
         for (const [res, amt] of Object.entries(preview.production))
-          if (amt) parts.push(`+${fmtCardVal(res, amt)} ${res}/yr`);
+          if (amt) parts.push(`${amt > 0 ? "+" : ""}${fmtCardVal(res, amt)} ${res}/yr`);
         const bonusStr = parts.length ? parts.join(", ") : "no bonuses";
         showConfirmDialog(
           `Place ${TILE_FULL_NAMES[pending]} here?`,
@@ -4453,9 +4705,16 @@ const editTerrainTypeBtn = document.getElementById("edit-terrain-type-btn");
 
 let editorBoardTiles = [];
 let selectedEditorTile = null;
+let _boardEditorOpenIntent = false;  // true only when user explicitly clicked "Edit Board"
 
-editBoardBtn.addEventListener("click", () => socket.emit("get_board_editor"));
-editBoardLobbyBtn.addEventListener("click", () => socket.emit("get_board_editor"));
+editBoardBtn.addEventListener("click", () => {
+  _boardEditorOpenIntent = true;
+  socket.emit("get_board_editor");
+});
+editBoardLobbyBtn.addEventListener("click", () => {
+  _boardEditorOpenIntent = true;
+  socket.emit("get_board_editor");
+});
 
 closeBoardEditor.addEventListener("click", () => {
   boardEditorModal.classList.add("hidden");
@@ -4467,10 +4726,23 @@ boardEditorModal.addEventListener("click", (e) => {
   if (e.target === boardEditorModal) closeBoardEditor.click();
 });
 
+socket.on("tile_type_config", (cfg) => {
+  tileTypeConfig = cfg || {};
+});
+
 socket.on("board_editor_data", (tiles) => {
   editorBoardTiles = tiles;
-  renderBoardEditor();
-  boardEditorModal.classList.remove("hidden");
+  if (_boardEditorOpenIntent) {
+    // User explicitly clicked "Edit Board" — open the modal
+    _boardEditorOpenIntent = false;
+    renderBoardEditor();
+    boardEditorModal.classList.remove("hidden");
+  } else if (!boardEditorModal.classList.contains("hidden")) {
+    // Editor already open for this client — silently refresh in place
+    // (another master saved a tile; don't disrupt current form state)
+    renderBoardEditor();
+  }
+  // If the modal is hidden and this is a background broadcast, ignore — don't pop it open
 });
 
 function renderBoardEditor() {
@@ -4516,19 +4788,27 @@ function renderBoardEditor() {
     poly.setAttribute("points", hexPointsStr(cx, cy));
 
     let fill;
+    let edStroke = "#555";
+    let edStrokeWidth = "1.5";
     if (tile.placed_tile) {
-      // In editor there are no live player sessions — always 50% opacity
-      fill = hexToRgba(TILE_COLORS[tile.placed_tile.type] || "#888888", 0.5);
+      const ownerColor = playerColorMap[tile.placed_tile.owner_id];
+      if (ownerColor) {
+        fill = ownerColor;
+        edStroke = "#fff";
+        edStrokeWidth = "2";
+      } else {
+        fill = hexToRgba(TILE_COLORS[tile.placed_tile.type] || "#888888", 0.5);
+      }
     } else {
       fill = TERRAIN_COLORS[tile.terrain] || TERRAIN_COLORS.empty;
     }
     poly.setAttribute("fill", fill);
     poly.setAttribute("stroke", selectedEditorTile &&
       selectedEditorTile.row === tile.row && selectedEditorTile.col === tile.col
-      ? "var(--accent)" : "#555");
+      ? "var(--accent)" : edStroke);
     poly.setAttribute("stroke-width", selectedEditorTile &&
       selectedEditorTile.row === tile.row && selectedEditorTile.col === tile.col
-      ? "3" : "1.5");
+      ? "3" : edStrokeWidth);
     g.appendChild(poly);
 
     let label = "";
@@ -4564,6 +4844,10 @@ function renderBoardEditor() {
       label = "🌳"; edLabelSize = "10";
     } else if (tile.terrain === "space") {
       label = "✨"; edLabelSize = "10";
+    } else if (tile.terrain === "launching_pad") {
+      label = "🚀"; edLabelSize = "10";
+    } else if (tile.terrain === "mountain") {
+      label = "⛰️"; edLabelSize = "12";
     }
     if (label) {
       const txt = document.createElementNS(ns, "text");
@@ -4596,17 +4880,10 @@ function renderBoardEditor() {
     g.addEventListener("mouseenter", (e) => {
       let info = `<strong>(${tile.row},${tile.col})</strong> — ${tile.terrain}`;
       if (tile.name) info += `: ${tile.name}`;
-      const bb = tile.build_bonuses || {};
-      const bImm = Object.entries(bb.immediate || {});
-      const bProd = Object.entries(bb.production || {});
-      if (bImm.length || bProd.length) {
-        info += `<br>Build: `;
-        info += [...bImm.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}`), ...bProd.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}/yr`)].join(", ");
-      }
-      const ab = Object.entries(tile.adjacency_bonuses || {});
-      if (ab.length) {
-        info += `<br>Adj: ${ab.map(([k,v]) => `+${fmtCardVal(k,v)} ${k}`).join(", ")}`;
-      }
+      const buildStr = _formatConditionalBonuses(tile.build_bonuses, "Build");
+      if (buildStr) info += `<br>${buildStr}`;
+      const adjStr = _formatConditionalBonuses(tile.adjacency_bonuses, "Adj");
+      if (adjStr) info += `<br>${adjStr}`;
       const reqs = tile.requirements || [];
       if (reqs.length) {
         info += `<br>🔒 Requires: ${reqs.map(r => `${CARD_SUBTYPE_EMOJIS[r] || ""} ${r}`).join(", ")}`;
@@ -4631,6 +4908,8 @@ function renderBoardEditor() {
     g.style.cursor = "pointer";
     g.addEventListener("click", () => {
       selectedEditorTile = tile;
+      // Mutual exclusion: close terrain-type form if open
+      terrainTypeForm.classList.add("hidden");
       renderBoardEditor();
       renderBoardTileForm(tile);
     });
@@ -4705,7 +4984,7 @@ function _boardResRow(key, value) {
   inp.value = value;
   inp.className = "board-form-input";
   inp.style.width = "60px";
-  row.appendChild(makeNumSpinner(inp, { min: 0 }));
+  row.appendChild(makeNumSpinner(inp, {}));  // no min — negative values allowed (penalties)
 
   const del = document.createElement("button");
   del.className = "btn btn-sm btn-danger-sm";
@@ -4723,10 +5002,145 @@ function _collectResRows(container) {
     const sel = row.querySelector("select");
     const inp = row.querySelector('input[type="number"]');
     const k = sel ? sel.value : "";
-    const v = inp ? parseInt(inp.value, 10) || 0 : 0;
-    if (k && v) result[k] = v;
+    const v = inp ? parseInt(inp.value, 10) : 0;
+    if (k && v !== 0) result[k] = v;  // keep negatives; skip zero rows
   });
   return result;
+}
+
+// ── Conditional bonus editor helpers ─────────────────────────────────────────
+// Options for the "When building: [type]" dropdown in each bonus condition block
+const TILE_TYPE_BONUS_OPTIONS = [
+  [null,                        "(any build type — always applies)"],
+  ["power_plant",               "⚡ Power Plant"],
+  ["pv_power_plant",            "☀️ PV Solar Plant"],
+  ["wind_power_plant",          "💨 Wind Power Plant"],
+  ["solar_thermal",             "🌡️ Solar Thermal"],
+  ["data_center",               "🖥️ Data Center"],
+  ["store",                     "🏪 Store"],
+  ["ad_campaign",               "📢 Ad Campaign"],
+  ["office",                    "🏢 Office"],
+  ["lobby_group",               "💻 Lobby Group"],
+  ["rare_metal_mine",           "🔩 Rare Metal Mine"],
+  ["hydroelectric_power_plant", "💧 Hydro Plant"],
+  ["satellite_solar",           "🛰️☀️ Satellite Solar"],
+  ["satellite_dc",              "🛰️🖥️ Satellite DC"],
+  ["factory",                   "🏭 Hardware Factory"],
+  ["launching_pad",             "🚀 Launching Pad"],
+];
+
+function _makeBonusConditionBlock(entry) {
+  const block = document.createElement("div");
+  block.className = "board-bonus-condition-block";
+
+  // Header: "When building: [dropdown] [× Remove]"
+  const header = document.createElement("div");
+  header.className = "board-bonus-condition-header";
+  const hLabel = document.createElement("span");
+  hLabel.textContent = "When building:";
+  header.appendChild(hLabel);
+
+  const typeSelect = document.createElement("select");
+  typeSelect.className = "editor-dict-key";
+  TILE_TYPE_BONUS_OPTIONS.forEach(([val, lbl]) => {
+    const o = document.createElement("option");
+    o.value = val ?? "";
+    o.textContent = lbl;
+    if ((entry.build_type ?? null) === val) o.selected = true;
+    typeSelect.appendChild(o);
+  });
+  header.appendChild(typeSelect);
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "btn btn-sm btn-danger-sm";
+  removeBtn.textContent = "× Remove";
+  removeBtn.style.marginLeft = "auto";
+  removeBtn.addEventListener("click", () => block.remove());
+  header.appendChild(removeBtn);
+  block.appendChild(header);
+
+  // Immediate resources
+  const immLabel = document.createElement("span");
+  immLabel.className = "board-bonus-sub";
+  immLabel.textContent = "Immediate";
+  block.appendChild(immLabel);
+  const immContainer = document.createElement("div");
+  immContainer.className = "board-res-container";
+  Object.entries(entry.immediate || {}).forEach(([k, v]) => immContainer.appendChild(_boardResRow(k, v)));
+  const addImm = document.createElement("button");
+  addImm.className = "btn btn-sm";
+  addImm.textContent = "+ Add";
+  addImm.addEventListener("click", () => immContainer.insertBefore(_boardResRow("", 0), addImm));
+  immContainer.appendChild(addImm);
+  block.appendChild(immContainer);
+
+  block._collect = () => ({
+    build_type: typeSelect.value || null,
+    immediate:  _collectResRows(immContainer),
+    production: {},
+  });
+  return block;
+}
+
+function _makeConditionalBonusSection(sectionLabel, savedRaw) {
+  const section = document.createElement("div");
+  section.className = "editor-field board-bonus-section";
+
+  const title = document.createElement("label");
+  title.textContent = sectionLabel;
+  section.appendChild(title);
+
+  const blocksContainer = document.createElement("div");
+  blocksContainer.className = "board-bonus-conditions-container";
+  section.appendChild(blocksContainer);
+
+  // Load existing data
+  _normBonusList(savedRaw).forEach(entry => {
+    if (Object.keys(entry.immediate || {}).length || Object.keys(entry.production || {}).length || entry.build_type) {
+      blocksContainer.appendChild(_makeBonusConditionBlock(entry));
+    }
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm";
+  addBtn.textContent = "+ Add condition";
+  addBtn.addEventListener("click", () =>
+    blocksContainer.appendChild(_makeBonusConditionBlock({})));
+  section.appendChild(addBtn);
+
+  section._collectList = () => {
+    const result = [];
+    blocksContainer.querySelectorAll(".board-bonus-condition-block").forEach(block => {
+      if (block._collect) {
+        const e = block._collect();
+        if (Object.keys(e.immediate || {}).length || Object.keys(e.production || {}).length) {
+          result.push(e);
+        }
+      }
+    });
+    return result;
+  };
+  return section;
+}
+
+// Format a conditional bonus list for hover display
+function _formatConditionalBonuses(raw, prefix) {
+  const list = _normBonusList(raw);
+  if (!list.length) return "";
+  return list.map(entry => {
+    const parts = [];
+    Object.entries(entry.immediate || {}).forEach(([k, v]) => {
+      if (v !== 0) parts.push(`${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${k}`);
+    });
+    Object.entries(entry.production || {}).forEach(([k, v]) => {
+      if (v !== 0) parts.push(`${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${k}/yr`);
+    });
+    if (!parts.length) return "";
+    const btLabel = entry.build_type
+      ? (TILE_LABELS[entry.build_type] || entry.build_type)
+      : "any";
+    return `${prefix} <em>(${btLabel})</em>: ${parts.join(", ")}`;
+  }).filter(Boolean).join("<br>");
 }
 
 function renderBoardTileForm(tile) {
@@ -4751,8 +5165,8 @@ function renderBoardTileForm(tile) {
   terrainSelect.className = "editor-dict-key";
   terrainSelect.style.width = "100%";
   ["empty", "city", "lake", "sea", "offshore_wind", "offshore_solar", "government",
-   "commercial", "sun", "wind", "gas_reserve", "coal", "wall",
-   "rare_metal_mine", "natural_park", "space"].forEach(t => {
+   "commercial", "sun", "wind", "gas_reserve", "coal", "wall", "mountain",
+   "rare_metal_mine", "natural_park", "space", "launching_pad"].forEach(t => {
     const o = document.createElement("option");
     o.value = t;
     o.textContent = t.charAt(0).toUpperCase() + t.slice(1);
@@ -4772,52 +5186,18 @@ function renderBoardTileForm(tile) {
   nameRow.appendChild(nameInput);
   form.appendChild(nameRow);
 
-  // --- Build bonuses (for buildable tiles) ---
-  const buildSection = document.createElement("div");
-  buildSection.className = "editor-field board-bonus-section";
-  const buildTitle = document.createElement("label");
-  buildTitle.textContent = "Build bonuses (what a player gets when building here)";
-  buildSection.appendChild(buildTitle);
-
-  const buildImmLabel = document.createElement("span");
-  buildImmLabel.className = "board-bonus-sub";
-  buildImmLabel.textContent = "Immediate";
-  buildSection.appendChild(buildImmLabel);
-  const buildImmContainer = document.createElement("div");
-  buildImmContainer.className = "board-res-container";
-  const bb = tile.build_bonuses || {};
-  Object.entries(bb.immediate || {}).forEach(([k, v]) => {
-    buildImmContainer.appendChild(_boardResRow(k, v));
-  });
-  const addBuildImm = document.createElement("button");
-  addBuildImm.className = "btn btn-sm";
-  addBuildImm.textContent = "+ Add";
-  addBuildImm.addEventListener("click", () => {
-    buildImmContainer.insertBefore(_boardResRow("", 0), addBuildImm);
-  });
-  buildImmContainer.appendChild(addBuildImm);
-  buildSection.appendChild(buildImmContainer);
+  // --- Build bonuses (conditional on build type) ---
+  const buildSection = _makeConditionalBonusSection(
+    "Build bonuses — what a player gets when building here (per build type)",
+    tile.build_bonuses
+  );
   form.appendChild(buildSection);
 
-  // --- Adjacency bonuses (for any terrain, but mainly lake/gov) ---
-  const adjSection = document.createElement("div");
-  adjSection.className = "editor-field board-bonus-section";
-  const adjTitle = document.createElement("label");
-  adjTitle.textContent = "Adjacency bonuses (given to players building next to this tile)";
-  adjSection.appendChild(adjTitle);
-  const adjContainer = document.createElement("div");
-  adjContainer.className = "board-res-container";
-  Object.entries(tile.adjacency_bonuses || {}).forEach(([k, v]) => {
-    adjContainer.appendChild(_boardResRow(k, v));
-  });
-  const addAdj = document.createElement("button");
-  addAdj.className = "btn btn-sm";
-  addAdj.textContent = "+ Add";
-  addAdj.addEventListener("click", () => {
-    adjContainer.insertBefore(_boardResRow("", 0), addAdj);
-  });
-  adjContainer.appendChild(addAdj);
-  adjSection.appendChild(adjContainer);
+  // --- Adjacency bonuses (conditional on build type) ---
+  const adjSection = _makeConditionalBonusSection(
+    "Adjacency bonuses — given to players building next to this tile (per build type)",
+    tile.adjacency_bonuses
+  );
   form.appendChild(adjSection);
 
   // --- Requirements ---
@@ -4847,31 +5227,22 @@ function renderBoardTileForm(tile) {
   onlyBuildSection.appendChild(onlyBuildTitle);
   const onlyBuildGrid = document.createElement("div");
   onlyBuildGrid.className = "only-build-grid";
-  // Empty only_build means ALL are allowed → show all checked
-  const savedOnlyBuild = tile.only_build || [];
-  const allAllowed = savedOnlyBuild.length === 0;
-  const BUILDABLE_TILE_TYPES = [
-    ["power_plant", "⚡ Power Plant"],
-    ["data_center", "🖥️ Data Center"],
-    ["store", "🏪 Store"],
-    ["ad_campaign", "📢 Ad Campaign"],
-    ["office", "🏢 Office"],
-    ["lobby_group", "💻 Lobby Group"],
-    ["rare_metal_mine", "🔩 Rare Metal Mine"],
-    ["hydroelectric_power_plant", "💧 Hydro Plant"],
-    ["satellite", "🛰️ Satellite"],
-    ["factory", "🏭 Hardware Factory"],
-  ];
-  BUILDABLE_TILE_TYPES.forEach(([val, lbl]) => {
+  // null/undefined = all allowed (show all checked); [] = none allowed; [...] = whitelist
+  const savedOnlyBuild = tile.only_build;
+  const allAllowed = savedOnlyBuild == null;
+  // Use the shared BUILDABLE_TILE_TYPE_OPTIONS (no hardcoded descriptions)
+  BUILDABLE_TILE_TYPE_OPTIONS.forEach(([val, lbl]) => {
     const cbLabel = document.createElement("label");
     cbLabel.className = "only-build-cb-label";
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.value = val;
-    // If nothing was saved (all allowed), check all; otherwise check only saved ones
-    cb.checked = allAllowed || savedOnlyBuild.includes(val);
+    // null=all allowed→all checked; []=none→none checked; [...]→check those
+    cb.checked = allAllowed || (Array.isArray(savedOnlyBuild) && savedOnlyBuild.includes(val));
     cbLabel.appendChild(cb);
-    cbLabel.appendChild(document.createTextNode(lbl));
+    const textWrap = document.createElement("span");
+    textWrap.textContent = lbl;
+    cbLabel.appendChild(textWrap);
     onlyBuildGrid.appendChild(cbLabel);
   });
   onlyBuildSection.appendChild(onlyBuildGrid);
@@ -4882,7 +5253,7 @@ function renderBoardTileForm(tile) {
   hint.style.fontSize = ".75rem";
   hint.style.color = "var(--text-dim)";
   hint.style.margin = ".5rem 0";
-  hint.innerHTML = "<strong>Store/Lobby/Office</strong> → commercial only | <strong>Power/DC/Factory/etc.</strong> → open terrains | <strong>🔩Mine</strong> → rare_metal_mine | <strong>💧Hydro</strong> → 🌊lake | <strong>Offshore (wind/solar)</strong> → power_plant (−$100B) | <strong>🌊Sea</strong> → data_center (−$150B) | <strong>🌌Space</strong> → satellite (−$200B) | <strong>🌳Park</strong> = −2⭐ | <strong>Gov/City/Wall</strong> → no build";
+  hint.innerHTML = "<strong>Store/Lobby/Office</strong> → commercial only | <strong>Power/DC/Factory/etc.</strong> → open terrains | <strong>🔩Mine</strong> → rare_metal_mine | <strong>💧Hydro</strong> → 🌊lake | <strong>💨Offshore Wind</strong> → wind power plant | <strong>☀️Offshore Solar</strong> → PV power plant | <strong>🌊Sea</strong> → data_center | <strong>✨Space</strong> → satellite solar or satellite DC | <strong>Gov/City/Wall</strong> → no build";
   form.appendChild(hint);
 
   boardTileForm.appendChild(form);
@@ -4950,16 +5321,13 @@ function renderBoardTileForm(tile) {
   saveBtn.className = "btn btn-sm btn-accent";
   saveBtn.textContent = "Save";
   saveBtn.addEventListener("click", () => {
-    const buildBonuses = {
-      immediate: _collectResRows(buildImmContainer),
-      production: {},
-    };
-    const adjacencyBonuses = _collectResRows(adjContainer);
+    const buildBonuses = buildSection._collectList();
+    const adjacencyBonuses = adjSection._collectList();
     const requirements = _collectReqRows(reqContainer);
     const checkedTypes = Array.from(onlyBuildGrid.querySelectorAll("input[type=checkbox]:checked"))
       .map(cb => cb.value);
-    // All checked = all allowed → save [] (no restriction); partial = explicit whitelist
-    const only_build = checkedTypes.length === BUILDABLE_TILE_TYPES.length ? [] : checkedTypes;
+    // All checked = all allowed → null; none checked = block all → []; partial = whitelist
+    const only_build = checkedTypes.length === BUILDABLE_TILE_TYPES.length ? null : checkedTypes;
     socket.emit("edit_board_tile", {
       row: tile.row,
       col: tile.col,
@@ -5013,38 +5381,48 @@ function renderBoardTileForm(tile) {
 const TERRAIN_OPTIONS = [
   "empty", "city", "lake", "sea", "offshore_wind", "offshore_solar",
   "government", "commercial", "sun", "wind", "gas_reserve", "coal",
-  "wall", "rare_metal_mine", "natural_park", "space",
+  "wall", "mountain", "rare_metal_mine", "natural_park", "space", "launching_pad",
 ];
 
+// Shared with BUILDABLE_TILE_TYPES inside renderBoardTileForm
 const BUILDABLE_TILE_TYPE_OPTIONS = [
-  ["power_plant", "⚡ Power Plant"],
-  ["data_center", "🖥️ Data Center"],
-  ["store", "🏪 Store"],
-  ["ad_campaign", "📢 Ad Campaign"],
-  ["office", "🏢 Office"],
-  ["lobby_group", "💻 Lobby Group"],
-  ["rare_metal_mine", "🔩 Rare Metal Mine"],
+  ["power_plant",               "⚡ Power Plant"],
+  ["pv_power_plant",            "☀️ PV Solar Plant"],
+  ["wind_power_plant",          "💨 Wind Power Plant"],
+  ["solar_thermal",             "🌡️ Solar Thermal Plant"],
+  ["data_center",               "🖥️ Data Center"],
+  ["store",                     "🏪 Store"],
+  ["ad_campaign",               "📢 Ad Campaign"],
+  ["office",                    "🏢 Office"],
+  ["lobby_group",               "💻 Lobby Group"],
+  ["rare_metal_mine",           "🔩 Rare Metal Mine"],
   ["hydroelectric_power_plant", "💧 Hydro Plant"],
-  ["satellite", "🛰️ Satellite"],
-  ["factory", "🏭 Hardware Factory"],
+  ["satellite_solar",           "🛰️☀️ Satellite Solar"],
+  ["satellite_dc",              "🛰️🖥️ Satellite DC"],
+  ["factory",                   "🏭 Hardware Factory"],
+  ["launching_pad",             "🚀 Launching Pad"],
 ];
+
+// Terrain-type defaults loaded from tile_type.yaml via server
+let tileTypeConfig = {};
 
 function renderTerrainTypeForm() {
-  terrainTypeForm.classList.remove("hidden");
+  // Mutual exclusion: close tile form if open
   boardTileForm.classList.add("hidden");
+  terrainTypeForm.classList.remove("hidden");
   terrainTypeForm.innerHTML = "";
 
   const title = document.createElement("h3");
   title.textContent = "Edit all tiles of a terrain type";
-  title.style.marginBottom = ".8rem";
+  title.style.marginBottom = ".4rem";
   terrainTypeForm.appendChild(title);
 
   const hint = document.createElement("p");
-  hint.style.cssText = "font-size:.75rem;color:var(--text-dim);margin:.3rem 0 .8rem;";
-  hint.textContent = "Changes apply to every tile on the board with the selected terrain. Leave 'Allowed build types' empty to allow all.";
+  hint.style.cssText = "font-size:.75rem;color:var(--text-dim);margin:.2rem 0 .8rem;";
+  hint.textContent = "Saved to tile_type.yaml. Also applied to all existing board tiles of that terrain.";
   terrainTypeForm.appendChild(hint);
 
-  // Terrain selector
+  // ── Terrain selector ──────────────────────────────────────────
   const terrainRow = document.createElement("div");
   terrainRow.className = "editor-field";
   const terrainLabel = document.createElement("label");
@@ -5062,7 +5440,21 @@ function renderTerrainTypeForm() {
   terrainRow.appendChild(terrainSel);
   terrainTypeForm.appendChild(terrainRow);
 
-  // Only build checkboxes — pre-filled from first matching tile
+  // ── Build bonuses ─────────────────────────────────────────────
+  let buildSection = _makeConditionalBonusSection(
+    "Build bonuses — given when player builds on this terrain (per build type)",
+    null
+  );
+  terrainTypeForm.appendChild(buildSection);
+
+  // ── Adjacency bonuses ─────────────────────────────────────────
+  let adjSection = _makeConditionalBonusSection(
+    "Adjacency bonuses — given when player builds next to this terrain (per build type)",
+    null
+  );
+  terrainTypeForm.appendChild(adjSection);
+
+  // ── Only-build checkboxes ─────────────────────────────────────
   const onlyBuildSection = document.createElement("div");
   onlyBuildSection.className = "editor-field board-bonus-section";
   const obLabel = document.createElement("label");
@@ -5071,11 +5463,30 @@ function renderTerrainTypeForm() {
   const obGrid = document.createElement("div");
   obGrid.className = "only-build-grid";
 
-  function refreshOnlyBuildCheckboxes() {
+  function refreshFromTerrain() {
     const terrain = terrainSel.value;
-    const matchingTile = editorBoardTiles.find(t => t.terrain === terrain);
-    const savedOb = (matchingTile?.only_build) || [];
-    const allAllowedOb = savedOb.length === 0;
+    // Read from tileTypeConfig (tile_type.yaml) — the authoritative source for terrain defaults
+    const ttEntry = tileTypeConfig[terrain] || {};
+
+    // Rebuild build bonuses section with data from tile_type.yaml
+    const newBuildSection = _makeConditionalBonusSection(
+      "Build bonuses — given when player builds on this terrain (per build type)",
+      ttEntry.build_bonuses ?? null
+    );
+    buildSection.replaceWith(newBuildSection);
+    buildSection = newBuildSection;
+
+    // Rebuild adjacency bonuses section with data from tile_type.yaml
+    const newAdjSection = _makeConditionalBonusSection(
+      "Adjacency bonuses — given when player builds next to this terrain (per build type)",
+      ttEntry.adjacency_bonuses ?? null
+    );
+    adjSection.replaceWith(newAdjSection);
+    adjSection = newAdjSection;
+
+    // Refill only_build checkboxes from tile_type.yaml
+    const savedOb = ttEntry.only_build ?? null;
+    const allAllowed = savedOb == null;
     obGrid.innerHTML = "";
     BUILDABLE_TILE_TYPE_OPTIONS.forEach(([val, lbl]) => {
       const cbLabel = document.createElement("label");
@@ -5083,18 +5494,20 @@ function renderTerrainTypeForm() {
       const cb = document.createElement("input");
       cb.type = "checkbox";
       cb.value = val;
-      cb.checked = allAllowedOb || savedOb.includes(val);
+      cb.checked = allAllowed || (Array.isArray(savedOb) && savedOb.includes(val));
       cbLabel.appendChild(cb);
-      cbLabel.appendChild(document.createTextNode(lbl));
+      const textWrap = document.createElement("span");
+      textWrap.textContent = lbl;
+      cbLabel.appendChild(textWrap);
       obGrid.appendChild(cbLabel);
     });
   }
-  refreshOnlyBuildCheckboxes();
-  terrainSel.addEventListener("change", refreshOnlyBuildCheckboxes);
+  refreshFromTerrain();
+  terrainSel.addEventListener("change", refreshFromTerrain);
   onlyBuildSection.appendChild(obGrid);
   terrainTypeForm.appendChild(onlyBuildSection);
 
-  // Actions
+  // ── Actions ───────────────────────────────────────────────────
   const actions = document.createElement("div");
   actions.className = "editor-form-actions";
 
@@ -5102,14 +5515,28 @@ function renderTerrainTypeForm() {
   saveBtn.className = "btn btn-sm btn-accent";
   saveBtn.textContent = "Apply to all tiles of this terrain";
   saveBtn.addEventListener("click", () => {
+    // Collect only_build
     const checkedOb = Array.from(obGrid.querySelectorAll("input[type=checkbox]:checked"))
       .map(cb => cb.value);
-    const only_build = checkedOb.length === BUILDABLE_TILE_TYPE_OPTIONS.length ? [] : checkedOb;
+    const only_build = checkedOb.length === BUILDABLE_TILE_TYPE_OPTIONS.length ? null : checkedOb;
+
+    const buildBonusList = buildSection._collectList();
+    const adjBonusList   = adjSection._collectList();
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
     socket.emit("edit_board_terrain_type", {
       terrain: terrainSel.value,
       only_build,
+      build_bonuses:    buildBonusList,
+      adjacency_bonuses: adjBonusList,
     });
-    terrainTypeForm.classList.add("hidden");
+    const onConfirm = () => {
+      terrainTypeForm.classList.add("hidden");
+      showFloatingSuccess("Terrain rules saved ✓");
+      socket.off("board_editor_data", onConfirm);
+    };
+    socket.once("board_editor_data", onConfirm);
   });
 
   const cancelBtn = document.createElement("button");
@@ -5121,9 +5548,8 @@ function renderTerrainTypeForm() {
   actions.appendChild(cancelBtn);
   terrainTypeForm.appendChild(actions);
 
-  requestAnimationFrame(() => {
-    terrainTypeForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  });
+  requestAnimationFrame(() =>
+    terrainTypeForm.scrollIntoView({ behavior: "smooth", block: "nearest" }));
 }
 
 editTerrainTypeBtn.addEventListener("click", renderTerrainTypeForm);

@@ -1,8 +1,12 @@
 - name: DDoS Storm
-  id: 23
-  description: Overwhelm a competitor's servers, reducing their uptime.
-  type: network
+  id: 31
+  description: 'Overwhelm a competitor''s servers, reducing their uptime. INT NOTE:
+    There should be 75% attacks and 25% defense, or 80/20'
+  type: null
   number: 2
+  disabled: 'true'
+  factory_refund: 0
+  dc_production_bonus: 0
   costs:
     engineers: 1
     suits: 0
@@ -20,14 +24,15 @@
     reputation: 1
     data_centers: 0
     ad_campaigns: 0
+  requirements: null
+  tiers: null
   boosts: null
-  disabled: true
-
 - name: Firewall Shield
-  id: 0
-  description: >
-    Deploy enterprise-grade firewalls and intrusion detection systems,
+  id: 32
+  description: 'Deploy enterprise-grade firewalls and intrusion detection systems,
     protecting your infrastructure from cyber attacks this year.
+
+    '
   type: cyber defense
   number: 2
   costs:
@@ -38,3 +43,4 @@
   boosts: null
   requirements: null
   tiers: null
+  disabled: true

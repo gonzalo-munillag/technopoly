@@ -9,7 +9,7 @@
 # ---- TEMPLATE (copy, uncomment, and fill in) ---------------
 #
 # - name: Event Name
-#   id: 99                  # unique across ALL card files
+#   id: 100                  # unique across ALL card files
 #   description: null       # flavour text shown on the card
 #   targets_all: 1          # 1 = affects all players
 #   compliance:             # cost if player accepts the event
@@ -21,4 +21,18 @@
 #   image: null
 #
 # ---- CARDS -------------------------------------------------
-[]
+- name: Climate Change
+  id: 75
+  tag: null
+  description: null
+  targets_all: 1
+  target_id: null
+  target_type: null
+  court_threshold: 4
+  factory_refund: 0
+  dc_production_bonus: 0
+  compliance: null
+  court_penalty: null
+  requirements: null
+  tiers: null
+  boosts: null

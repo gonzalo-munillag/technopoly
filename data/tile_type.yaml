@@ -1,0 +1,4 @@
+# Terrain-type level defaults for the board editor.
+# Edited via "Edit by Terrain Type" in the Board Editor.
+# Keys are terrain type names (e.g. commercial, lake, sun, ...).
+# Each entry can have: only_build, requirements, build_bonuses, adjacency_bonuses.

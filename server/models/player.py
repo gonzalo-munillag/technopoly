@@ -92,10 +92,16 @@ class Player:
         if self.resources.get("data", 0) < data_cost:
             return {"ok": False, "error": f"Not enough data — need {data_cost}PB to upgrade."}
         self.resources["data"] = self.resources.get("data", 0) - data_cost
-        # Incremental users gained
+        # Incremental users gained (with reputation modifier, same as card play)
         users_gained = tier.get("users", 0)
         if users_gained > 0:
             self.gain_users(users_gained, game)
+            mod = self.reputation_modifier()
+            if mod != 0:
+                delta = max(-users_gained, mod)
+                self.users = max(0, self.users + delta)
+                if game and delta > 0:
+                    game.user_pool = max(0, game.user_pool - delta)
         # Incremental money production gained
         money_gained = tier.get("money", 0)
         if money_gained:
