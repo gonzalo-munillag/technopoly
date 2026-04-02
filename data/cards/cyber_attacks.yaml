@@ -1,5 +1,5 @@
 - name: DDoS Storm
-  id: 31
+  id: 44
   description: 'Overwhelm a competitor''s servers, reducing their uptime. INT NOTE:
     There should be 75% attacks and 25% defense, or 80/20'
   type: null
@@ -28,7 +28,7 @@
   tiers: null
   boosts: null
 - name: Firewall Shield
-  id: 32
+  id: 45
   description: 'Deploy enterprise-grade firewalls and intrusion detection systems,
     protecting your infrastructure from cyber attacks this year.
 

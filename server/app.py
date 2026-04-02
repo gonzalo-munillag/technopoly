@@ -52,6 +52,81 @@ def _touch_activity():
         _last_activity = time.time()
 
 
+def _card_build_types(card) -> list[str]:
+    """Return build tile types from a card (supports scalar or list)."""
+    raw = getattr(card, "build", None)
+    if isinstance(raw, list):
+        return [b for b in raw if b]
+    if raw:
+        return [raw]
+    tile = getattr(card, "tile_type", None)
+    return [tile] if tile else []
+
+
+def _money_cost_for_card_play(player, card) -> int:
+    """How much money this card play itself deducts (excluding placement fees)."""
+    costs = getattr(card, "costs", None) or {}
+    if costs:
+        total = int(costs.get("money") or 0)
+        if card.fee and not player._owns_fee_card(card):
+            total += int(card.fee or 0)
+        return total
+    fee = 0 if player._owns_fee_card(card) else int(card.fee or 0)
+    return int(card.cost or 0) + fee
+
+
+def _placement_fee_options(player_id: str, row: int, col: int, meta: dict | None = None):
+    """Return placement fee context for this spot.
+    Output: {"amount": int, "payees": [pid,...]} or None if no fee required."""
+    meta = meta or {}
+    fee_amt = int(meta.get("adjacent_placement_fee") or 0)
+    target_types = {
+        t for t in (meta.get("adjacent_placement_fee_target_types") or [])
+        if t
+    }
+    if fee_amt <= 0 or not target_types:
+        return None
+    payees = set()
+    for nb in game.board.get_neighbors(row, col):
+        pt = nb.get("placed_tile")
+        if not pt:
+            continue
+        owner = pt.get("owner_id")
+        if not owner or owner == player_id:
+            continue
+        if pt.get("type") in target_types and owner in game.players:
+            payees.add(owner)
+    if not payees:
+        return None
+    return {"amount": fee_amt, "payees": list(payees)}
+
+
+def _has_any_legal_tile_placement(
+    player,
+    tile_type: str,
+    meta: dict | None = None,
+    money_after_card: int | None = None,
+) -> bool:
+    """Check if player can legally place this tile anywhere right now."""
+    played_types = {c.card_color_type for c in player.played_cards if c.card_color_type}
+    only_next_to = (meta or {}).get("only_playable_next_to") or []
+    only_terrains = (meta or {}).get("only_playable_on_terrains") or []
+    for t in game.board.to_list():
+        if game.board.can_place_for_player(
+            t["row"], t["col"], tile_type,
+            played_card_types=played_types,
+            only_playable_next_to=only_next_to,
+            only_playable_on_terrains=only_terrains,
+        ):
+            if money_after_card is not None:
+                fee_info = _placement_fee_options(player.player_id, t["row"], t["col"], meta)
+                fee_amt = int(fee_info["amount"]) if fee_info else 0
+                if money_after_card < fee_amt:
+                    continue
+            return True
+    return False
+
+
 def _inactivity_watchdog():
     """Background thread that ends the game after INACTIVITY_TIMEOUT of no player actions."""
     while True:
@@ -282,6 +357,7 @@ def on_pick_company(data):
 
     if card.starting_tiles:
         player._remaining_starting_tiles = list(card.starting_tiles)
+        player.pending_tile_queue = []
         player.pending_tile = player._remaining_starting_tiles.pop(0)
 
     _send_private_states()
@@ -594,6 +670,8 @@ def on_play_card(data):
         emit("error", {"message": req_err})
         return
 
+    build_tiles = _card_build_types(card)
+
     # Validate responsible-mining extra cost if chosen
     if use_responsible_mining and card.responsible_mining:
         extra_cost = card.responsible_mining.get("extra_cost") or {}
@@ -606,6 +684,20 @@ def on_play_card(data):
     if err:
         emit("error", {"message": err})
         return
+    # If this card creates build tile placement, ensure at least one legal placement exists
+    # before allowing the card to be played (prevents stuck pending-tile states).
+    if build_tiles:
+        tile_meta = {
+            "only_playable_next_to": card.only_playable_next_to or [],
+            "only_playable_on_terrains": card.only_playable_on_terrains or [],
+            "adjacent_placement_fee": card.adjacent_placement_fee or 0,
+            "adjacent_placement_fee_target_types": card.adjacent_placement_fee_target_types or [],
+        }
+        money_after_card = (player.resources.get("money", 0) - _money_cost_for_card_play(player, card))
+        for bt in build_tiles:
+            if not _has_any_legal_tile_placement(player, bt, tile_meta, money_after_card=money_after_card):
+                emit("error", {"message": f"No legal board placement available for {bt.replace('_', ' ')} with your current money/placement fee constraints. Cannot play this card now."})
+                return
     player.pay_costs(card, use_optional)
 
     # Apply responsible-mining extra cost and bonus effect
@@ -650,11 +742,18 @@ def on_play_card(data):
         "card": played.to_dict(),
     }, room="game")
 
-    if card.tile_type:
-        player.pending_tile = card.tile_type
+    if build_tiles:
+        player.pending_tile = build_tiles[0]
+        player.pending_tile_queue = list(build_tiles[1:])
         player.pending_tile_meta = {
-            "factory_refund": card.factory_refund,
-            "dc_production_bonus": card.dc_production_bonus,
+            "only_playable_next_to": card.only_playable_next_to or [],
+            "only_playable_on_terrains": card.only_playable_on_terrains or [],
+            "bonuses_by_placing_next_to_building": card.bonuses_by_placing_next_to_building or [],
+            "bonuses_by_building_on_terrain_type": card.bonuses_by_building_on_terrain_type or [],
+            "bonuses_by_building_adjacent_to_terrain_type": card.bonuses_by_building_adjacent_to_terrain_type or [],
+            "placed_tile_adjacency_bonuses": card.placed_tile_adjacency_bonuses or [],
+            "adjacent_placement_fee": card.adjacent_placement_fee or 0,
+            "adjacent_placement_fee_target_types": card.adjacent_placement_fee_target_types or [],
         }
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
@@ -704,10 +803,23 @@ def on_play_build_card(data):
     if req_err:
         emit("error", {"message": req_err})
         return
+    build_tiles = _card_build_types(card)
     err = player.can_afford_costs(card, {})
     if err:
         emit("error", {"message": err})
         return
+    if build_tiles:
+        tile_meta = {
+            "only_playable_next_to": card.only_playable_next_to or [],
+            "only_playable_on_terrains": card.only_playable_on_terrains or [],
+            "adjacent_placement_fee": card.adjacent_placement_fee or 0,
+            "adjacent_placement_fee_target_types": card.adjacent_placement_fee_target_types or [],
+        }
+        money_after_card = (player.resources.get("money", 0) - _money_cost_for_card_play(player, card))
+        for bt in build_tiles:
+            if not _has_any_legal_tile_placement(player, bt, tile_meta, money_after_card=money_after_card):
+                emit("error", {"message": f"No legal board placement available for {bt.replace('_', ' ')} with your current money/placement fee constraints. Cannot play this card now."})
+                return
 
     try:
         player.pay_costs(card, {})
@@ -731,11 +843,18 @@ def on_play_build_card(data):
             "card": card.to_dict(),
         }, room="game")
 
-        if card.tile_type:
-            player.pending_tile = card.tile_type
+        if build_tiles:
+            player.pending_tile = build_tiles[0]
+            player.pending_tile_queue = list(build_tiles[1:])
             player.pending_tile_meta = {
-                "factory_refund": card.factory_refund,
-                "dc_production_bonus": card.dc_production_bonus,
+                "only_playable_next_to": card.only_playable_next_to or [],
+                "only_playable_on_terrains": card.only_playable_on_terrains or [],
+                "bonuses_by_placing_next_to_building": card.bonuses_by_placing_next_to_building or [],
+                "bonuses_by_building_on_terrain_type": card.bonuses_by_building_on_terrain_type or [],
+                "bonuses_by_building_adjacent_to_terrain_type": card.bonuses_by_building_adjacent_to_terrain_type or [],
+                "placed_tile_adjacency_bonuses": card.placed_tile_adjacency_bonuses or [],
+                "adjacent_placement_fee": card.adjacent_placement_fee or 0,
+                "adjacent_placement_fee_target_types": card.adjacent_placement_fee_target_types or [],
             }
             socketio.emit("game_state", game.to_dict(), room="game")
             _send_private_states()
@@ -934,10 +1053,36 @@ def on_place_tile(data):
         return
 
     meta = player.pending_tile_meta or {}
+    placement_fee = _placement_fee_options(player_id, row, col, meta)
+    pay_to = (data.get("pay_to") or {}).get("placement_fee")
+    if placement_fee:
+        payees = placement_fee["payees"]
+        fee_amt = int(placement_fee["amount"])
+        if player.resources.get("money", 0) < fee_amt:
+            emit("error", {"message": f"Not enough money to place here — placement fee is ${fee_amt}B."})
+            return
+        if not pay_to:
+            emit("placement_fee_required", {
+                "row": row,
+                "col": col,
+                "amount": fee_amt,
+                "payees": [{"pid": pid, "name": game.players[pid].name} for pid in payees if pid in game.players],
+            })
+            return
+        if pay_to not in payees:
+            emit("error", {"message": "Selected placement fee payee is not eligible for this placement."})
+            return
+        player.resources["money"] = player.resources.get("money", 0) - fee_amt
+        game.players[pay_to].resources["money"] = game.players[pay_to].resources.get("money", 0) + fee_amt
+
     bonuses = game.board.place_tile(
         row, col, player.pending_tile, player_id,
-        factory_refund=meta.get("factory_refund", 0),
-        dc_production_bonus=meta.get("dc_production_bonus", 0),
+        only_playable_next_to=meta.get("only_playable_next_to") or [],
+        only_playable_on_terrains=meta.get("only_playable_on_terrains") or [],
+        bonuses_by_placing_next_to_building=meta.get("bonuses_by_placing_next_to_building") or [],
+        bonuses_by_building_on_terrain_type=meta.get("bonuses_by_building_on_terrain_type") or [],
+        bonuses_by_building_adjacent_to_terrain_type=meta.get("bonuses_by_building_adjacent_to_terrain_type") or [],
+        placed_tile_adjacency_bonuses=meta.get("placed_tile_adjacency_bonuses") or [],
     )
     if not bonuses:
         emit("error", {"message": "Cannot place a tile there."})
@@ -961,17 +1106,23 @@ def on_place_tile(data):
                 game.user_pool = max(0, game.user_pool - delta)
 
     tile_type = player.pending_tile
+    current_meta = player.pending_tile_meta or {}
     player.pending_tile = None
     player.pending_tile_meta = {}
 
-    # Factory money production: per-card refund from adjacent power plants, added as yearly income
-    factory_refund = 0
-    if tile_type == "factory":
-        factory_refund = game.board.get_adjacent_factory_refund(row, col)
-        if factory_refund > 0:
-            player.production["money"] = player.production.get("money", 0) + factory_refund
-
-    if player._remaining_starting_tiles:
+    if player.pending_tile_queue:
+        # Advance to next queued tile only if a legal placement exists now.
+        while player.pending_tile_queue:
+            nxt = player.pending_tile_queue.pop(0)
+            if _has_any_legal_tile_placement(
+                player, nxt, current_meta,
+                money_after_card=player.resources.get("money", 0),
+            ):
+                player.pending_tile = nxt
+                player.pending_tile_meta = dict(current_meta)
+                break
+            emit("error", {"message": f"No legal board placement available for queued tile: {nxt.replace('_', ' ')}. Skipping it."})
+    elif player._remaining_starting_tiles:
         player.pending_tile = player._remaining_starting_tiles.pop(0)
 
     bonus_text = []
@@ -979,8 +1130,6 @@ def on_place_tile(data):
         bonus_text.append(f"+{amt} {res}")
     for res, amt in bonuses.get("production", {}).items():
         bonus_text.append(f"+{amt} {res}/yr")
-    if factory_refund > 0:
-        bonus_text.append(f"+${factory_refund}M/yr factory income")
 
     socketio.emit("board_update", game.board.to_list(), room="game")
     emit("tile_placed", {
@@ -1216,6 +1365,38 @@ def _send_private_states():
 # ── Card Editor ─────────────────────────────────────────────
 
 def _read_all_cards_yaml() -> dict[str, list[dict]]:
+    def _normalize_card_entry(card: dict) -> dict:
+        c = dict(card or {})
+        legacy_factory_refund = int(c.get("factory_refund", 0) or 0)
+        legacy_dc_bonus = int(c.get("dc_production_bonus", 0) or 0)
+
+        placed_adj = c.get("placed_tile_adjacency_bonuses")
+        if not placed_adj:
+            placed_adj = []
+            if legacy_factory_refund > 0:
+                placed_adj.append({
+                    "build_type": "factory",
+                    "production": {"money": legacy_factory_refund},
+                })
+            if legacy_dc_bonus > 0:
+                placed_adj.append({
+                    "build_type": "data_center",
+                    "production": {"data_centers": legacy_dc_bonus},
+                })
+        c["placed_tile_adjacency_bonuses"] = placed_adj
+
+        placing_adj = c.get("bonuses_by_placing_next_to_building") or []
+        if not placing_adj and legacy_dc_bonus > 0:
+            placing_adj = [{
+                "build_type": "data_center",
+                "production": {"data_centers": legacy_dc_bonus},
+            }]
+        c["bonuses_by_placing_next_to_building"] = placing_adj
+
+        c.pop("factory_refund", None)
+        c.pop("dc_production_bonus", None)
+        return c
+
     result = {}
     for card_type, filename in CARD_TYPE_FILES.items():
         filepath = CARDS_DIR / filename
@@ -1223,7 +1404,8 @@ def _read_all_cards_yaml() -> dict[str, list[dict]]:
             result[card_type] = []
             continue
         with open(filepath) as f:
-            result[card_type] = yaml.safe_load(f) or []
+            raw_cards = yaml.safe_load(f) or []
+            result[card_type] = [_normalize_card_entry(c) for c in raw_cards]
     return result
 
 
@@ -1555,8 +1737,15 @@ def on_add_card(data):
     _DEFAULT = {"name": "New Card", "id": _next_card_id(), "image": None, "description": "",
                 "type": "", "number": 1, "build": None, "costs": dict(_COSTS_TEMPLATE),
                 "effect": {}, "boosts": [], "requirements": [],
-                "tiers": [],
-                "factory_refund": None, "dc_production_bonus": None}
+                "only_playable_next_to": [],
+                "only_playable_on_terrains": [],
+                "bonuses_by_placing_next_to_building": [],
+                "bonuses_by_building_on_terrain_type": [],
+                "bonuses_by_building_adjacent_to_terrain_type": [],
+                "placed_tile_adjacency_bonuses": [],
+                "adjacent_placement_fee": 0,
+                "adjacent_placement_fee_target_types": [],
+                "tiers": []}
 
     new_card = _CATEGORY_TEMPLATES.get(card_type, dict(_DEFAULT))
     if "id" not in new_card or new_card["id"] == 0:
@@ -1763,6 +1952,14 @@ def on_permanent_delete_card(data):
     emit("graveyard_data", {"cards": _read_graveyard()})
 
 
+@socketio.on("delete_all_graveyard")
+def on_delete_all_graveyard():
+    if request.sid not in editor_sids:
+        return
+    _write_graveyard([])
+    emit("graveyard_data", {"cards": []})
+
+
 @socketio.on("get_card_trees")
 def on_get_card_trees():
     if not _ensure_editor(request.sid):
@@ -1778,12 +1975,16 @@ def on_get_card_trees():
 def on_get_params():
     if not _ensure_editor(request.sid):
         return
-    emit("params_data", load_params())
+    params = dict(load_params() or {})
+    params.pop("money_per_users", None)  # legacy key removed
+    emit("params_data", params)
 
 @socketio.on("save_params")
 def on_save_params(data):
     if not _ensure_editor(request.sid):
         return
+    data = dict(data or {})
+    data.pop("money_per_users", None)  # legacy key removed
     with open(PARAMS_FILE, "w") as f:
         yaml.dump(data, f, default_flow_style=False, sort_keys=False)
     load_params()

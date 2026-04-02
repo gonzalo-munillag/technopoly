@@ -1,5 +1,5 @@
 - name: Headquarters
-  id: 40
+  id: 50
   description: null
   type: office
   number: 1
@@ -16,8 +16,9 @@
   requirements: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Home Office Gear
-  id: 41
+  id: 51
   description: null
   type: office
   number: 2
@@ -44,8 +45,9 @@
   requirements: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Coworking Rental
-  id: 42
+  id: 52
   description: null
   type: office
   number: 1
@@ -71,8 +73,9 @@
   requirements: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Office Building
-  id: 43
+  id: 53
   description: null
   type: office
   number: 2
@@ -91,8 +94,9 @@
   requirements: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Office Building Rental
-  id: 44
+  id: 54
   description: null
   type: office
   number: 1
@@ -109,41 +113,41 @@
   requirements: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Hyperscale Data Center
-  id: 45
+  id: 55
   description: "INT NOTE: fee to HW someone who has a HW focused company. choose to\
     \ pay  \nMassive facilities built for huge-scale operations."
   type: data center
   number: 1
-  build: data_center
   factory_refund: 0
   dc_production_bonus: 0
   costs:
-    engineers: 10
-    suits: 3
+    engineers: 4
+    suits: 0
     ads: 0
-    money: 1000
+    money: 400
     servers: 5
     ad_campaigns: 0
     fee: 500
     fee_card_type: chip enterprise
-  effect:
-    servers: 6
-    money: 5
-    data_centers: 0
-    ad_campaigns: 0
+  effect: null
+  production:
+    data_centers: 2
+  build: data_center
   requirements: null
+  only_playable_next_to: null
+  bonuses_by_placing_next_to_building: null
   tiers: null
   boosts: null
 - name: On-Premise Data Center
-  id: 46
+  id: 56
   description: "INT NOTE: fee to HW vendor. \nOwned and operated by a single company\
     \ for its own internal use."
   type: data center
   number: 1
-  build: data_center
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 0
+  undefined: commercial
   costs:
     engineers: 0
     suits: 0
@@ -158,15 +162,28 @@
     fee: 0
     fee_card_id: null
   effect: null
+  production: null
+  build: data_center
+  requirements: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type:
+  - terrain_type: commercial
+    immediate:
+      money: 100
+    production: {}
+  placed_tile_adjacency_bonuses: null
+  tiers: null
   boosts: null
-  disabled: true
 - name: Colocation Data Center
-  id: 47
+  id: 57
   description: "INT NOTE: fee to HW vendor. \nThird-party facilities where multiple\
     \ businesses rent space."
   type: data center
   number: 1
-  build: data_center
   factory_refund: 0
   dc_production_bonus: 0
   costs:
@@ -183,10 +200,15 @@
     fee: 0
     fee_card_id: null
   effect: null
+  production: null
+  build: data_center
+  requirements: null
+  only_playable_next_to: null
+  bonuses_by_placing_next_to_building: null
+  tiers: null
   boosts: null
-  disabled: true
 - name: Edge Data Center
-  id: 48
+  id: 58
   description: "INT NOTE: fee to HW vendor. \nSmaller distributed data center closer\
     \ to users. "
   type: data center
@@ -212,7 +234,7 @@
   boosts: null
   disabled: true
 - name: Brand-Owned Store
-  id: 49
+  id: 59
   description: Sell only one brand’s products. Apple Store
   type: store
   number: 3
@@ -240,7 +262,7 @@
   tiers: null
   boosts: null
 - name: Electronics Retailer
-  id: 50
+  id: 60
   description: 'Large stores selling many brands and categories
 
     TVs, laptops, phones, appliances
@@ -271,7 +293,7 @@
   tiers: null
   boosts: null
 - name: Authorized Reseller
-  id: 51
+  id: 61
   description: 'Official partners of brands
 
     Sell genuine products with warranty support
@@ -303,14 +325,13 @@
   tiers: null
   boosts: null
 - name: Nuclear Power Plant
-  id: 52
-  description: Build and operate power infrastructure. Essential for data centers.
-  type: power plant
+  id: 62
+  description: High-output zero-emission power. Essential for data centers. Requires
+    significant investment but delivers clean energy at scale.
+  type: nuclear power plant
   number: 2
-  build: power_plant
-  factory_refund: 10
-  dc_production_bonus: 1
-  disabled: 'true'
+  undefined: null
+  adjacent_placement_fee: 0
   costs:
     engineers: 2
     suits: 0
@@ -325,42 +346,59 @@
     money: 3
     data_centers: 0
     ad_campaigns: 0
+  production: null
+  build: nuclear_power_plant
   requirements: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
 - name: Natural Gas Power Plant
-  id: 53
-  description: Harness the sun. Clean energy and good PR.
-  type: power plant
-  number: 4
-  build: power_plant
-  factory_refund: 5
-  dc_production_bonus: 1
-  disabled: 'true'
+  id: 63
+  description: Fast to build and flexible. A reliable bridge fuel for powering your
+    data centers, though it carries a reputation cost.
+  type: natural gas power plant
+  number: 3
+  undefined: gas_reserve
+  adjacent_placement_fee: 0
   costs:
-    engineers: 1
+    engineers: 5
     suits: 0
     ads: 0
-    money: 5
+    money: 500
     servers: 0
     data_centers: 0
     ad_campaigns: 0
     fee: 0
     fee_card_id: null
   effect:
-    money: 2
-    reputation: 1
     data_centers: 0
     ad_campaigns: 0
+  production: null
+  build: natural_gas_power_plant
   requirements: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type:
+  - terrain_type: gas_reserve
+    immediate: {}
+    production:
+      money: 1
+  placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
 - name: PV Power Plant
-  id: 54
+  id: 64
   description: Photovoltaic solar array. Ideal on sun or offshore solar terrain. Boosts
     adjacent data centers.
   type: pv power plant
-  number: 10
+  number: 5
   build: pv_power_plant
   factory_refund: 0
   dc_production_bonus: 1
@@ -385,13 +423,13 @@
   requirements: null
   tiers: null
   boosts: null
-- name: Solar Thermal Power Plant
-  id: 55
-  description: Concentrating solar collectors convert heat into electricity. Best
-    on sun terrain. Boosts adjacent data centers.
-  type: solar thermal
+- name: Geothermal Power Plant
+  id: 65
+  description: Harnesses heat from deep underground to generate electricity. Can be
+    built on any open terrain. Boosts adjacent data centers.
+  type: geothermal power plant
   number: 1
-  build: solar_thermal
+  build: geothermal_power_plant
   factory_refund: 0
   dc_production_bonus: 1
   disabled: 'false'
@@ -416,15 +454,14 @@
   tiers: null
   boosts: null
 - name: Wind Farm
-  id: 56
+  id: 66
   description: Onshore or offshore wind turbines. Best on wind or offshore wind terrain.
     Boosts adjacent data centers.
   type: wind power plant
-  number: 4
-  build: wind_power_plant
-  factory_refund: 0
-  dc_production_bonus: 1
+  number: 6
   disabled: 'false'
+  undefined: data_center
+  adjacent_placement_fee: 0
   costs:
     engineers: 1
     suits: 0
@@ -442,67 +479,23 @@
     reputation: 1
     data_centers: 0
     ad_campaigns: 0
+  production: null
+  build: wind_power_plant
   requirements: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-- name: Biomass Power Plant
-  id: 57
-  description: null
-  type: power plant
-  number: 1
-  build: power_plant
-  factory_refund: 0
-  dc_production_bonus: 0
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-    fee_card_type: null
-    fee_company_type: null
-  effect: null
-  boosts: null
-  disabled: true
-- name: Geothermal Power Plant
-  id: 58
-  description: null
-  type: power plant
-  number: 1
-  build: power_plant
-  factory_refund: 0
-  dc_production_bonus: 0
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-    fee_card_type: null
-    fee_company_type: null
-  effect: null
-  boosts: null
-  disabled: true
 - name: Coal Power Plant
-  id: 59
-  description: null
-  type: power plant
+  id: 67
+  description: Cheap and abundant but highly polluting. Cheap energy that hurts your
+    reputation.
+  type: coal power plant
   number: 3
-  build: power_plant
+  build: coal_power_plant
   factory_refund: 0
   dc_production_bonus: 0
   disabled: 'true'
@@ -525,12 +518,59 @@
   requirements: null
   tiers: null
   boosts: null
+- name: Hydroelectric Power Plant
+  id: 68
+  description: 'Build a hydroelectric dam on a lake tile. Generates clean power, boosting
+    data center production.
+
+    '
+  type: hydroelectric power plant
+  number: 2
+  build: hydroelectric_power_plant
+  factory_refund: 0
+  dc_production_bonus: 0
+  costs:
+    money: 150
+    engineers: 2
+  effect:
+    data_centers: 2
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Solar Thermal Power Plant
+  id: 69
+  description: Concentrates sunlight to generate heat and electricity. Best deployed
+    on sun terrain. Boosts adjacent data centers.
+  type: solar thermal
+  number: 2
+  build: solar_thermal
+  factory_refund: 0
+  dc_production_bonus: 1
+  image: null
+  costs:
+    engineers: 1
+    suits: 0
+    money: 6
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    money: 2
+    reputation: 1
+  requirements: null
+  tiers: null
+  boosts: null
+  disabled: true
 - name: Digital Banner Ads
-  id: 60
+  id: 70
   description: Targeted advertising infrastructure reaching billions of eyeballs.
   type: ad campaign
-  number: 2
-  build: ad_campaign
+  number: 3
   factory_refund: 0
   dc_production_bonus: 0
   disabled: 'true'
@@ -538,26 +578,29 @@
     engineers: 1
     suits: 1
     ads: 0
-    money: 3
+    money: 100
     servers: 1
     data_centers: 0
     ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
+    fee: 200
+    fee_card_id: 22
   effect:
     ads: 6
     users: 4
     money: 3
     data_centers: 0
     ad_campaigns: 0
+  production: null
+  build: ad_campaign
   requirements: null
+  only_playable_next_to: null
   tiers: null
   boosts: null
 - name: Video Ads
-  id: 61
+  id: 71
   description: null
   type: ad campaign
-  number: 2
+  number: 3
   build: ad_campaign
   factory_refund: 0
   dc_production_bonus: 0
@@ -566,15 +609,15 @@
     engineers: 0
     suits: 0
     ads: 0
-    money: 0
+    money: 100
     servers: 0
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 0
-    fee_card_id: null
+    fee: 200
+    fee_card_id: 22
     fee_card_type: null
     fee_company_type: null
   effect: null
@@ -582,10 +625,10 @@
   tiers: null
   boosts: null
 - name: Influencer Advertising
-  id: 62
+  id: 72
   description: Pay a soulless influencer to advertise your ads.
   type: ad campaign
-  number: 2
+  number: 1
   build: ad_campaign
   factory_refund: 0
   dc_production_bonus: 0
@@ -610,7 +653,7 @@
   tiers: null
   boosts: null
 - name: Billboard Blitz
-  id: 63
+  id: 73
   description: Plaster your brand across every surface. Old school, still works.
   type: ad campaign
   number: 1
@@ -638,7 +681,7 @@
   tiers: null
   boosts: null
 - name: Lobbying Group
-  id: 64
+  id: 74
   description: Influence government policy in your favor. Build a lobbying operation.
   type: lobby
   number: 1
@@ -665,7 +708,7 @@
   tiers: null
   boosts: null
 - name: Grassroots Lobbying
-  id: 65
+  id: 75
   description: mobilize public to pressure officials
   type: lobby
   number: 1
@@ -693,7 +736,7 @@
   boosts: null
   disabled: true
 - name: Corporate Lobbying
-  id: 66
+  id: 76
   description: companies influencing regulation
   type: lobby
   number: 2
@@ -721,43 +764,58 @@
   tiers: null
   boosts: null
 - name: Rare Metal Mine
-  id: 67
+  id: 77
   description: null
   type: rare metal mine
   number: 3
-  build: rare_metal_mine
   factory_refund: 0
   dc_production_bonus: 0
+  responsible_mining: '[object Object]'
+  disabled: 'true'
+  adjacent_placement_fee: null
   costs:
     money: 200
     engineers: 3
-  effect:
-    money: 10
-  responsible_mining:
-    extra_cost:
-      money: 50
-    extra_effect:
-      reputation: 2
+  effect: null
+  production:
+    money: 4
+  build: rare_metal_mine
   requirements: null
+  only_playable_next_to: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
   tiers: null
-  boosts: null
-  disabled: true
-- name: Hydroelectric Power Plant
-  id: 68
-  description: 'Build a hydroelectric dam on a lake tile. Generates clean power, boosting
-    data center production.
-
-    '
-  type: hydroelectric power plant
-  number: 2
-  build: hydroelectric_power_plant
+  boosts:
+  - target_id: null
+    target_type:
+    - hardware manufacturer
+    - chip enterprise
+    bonus:
+      money: 100
+    target_count: 5
+- name: Distribution Center
+  id: 78
+  description: A logistics hub that generates steady revenue and boosts nearby commercial
+    activity.
+  type: online marketplace
+  number: 3
+  build: distribution_center
   factory_refund: 0
   dc_production_bonus: 0
+  image: null
   costs:
-    money: 150
-    engineers: 2
+    engineers: 1
+    suits: 1
+    money: 8
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
   effect:
-    data_centers: 2
+    money: 5
   requirements: null
   tiers: null
   boosts: null

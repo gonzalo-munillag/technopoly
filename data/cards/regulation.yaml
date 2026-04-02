@@ -1,5 +1,5 @@
 - name: Anti-Monopoly Ruling
-  id: 69
+  id: 79
   description: Large companies are fined for anti-competitive practices.
   tag: antitrust
   targets_all: 1
@@ -17,7 +17,7 @@
   tiers: null
   boosts: null
 - name: Anti-Monopoly Ruling 2
-  id: 70
+  id: 80
   description: Large companies are fined for anti-competitive practices.
   tag: antitrust
   targets_all: 1
@@ -31,7 +31,7 @@
     reputation: -3
   boosts: null
 - name: Cybersecurity Mandate
-  id: 71
+  id: 81
   description: All companies must meet minimum cybersecurity standards.
   tag: security
   image: null
@@ -46,7 +46,7 @@
     reputation: -4
   court_threshold: 5
 - name: Platform Licensing Act
-  id: 72
+  id: 82
   description: Search engines must acquire a government license or shut down.
   tag: licensing
   image: null
@@ -60,7 +60,7 @@
     reputation: -2
   court_threshold: 4
 - name: 'Climate Change: Rising see level'
-  id: 73
+  id: 83
   tag: null
   description: 'int note: you need to pay extra to build dikes around power plants
     next to the see'
@@ -75,7 +75,7 @@
   requirements: null
   boosts: null
 - name: Green Deal
-  id: 74
+  id: 84
   tag: null
   description: 'int comment: you pay X for every fossil fuel power plant'
   targets_all: 1

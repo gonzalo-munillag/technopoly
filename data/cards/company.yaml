@@ -61,7 +61,7 @@
   tiers: null
   boosts: null
   disabled: true
-- name: DeepMind Industries
+- name: OpenMind Industries
   id: 4
   type: null
   description: An AI research lab turned corporate juggernaut. Their algorithms know
@@ -81,6 +81,7 @@
     HR: 1
     data_centers: 2
     ad_campaigns: 0
+  production: null
   requirements: null
   tiers: null
   boosts: null

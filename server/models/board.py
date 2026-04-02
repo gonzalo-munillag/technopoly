@@ -5,37 +5,42 @@ from dataclasses import dataclass, field
 _UNSET = object()
 
 TILE_TYPES = {
-    "power_plant", "pv_power_plant", "wind_power_plant", "solar_thermal",
+    "nuclear_power_plant", "natural_gas_power_plant", "coal_power_plant",
+    "pv_power_plant", "wind_power_plant", "geothermal_power_plant", "solar_thermal",
     "factory", "data_center", "store", "ad_campaign",
     "office", "lobby_group", "rare_metal_mine", "hydroelectric_power_plant",
-    "satellite_solar", "satellite_dc", "launching_pad",
+    "satellite_solar", "satellite_dc", "launching_pad", "distribution_center",
 }
 
-# Tile types that behave as power plants for synergy calculations
-_POWER_PLANT_TYPES = {"power_plant", "pv_power_plant", "wind_power_plant", "solar_thermal", "satellite_solar"}
-
 TILE_BASE_BONUSES = {
-    "power_plant":               {},
-    "pv_power_plant":            {},  # boosts adjacent DCs (same synergy as power_plant)
-    "wind_power_plant":          {},  # boosts adjacent DCs (same synergy as power_plant)
-    "solar_thermal":             {},  # boosts adjacent DCs (same synergy as power_plant)
+    "nuclear_power_plant":       {},
+    "natural_gas_power_plant":   {},
+    "coal_power_plant":          {},
+    "pv_power_plant":            {},
+    "wind_power_plant":          {},
+    "geothermal_power_plant":    {},
+    "solar_thermal":             {},
     "factory":                   {},
-    "data_center":               {"production": {"data_centers": 1}},
-    "store":                     {"production": {"ad_campaigns": 1}},
-    "ad_campaign":               {"production": {"ad_campaigns": 1}},
-    "office":                    {"production": {"HR": 1}},
+    "data_center":               {},
+    "store":                     {},
+    "ad_campaign":               {},
+    "office":                    {},
     "lobby_group":               {},
-    "rare_metal_mine":           {"production": {"money": 10}},
-    "hydroelectric_power_plant": {"production": {"data_centers": 2}},
-    "satellite_solar":           {},                                    # boosts adjacent DCs (power plant synergy)
-    "satellite_dc":              {"production": {"data_centers": 3}},  # orbital data center
-    "launching_pad":             {},                                    # enables satellite placement
+    "rare_metal_mine":           {},
+    "hydroelectric_power_plant": {},
+    "satellite_solar":           {},
+    "satellite_dc":              {},
+    "launching_pad":             {},
+    "distribution_center":       {},
 }
 
 TILE_LABELS = {
-    "power_plant":               "PWR",
+    "nuclear_power_plant":       "☢️",
+    "natural_gas_power_plant":   "🔥",
+    "coal_power_plant":          "⛏️",
     "pv_power_plant":            "PV",
     "wind_power_plant":          "WND",
+    "geothermal_power_plant":    "GEO",
     "solar_thermal":             "CSP",
     "factory":                   "FAC",
     "data_center":               "DC",
@@ -48,6 +53,7 @@ TILE_LABELS = {
     "satellite_solar":           "SAT☀",
     "satellite_dc":              "SAT🖥",
     "launching_pad":             "🚀",
+    "distribution_center":       "📦",
 }
 
 # Pointy-top, odd-r offset neighbor directions
@@ -79,16 +85,16 @@ _SPECIAL = {
 
 
 VALID_TERRAINS = {
-    "empty", "city", "lake", "sea", "government", "commercial",
+    "empty", "city", "lake", "sea", "government", "commercial", "industrial",
     "sun", "wind", "gas_reserve", "coal", "wall", "rare_metal_mine",
     "natural_park", "offshore_wind", "offshore_solar", "space", "launching_pad",
-    "mountain",
+    "mountain", "geothermal",
 }
 
 # Terrains where nothing can be built
 _NO_BUILD_TERRAINS = {"government", "city", "wall", "mountain"}
 # Terrains open to normal non-commercial, non-lake, non-offshore tiles
-_OPEN_TERRAINS = {"empty", "sun", "wind", "gas_reserve", "coal", "natural_park"}
+_OPEN_TERRAINS = {"empty", "sun", "wind", "gas_reserve", "coal", "natural_park", "geothermal", "industrial"}
 # Tiles restricted to commercial terrain only
 _COMMERCIAL_ONLY = {"store", "lobby_group", "office"}
 # Tiles restricted to rare_metal_mine terrain only
@@ -138,6 +144,16 @@ def _normalize_adjacency_bonuses(ab) -> list:
         return [{"build_type": None, "immediate": dict(ab), "production": {}}]
     return []
 
+def _normalize_terrain_bonuses(tb) -> list:
+    if isinstance(tb, list):
+        return tb
+    if isinstance(tb, dict) and tb:
+        if "immediate" in tb or "production" in tb:
+            return [{"terrain_type": None, "immediate": tb.get("immediate") or {},
+                     "production": tb.get("production") or {}}]
+        return [{"terrain_type": None, "immediate": dict(tb), "production": {}}]
+    return []
+
 
 def _make_tile(row: int, col: int, terrain: str = "empty",
                name: str = "", build_bonuses: dict | None = None,
@@ -154,6 +170,13 @@ def _make_tile(row: int, col: int, terrain: str = "empty",
         "requirements": requirements or [],  # list of card types player must have played
         "only_build": only_build,             # None=all allowed; []=none; [...]= whitelist
     }
+
+
+def _normalize_tile_type(tile_type: str | None) -> str | None:
+    """Backward compatibility: map retired tile keys to their replacements."""
+    if tile_type == "power_plant":
+        return "nuclear_power_plant"  # default legacy fallback
+    return tile_type
 
 
 @dataclass
@@ -263,6 +286,12 @@ class Board:
         lookup = {(c["row"], c["col"]): c for c in config}
         new_keys = set()
         for cfg in config:
+            pt = cfg.get("placed_tile")
+            if isinstance(pt, dict) and pt.get("type"):
+                pt["type"] = _normalize_tile_type(pt.get("type"))
+            ob = cfg.get("only_build")
+            if isinstance(ob, list):
+                cfg["only_build"] = [_normalize_tile_type(x) for x in ob if _normalize_tile_type(x)]
             key = (cfg["row"], cfg["col"])
             if key not in self._tiles:
                 self._tiles[key] = _make_tile(
@@ -288,6 +317,11 @@ class Board:
                     tile["adjacency_bonuses"] = saved["adjacency_bonuses"]
                 tile["requirements"] = saved.get("requirements") or []
                 tile["only_build"] = saved.get("only_build")  # None, [], or [...]
+                if isinstance(tile["only_build"], list):
+                    tile["only_build"] = [_normalize_tile_type(x) for x in tile["only_build"] if _normalize_tile_type(x)]
+            pt = tile.get("placed_tile")
+            if isinstance(pt, dict) and pt.get("type"):
+                pt["type"] = _normalize_tile_type(pt.get("type"))
 
     def get_tile(self, row: int, col: int) -> dict | None:
         return self._tiles.get((row, col))
@@ -309,6 +343,42 @@ class Board:
         reqs = t.get("requirements") or []
         return all(req in played_card_types for req in reqs)
 
+    def can_place_for_player(
+        self,
+        row: int,
+        col: int,
+        tile_type: str,
+        played_card_types: set[str] | None = None,
+        only_playable_next_to: list[str] | None = None,
+        only_playable_on_terrains: list[str] | None = None,
+    ) -> bool:
+        """Non-mutating placement feasibility check with player/card constraints."""
+        tile_type = _normalize_tile_type(tile_type) or ""
+        if not self.can_place(row, col, tile_type):
+            return False
+        if only_playable_on_terrains:
+            t = self._tiles.get((row, col))
+            if not t or t.get("terrain") not in set(only_playable_on_terrains):
+                return False
+        if played_card_types is not None and not self.player_meets_requirements(row, col, played_card_types):
+            return False
+        if only_playable_next_to:
+            allowed = {
+                _normalize_tile_type(t)
+                for t in only_playable_next_to
+                if _normalize_tile_type(t)
+            }
+            if allowed:
+                has_match = False
+                for nb in self.get_neighbors(row, col):
+                    pt = nb.get("placed_tile")
+                    if pt and _normalize_tile_type(pt.get("type")) in allowed:
+                        has_match = True
+                        break
+                if not has_match:
+                    return False
+        return True
+
     def can_stack(self, row: int, col: int, tile_type: str = "") -> bool:
         """Return True if tile_type can be stacked on top of a satellite at (row, col)."""
         t = self._tiles.get((row, col))
@@ -320,53 +390,15 @@ class Board:
                 and tile_type in _SATELLITE_STACKABLE)
 
     def can_place(self, row: int, col: int, tile_type: str = "") -> bool:
+        tile_type = _normalize_tile_type(tile_type) or ""
         t = self._tiles.get((row, col))
         if not t:
             return False
         # Stacking on a satellite is handled separately
         if t["placed_tile"] is not None:
             return False
-        terrain = t["terrain"]
-        if terrain in _NO_BUILD_TERRAINS:
-            return False
-        # space tiles → space terrain only
-        if tile_type in _SPACE_TILES:
-            allowed = _SPACE_TERRAIN_TILES.get(terrain, set())
-            return tile_type in allowed
-        # space terrains → space tiles only
-        if terrain in _SPACE_TERRAIN_TILES:
-            return tile_type in _SPACE_TERRAIN_TILES[terrain]
-        # hydroelectric → lake only; lake → hydroelectric only
-        if tile_type in _LAKE_ONLY:
-            return terrain == "lake"
-        if terrain == "lake":
-            return False
-        # rare_metal_mine tiles → its terrain only
-        if tile_type in _MINE_ONLY:
-            return terrain == "rare_metal_mine"
-        if terrain == "rare_metal_mine":
-            return False
-        # launching_pad tiles → launching_pad terrain only; launching_pad terrain → launching_pad tiles only
-        if tile_type == "launching_pad":
-            return terrain == "launching_pad"
-        if terrain == "launching_pad":
-            return tile_type == "launching_pad"
-        # offshore_wind → wind_power_plant only; offshore_solar → pv_power_plant only
-        if terrain == "offshore_wind":
-            return tile_type in _OFFSHORE_WIND_TILES
-        if terrain == "offshore_solar":
-            return tile_type in _OFFSHORE_SOLAR_TILES
-        # sea → data_center only
-        if terrain == "sea":
-            return tile_type in _SEA_BUILDABLE
-        # store, lobby_group, office → commercial only
-        if tile_type in _COMMERCIAL_ONLY:
-            return terrain == "commercial"
-        if terrain == "commercial":
-            return False
-        # everything else → open terrains
-        if terrain not in _OPEN_TERRAINS:
-            return False
+        # Placement is data-driven from board/tile editor config.
+        # Terrain-specific hardcoded rules were removed.
         # Per-tile only_build whitelist: None=all allowed, []=none, [...]= explicit list
         only_build = t.get("only_build")
         if only_build is not None and tile_type not in only_build:
@@ -387,26 +419,55 @@ class Board:
         if not t:
             return False
         if tile_type:
+            tile_type = _normalize_tile_type(tile_type)
             if tile_type not in TILE_TYPES:
                 return False
-            t["placed_tile"] = {"type": tile_type, "owner_id": None,
-                                 "factory_refund": 0, "dc_production_bonus": 0}
+            t["placed_tile"] = {
+                "type": tile_type,
+                "owner_id": None,
+                "placed_tile_adjacency_bonuses": [],
+            }
         else:
             t["placed_tile"] = None
         return True
 
     def place_tile(self, row: int, col: int,
                    tile_type: str, owner_id: str,
-                   factory_refund: int = 0,
-                   dc_production_bonus: int = 0) -> dict:
+                   only_playable_next_to: list[str] | None = None,
+                   only_playable_on_terrains: list[str] | None = None,
+                   bonuses_by_placing_next_to_building: list[dict] | dict | None = None,
+                   bonuses_by_building_on_terrain_type: list[dict] | dict | None = None,
+                   bonuses_by_building_adjacent_to_terrain_type: list[dict] | dict | None = None,
+                   placed_tile_adjacency_bonuses: list[dict] | dict | None = None) -> dict:
+        tile_type = _normalize_tile_type(tile_type) or ""
         if not self.can_place(row, col, tile_type):
             return {}
+        if only_playable_on_terrains:
+            tile0 = self._tiles.get((row, col))
+            if not tile0 or tile0.get("terrain") not in set(only_playable_on_terrains):
+                return {}
+        # Optional card-level adjacency restriction: this tile can only be placed
+        # if at least one neighboring placed tile matches a required type.
+        if only_playable_next_to:
+            allowed = {
+                _normalize_tile_type(t)
+                for t in only_playable_next_to
+                if _normalize_tile_type(t)
+            }
+            has_match = False
+            if allowed:
+                for nb in self.get_neighbors(row, col):
+                    pt = nb.get("placed_tile")
+                    if pt and _normalize_tile_type(pt.get("type")) in allowed:
+                        has_match = True
+                        break
+            if not has_match:
+                return {}
         tile = self._tiles[(row, col)]
         tile_record = {
             "type": tile_type,
             "owner_id": owner_id,
-            "factory_refund": factory_refund,
-            "dc_production_bonus": dc_production_bonus,
+            "placed_tile_adjacency_bonuses": _normalize_adjacency_bonuses(placed_tile_adjacency_bonuses),
         }
         tile["placed_tile"] = tile_record
 
@@ -432,30 +493,57 @@ class Board:
                         immediate[res] = immediate.get(res, 0) + amt
                     for res, amt in (entry.get("production") or {}).items():
                         production[res] = production.get(res, 0) + amt
+            pt = nb.get("placed_tile") or {}
+            for entry in _normalize_adjacency_bonuses(pt.get("placed_tile_adjacency_bonuses", {})):
+                bt = entry.get("build_type")
+                if bt is None or bt == tile_type:
+                    for res, amt in (entry.get("immediate") or {}).items():
+                        immediate[res] = immediate.get(res, 0) + amt
+                    for res, amt in (entry.get("production") or {}).items():
+                        production[res] = production.get(res, 0) + amt
 
-        # Power plant ↔ data center synergy (per-card bonus); all power plant variants qualify
-        if tile_type in _POWER_PLANT_TYPES:
+        # Card-level "bonuses by placing next to building":
+        # if this placed tile is adjacent to matching placed tile types, apply bonus.
+        if bonuses_by_placing_next_to_building:
             for nb in self.get_neighbors(row, col):
                 pt = nb.get("placed_tile")
-                if pt and pt["type"] == "data_center":
-                    production["data_centers"] = production.get("data_centers", 0) + dc_production_bonus
-        elif tile_type == "data_center":
+                if not pt:
+                    continue
+                adjacent_type = _normalize_tile_type(pt.get("type"))
+                for entry in _normalize_adjacency_bonuses(bonuses_by_placing_next_to_building):
+                    bt = _normalize_tile_type(entry.get("build_type"))
+                    if bt is None or bt == adjacent_type:
+                        for res, amt in (entry.get("immediate") or {}).items():
+                            immediate[res] = immediate.get(res, 0) + amt
+                        for res, amt in (entry.get("production") or {}).items():
+                            production[res] = production.get(res, 0) + amt
+
+        # Card-level "bonuses by building on terrain type":
+        # if this tile is placed on matching terrain, apply bonus.
+        if bonuses_by_building_on_terrain_type:
+            terrain = tile.get("terrain")
+            for entry in _normalize_terrain_bonuses(bonuses_by_building_on_terrain_type):
+                tt = entry.get("terrain_type")
+                if tt is None or tt == terrain:
+                    for res, amt in (entry.get("immediate") or {}).items():
+                        immediate[res] = immediate.get(res, 0) + amt
+                    for res, amt in (entry.get("production") or {}).items():
+                        production[res] = production.get(res, 0) + amt
+
+        # Card-level "bonuses by building adjacent to terrain type":
+        # if this tile is placed adjacent to matching terrain, apply bonus.
+        if bonuses_by_building_adjacent_to_terrain_type:
             for nb in self.get_neighbors(row, col):
-                pt = nb.get("placed_tile")
-                if pt and pt.get("type") in _POWER_PLANT_TYPES:
-                    bonus = pt.get("dc_production_bonus", 1)
-                    production["data_centers"] = production.get("data_centers", 0) + bonus
+                nb_terrain = nb.get("terrain")
+                for entry in _normalize_terrain_bonuses(bonuses_by_building_adjacent_to_terrain_type):
+                    tt = entry.get("terrain_type")
+                    if tt is None or tt == nb_terrain:
+                        for res, amt in (entry.get("immediate") or {}).items():
+                            immediate[res] = immediate.get(res, 0) + amt
+                        for res, amt in (entry.get("production") or {}).items():
+                            production[res] = production.get(res, 0) + amt
 
         return {"immediate": immediate, "production": production}
-
-    def get_adjacent_factory_refund(self, row: int, col: int) -> int:
-        """Sum factory_refund from all adjacent power plant tiles (all variants)."""
-        total = 0
-        for nb in self.get_neighbors(row, col):
-            pt = nb.get("placed_tile")
-            if pt and pt.get("type") in _POWER_PLANT_TYPES:
-                total += pt.get("factory_refund", 0)
-        return total
 
     def reset(self):
         for t in self._tiles.values():

@@ -1,6 +1,7 @@
 total_users: 5000
-money_per_users: 10
+money_users_trigger: 10
 data_per_users: 200
+data_users_trigger: 10
 projects_draw: 3
 boosters_draw: 3
 build_row_size: 5

@@ -592,12 +592,16 @@ function renderDraft(pool, draftedFuckups) {
     return;
   }
 
+  // Always show Done Drafting — hiding it when pool is empty causes the game to get stuck.
+  doneDraftBtn.classList.remove("hidden");
+
   if ((!pool || pool.length === 0) && (!draftedFuckups || draftedFuckups.length === 0)) {
-    doneDraftBtn.classList.add("hidden");
+    const emptyDiv = document.createElement("div");
+    emptyDiv.className = "waiting-msg";
+    emptyDiv.textContent = "No cards available to draft. Click Done Drafting to proceed.";
+    draftContainer.appendChild(emptyDiv);
     return;
   }
-
-  doneDraftBtn.classList.remove("hidden");
 
   const hintEl = document.querySelector(".phase-hint");
   if (hintEl) {
@@ -610,35 +614,48 @@ function renderDraft(pool, draftedFuckups) {
   const draftRow = document.createElement("div");
   draftRow.className = "draft-grid";
 
-  DRAFT_SECTIONS.forEach(section => {
-    const matching = pool.filter(c => section.types.includes(c.card_type));
-    if (matching.length === 0) return;
+  const draftCost = lastGameState?.params?.draft_cost ?? 3;
+  const matchedCards = new Set();
 
+  function renderDraftSection(label, cards) {
+    if (cards.length === 0) return;
     const sectionDiv = document.createElement("div");
     sectionDiv.className = "draft-section";
     const h3 = document.createElement("h3");
     h3.className = "draft-section-title";
-    h3.textContent = section.label;
+    h3.textContent = label;
     sectionDiv.appendChild(h3);
-
     const grid = document.createElement("div");
     grid.className = "hand-container";
-    matching.forEach(card => {
+    cards.forEach(card => {
       const el = createCardElement(card);
+      const wrap = document.createElement("div");
+      wrap.className = "draft-card-wrap";
       const keepBtn = document.createElement("button");
       keepBtn.className = "btn btn-sm btn-keep";
-      const draftCost = lastGameState?.params?.draft_cost ?? 3;
       keepBtn.textContent = `Keep ($${draftCost}B)`;
       keepBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         socket.emit("keep_card", { card_name: card.name });
       });
-      el.appendChild(keepBtn);
-      grid.appendChild(el);
+      wrap.appendChild(el);
+      wrap.appendChild(keepBtn);
+      grid.appendChild(wrap);
     });
     sectionDiv.appendChild(grid);
     draftRow.appendChild(sectionDiv);
+  }
+
+  DRAFT_SECTIONS.forEach(section => {
+    const matching = pool.filter(c => section.types.includes(c.card_type));
+    matching.forEach(c => matchedCards.add(c.name));
+    renderDraftSection(section.label, matching);
   });
+
+  // Fallback: any card not matched by a known section still gets a Keep button
+  const unmatched = pool.filter(c => !matchedCards.has(c.name));
+  renderDraftSection("Other", unmatched);
+
   draftContainer.appendChild(draftRow);
 
   if (draftedFuckups && draftedFuckups.length > 0) {
@@ -1204,6 +1221,49 @@ function showPaymentPopup(card, useOptional, callback) {
   document.body.appendChild(overlay);
 }
 
+function showPlacementFeePopup(data, callback) {
+  const payees = data.payees || [];
+  const feeAmt = data.amount || 0;
+  const overlay = document.createElement("div");
+  overlay.className = "payment-popup-overlay";
+  const popup = document.createElement("div");
+  popup.className = "payment-popup";
+
+  const title = document.createElement("h3");
+  title.textContent = "Placement Fee";
+  popup.appendChild(title);
+
+  const info = document.createElement("p");
+  info.className = "payment-info";
+  info.innerHTML = payees.length <= 1
+    ? `This placement is adjacent to an opponent target building.<br>Pay <strong>💰$${feeAmt}B</strong> to continue.`
+    : `This placement is adjacent to multiple opponent target buildings.<br>Choose who receives <strong>💰$${feeAmt}B</strong>.`;
+  popup.appendChild(info);
+
+  const btnRow = document.createElement("div");
+  btnRow.className = "payment-player-btns";
+  payees.forEach(({ pid, name }) => {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-sm payment-player-btn";
+    btn.textContent = `💰 Pay ${name}`;
+    btn.addEventListener("click", () => { overlay.remove(); callback({ placement_fee: pid }); });
+    btnRow.appendChild(btn);
+  });
+  popup.appendChild(btnRow);
+
+  const actions = document.createElement("div");
+  actions.className = "payment-actions";
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn btn-sm";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", () => overlay.remove());
+  actions.appendChild(cancelBtn);
+  popup.appendChild(actions);
+
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+}
+
 function renderHand(hand) {
   handDiv.innerHTML = "";
   hand.forEach(card => {
@@ -1287,6 +1347,15 @@ function renderHand(hand) {
 const floatingTooltip = document.createElement("div");
 floatingTooltip.className = "floating-card-tooltip hidden";
 document.body.appendChild(floatingTooltip);
+let hoverTooltipPinned = false;
+
+floatingTooltip.addEventListener("mouseenter", () => {
+  hoverTooltipPinned = true;
+});
+floatingTooltip.addEventListener("mouseleave", () => {
+  hoverTooltipPinned = false;
+  floatingTooltip.classList.add("hidden");
+});
 
 function renderPlayedCards(cards) {
   playedDiv.innerHTML = "";
@@ -1328,6 +1397,7 @@ function renderPlayedCards(cards) {
     }
 
     div.addEventListener("mouseenter", (e) => {
+      hoverTooltipPinned = false;
       floatingTooltip.innerHTML = "";
       floatingTooltip.appendChild(createCardElement(c));
       floatingTooltip.classList.remove("hidden");
@@ -1343,7 +1413,9 @@ function renderPlayedCards(cards) {
       floatingTooltip.style.left = left + "px";
     });
 
-    div.addEventListener("mouseleave", () => {
+    div.addEventListener("mouseleave", (e) => {
+      if (e.relatedTarget && floatingTooltip.contains(e.relatedTarget)) return;
+      if (hoverTooltipPinned) return;
       floatingTooltip.classList.add("hidden");
     });
 
@@ -1580,14 +1652,24 @@ function renderUsersPie() {
   ctx.textBaseline = "middle";
   ctx.fillText("USERS", cx, cy);
 
-  const myPct = total > 0 ? ((myUsers / total) * 100).toFixed(1) : "0.0";
-  const mpu = lastGameState?.params?.money_per_users ?? 20;
+  // Use a single snapshot source for "my" values to avoid transient mismatches
+  // when game_state and your_state arrive in different ticks.
+  const myUsersForIncome = (typeof lastPrivateState?.users === "number")
+    ? lastPrivateState.users
+    : myUsers;
+  const myPct = total > 0 ? ((myUsersForIncome / total) * 100).toFixed(1) : "0.0";
+  const mpu = lastGameState?.params?.money_users_trigger ?? 10;
   const dpu = lastGameState?.params?.data_per_users ?? 200;
-  const income = mpu > 0 ? Math.floor(myUsers / mpu) : 0;
-  const hint = `100M👥 → $${Math.round(100 / mpu)}B/yr`;
-  const dataProd = Math.floor(myUsers / 100) * dpu;
-  const dataHint = `100M👥 → ${dpu}PB/yr`;
-  info.innerHTML = `<strong>👥 ${myUsers}M</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 $${income}B/yr</span><br><span class="pie-hint">${hint}</span><br><span class="pie-income">📊 ${dataProd}PB/yr</span><br><span class="pie-hint">${dataHint}</span>`;
+  const dut = lastGameState?.params?.data_users_trigger ?? 10;
+  const userIncome = mpu > 0 ? Math.floor(myUsersForIncome / mpu) : 0;
+  const cardMoneyProd = lastPrivateState?.production?.money ?? 0;
+  const income = userIncome + cardMoneyProd;
+  const hint = `${mpu}M👥 → $1B/yr`;
+  const dataProd = dut > 0 ? Math.floor(myUsersForIncome / dut) * dpu : 0;
+  const dataHint = `${dut}M👥 → ${dpu}PB/yr`;
+  const usersIncomeStr = `Users: +$${userIncome}B/yr`;
+  const cardsIncomeStr = `Cards/Tiles: ${cardMoneyProd >= 0 ? "+" : ""}$${cardMoneyProd}B/yr`;
+  info.innerHTML = `<strong>👥 ${myUsersForIncome}M</strong> <span class="pie-pct">${myPct}%</span><br><span class="pie-income">💰 Total $${income}B/yr</span><br><span class="pie-hint">${usersIncomeStr} | ${cardsIncomeStr}</span><br><span class="pie-hint">${hint}</span><br><span class="pie-income">📊 ${dataProd}PB/yr</span><br><span class="pie-hint">${dataHint}</span>`;
 
   let pieTip = document.getElementById("pie-tooltip");
   if (!pieTip) {
@@ -1694,7 +1776,8 @@ function renderProduction(production) {
     }
 
     const prefix = key === "HR" ? "+" : "";
-    div.innerHTML = `<span class="label">${labelHtml}</span><span class="value">${prefix}${displayVal}</span>`;
+    const valueHtml = `<span class="value">${prefix}${displayVal}</span>`;
+    div.innerHTML = `<span class="label">${labelHtml}</span>${valueHtml}`;
     productionDiv.appendChild(div);
   });
 
@@ -1728,15 +1811,58 @@ function fmtCardVal(key, val) {
 }
 
 let cardNamesById = {};
+// boostSourcesById[targetId]  = [ "Boosting Card Name", ... ]
+let boostSourcesById = {};
+// feeSourcesById[feeCardId]   = [ "Card Name that pays fee", ... ]
+let feeSourcesById = {};
+
 function rebuildCardIndex() {
   cardNamesById = {};
+  boostSourcesById = {};
+  feeSourcesById = {};
+
   if (lastGameState?.card_names) {
     Object.assign(cardNamesById, lastGameState.card_names);
   }
+
+  // Collect all cards from editor data (most complete source)
+  const allCardsList = [];
   if (editorCards) {
     for (const cards of Object.values(editorCards)) {
       for (const card of (cards || [])) {
-        if (card && card.id) cardNamesById[card.id] = card.name;
+        if (card && card.id) {
+          cardNamesById[card.id] = card.name;
+          allCardsList.push(card);
+        }
+      }
+    }
+  }
+
+  // Build reverse boost map: target_id → [booster card names]
+  // Only include active cards and real boosts (non-empty bonus payload).
+  for (const card of allCardsList) {
+    if (card.disabled === true || card.disabled === "true") continue;
+    for (const boost of (card.boosts || [])) {
+      if (!boost.target_id) continue;
+      const bonus = boost.bonus || {};
+      const hasBonus = Object.values(bonus).some(v => Number(v) !== 0);
+      if (!hasBonus) continue;
+      const ids = Array.isArray(boost.target_id) ? boost.target_id : [boost.target_id];
+      for (const tid of ids) {
+        if (!tid) continue;
+        if (!boostSourcesById[tid]) boostSourcesById[tid] = [];
+        if (!boostSourcesById[tid].includes(card.name)) boostSourcesById[tid].push(card.name);
+      }
+    }
+
+    // Build reverse fee map: fee_card_id → [payer card names]
+    const feeId = card.costs?.fee_card_id;
+    if (feeId) {
+      const ids = Array.isArray(feeId) ? feeId : [feeId];
+      for (const fid of ids) {
+        if (!fid) continue;
+        if (!feeSourcesById[fid]) feeSourcesById[fid] = [];
+        if (!feeSourcesById[fid].includes(card.name)) feeSourcesById[fid].push(card.name);
       }
     }
   }
@@ -1756,14 +1882,17 @@ const CARD_SUBTYPE_EMOJIS = {
   "online marketplace":       "🛒",
   "search service":           "🔍",
   "store":                    "🏪",
-  "power plant":              "⚡",
+  "nuclear power plant":      "☢️",
+  "natural gas power plant":  "🔥",
+  "coal power plant":         "⛏️",
   "pv power plant":           "☀️",
   "wind power plant":         "💨",
-  "solar thermal":            "🌡️",
+  "solar thermal":            "☀️",
+  "geothermal power plant":   "🌡️",
   "data center":              "🗄️",
   "office":                   "🏢",
   "ad campaign":              "📢",
-  "lobby":                    "🏛️",
+  "lobby":                    "🎓",
   "rare metal mine":          "🔩",
   "hydroelectric power plant":"💧",
   "satellite solar":          "🛰️☀️",
@@ -1782,10 +1911,13 @@ const CARD_TYPE_TINTS = {
   "online marketplace":    "#2e1a0a",  // dark orange
   "search service":        "#0f2a18",  // dark green
   "store":                 "#252525",  // dark neutral
-  "power plant":           "#1e1208",  // dark brown
+  "nuclear power plant":   "#0d2a0d",  // dark green (nuclear)
+  "natural gas power plant":"#2a1200", // dark orange (gas)
+  "coal power plant":      "#1a1a1a",  // near-black (coal)
   "pv power plant":        "#2a1e00",  // dark amber
   "wind power plant":      "#0a2020",  // dark teal
   "solar thermal":         "#2a0a00",  // dark deep red
+  "geothermal power plant":"#24110a",  // dark volcanic brown
   "data center":           "#1a1e22",  // dark slate
   "office":                "#0f1a3a",  // dark royal blue
   "ad campaign":           "#2e0f1e",  // dark pink
@@ -1807,6 +1939,109 @@ const CARD_DECK_EMOJIS = {
   "regulation":    "⚖️",
   "world_event":   "🌍",
 };
+
+const TERRAIN_EMOJIS = {
+  empty: "🌫️",
+  city: "🏙️",
+  lake: "🌊",
+  sea: "🌊",
+  offshore_wind: "💨",
+  offshore_solar: "☀️",
+  government: "🏛️",
+  commercial: "💼",
+  industrial: "⚙️",
+  sun: "☀️",
+  wind: "💨",
+  gas_reserve: "🔥",
+  coal: "⛏️",
+  geothermal: "🌡️",
+  wall: "🧱",
+  mountain: "⛰️",
+  rare_metal_mine: "🔩",
+  natural_park: "🌳",
+  space: "✨",
+  launching_pad: "🚀",
+};
+
+function _terrainLabel(terrain) {
+  if (!terrain) return "";
+  if (terrain === "empty") return "";
+  return TERRAIN_EMOJIS[terrain] || "❔";
+}
+
+function _cardBuildTypes(card) {
+  const b = card?.build;
+  if (Array.isArray(b)) return b.filter(Boolean);
+  return b ? [b] : [];
+}
+
+function _tileAllowsBuildTypeByRule(tile, buildType) {
+  const onlyBuild = tile?.only_build;
+  return onlyBuild == null || (Array.isArray(onlyBuild) && onlyBuild.includes(buildType));
+}
+
+function _buildableTerrainsFromBoardRules(card) {
+  const buildTypes = _cardBuildTypes(card);
+  if (!buildTypes.length) return [];
+
+  // Prefer concrete board data (authoritative; includes per-tile overrides).
+  const boardSource = (Array.isArray(boardTiles) && boardTiles.length)
+    ? boardTiles
+    : ((Array.isArray(editorBoardTiles) && editorBoardTiles.length) ? editorBoardTiles : []);
+  if (boardSource.length) {
+    const terrains = new Set();
+    boardSource.forEach(tile => {
+      if (buildTypes.some(bt => _tileAllowsBuildTypeByRule(tile, bt))) {
+        terrains.add(tile.terrain);
+      }
+    });
+    return [...terrains];
+  }
+
+  // No board snapshot available yet; avoid partial/inconsistent terrain lists.
+  return [];
+}
+
+function _mergeBonusInto(acc, immediate, production) {
+  Object.entries(immediate || {}).forEach(([k, v]) => {
+    acc.immediate[k] = (acc.immediate[k] || 0) + (Number(v) || 0);
+  });
+  Object.entries(production || {}).forEach(([k, v]) => {
+    acc.production[k] = (acc.production[k] || 0) + (Number(v) || 0);
+  });
+}
+
+function _boardTerrainBonusesForCard(card, bonusKey) {
+  const buildTypes = _cardBuildTypes(card);
+  if (!buildTypes.length) return [];
+
+  const byTerrain = new Map();
+  const addTerrainEntry = (terrain, entry) => {
+    if (!terrain || !entry) return;
+    const bt = entry.build_type || null;
+    if (bt && !buildTypes.includes(bt)) return;
+    const cur = byTerrain.get(terrain) || { terrain_type: terrain, immediate: {}, production: {} };
+    _mergeBonusInto(cur, entry.immediate || {}, entry.production || {});
+    byTerrain.set(terrain, cur);
+  };
+
+  if (tileTypeConfig && typeof tileTypeConfig === "object" && Object.keys(tileTypeConfig).length) {
+    Object.entries(tileTypeConfig).forEach(([terrain, cfg]) => {
+      _normBonusList(cfg?.[bonusKey]).forEach(entry => addTerrainEntry(terrain, entry));
+    });
+  } else {
+    const boardSource = (Array.isArray(boardTiles) && boardTiles.length)
+      ? boardTiles
+      : ((Array.isArray(editorBoardTiles) && editorBoardTiles.length) ? editorBoardTiles : []);
+    boardSource.forEach(tile => {
+      _normBonusList(tile?.[bonusKey]).forEach(entry => addTerrainEntry(tile.terrain, entry));
+    });
+  }
+
+  return [...byTerrain.values()].filter(
+    e => Object.keys(e.immediate || {}).length || Object.keys(e.production || {}).length
+  );
+}
 
 function createCardElement(card, options = {}) {
   const el = document.createElement("div");
@@ -1844,14 +2079,20 @@ function createCardElement(card, options = {}) {
       effectsHtml += `</span></div>`;
     }
   } else {
-    const prodText = Object.entries(card.production || {})
-      .filter(([, v]) => v > 0)
-      .map(([k, v]) => `+${fmtCardVal(k, v)} ${emojiRes(k)}/yr`).join(", ");
     const immText = Object.entries(card.immediate || {})
       .filter(([, v]) => v !== 0)
       .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
-    if (prodText) effectsHtml += `<div class="card-production">${prodText}</div>`;
     if (immText) effectsHtml += `<div class="card-immediate">${immText}</div>`;
+  }
+
+  // Production /yr — always shown when present, regardless of effect type
+  const prodEntries = Object.entries(card.production || {}).filter(([, v]) => v !== 0);
+  if (prodEntries.length) {
+    effectsHtml += `<div class="card-effects"><span class="card-section-label">Production</span><span class="card-effects-row">`;
+    effectsHtml += prodEntries.map(([k, v]) =>
+      `<span class="card-effect-item">${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}<span style="font-size:.75em;opacity:.8;">/yr</span></span>`
+    ).join("");
+    effectsHtml += `</span></div>`;
   }
 
   // Boosts
@@ -1892,6 +2133,24 @@ function createCardElement(card, options = {}) {
     boostsHtml += `</span></div>`;
   }
 
+  // "Boosted by" — cards that target this card's ID via target_id boosts
+  let boostedByHtml = "";
+  if (card.id && boostSourcesById[card.id] && boostSourcesById[card.id].length) {
+    const nameSpans = boostSourcesById[card.id]
+      .map(n => `<span style="color:#ff8c00;font-weight:600;">${n}</span>`)
+      .join(", ");
+    boostedByHtml = `<div class="card-boosted-by" style="margin-top:.3em;padding:.2em .4em;"><span class="card-section-label" style="font-size:.7em;opacity:.7;display:block;">Boosted by</span><span class="card-effects-row" style="font-size:.72em;font-style:italic;">${nameSpans}</span></div>`;
+  }
+
+  // "Fees collected from" — cards whose fee_card_id targets this card's ID
+  let feesCollectedHtml = "";
+  if (card.id && feeSourcesById[card.id] && feeSourcesById[card.id].length) {
+    const nameSpans = feeSourcesById[card.id]
+      .map(n => `<span style="color:#ffd54f;font-weight:600;">${n}</span>`)
+      .join(", ");
+    feesCollectedHtml = `<div class="card-fees-collected" style="margin-top:.3em;padding:.2em .4em;"><span class="card-section-label" style="font-size:.7em;opacity:.7;display:block;">Fees collected from</span><span class="card-effects-row" style="font-size:.72em;font-style:italic;">${nameSpans}</span></div>`;
+  }
+
   // Starting resources (company cards)
   let startHtml = "";
   const startEntries = Object.entries(card.starting_resources || {}).filter(([, v]) => v !== 0);
@@ -1906,7 +2165,9 @@ function createCardElement(card, options = {}) {
   // Build badge
   let buildHtml = "";
   if (card.build) {
-    const label = card.build.replace(/_/g, " ");
+    const label = Array.isArray(card.build)
+      ? card.build.map(b => (b || "").replace(/_/g, " ")).filter(Boolean).join(", ")
+      : card.build.replace(/_/g, " ");
     buildHtml = `<div class="card-build-badge">🏗️ ${label}</div>`;
   }
 
@@ -1925,6 +2186,66 @@ function createCardElement(card, options = {}) {
     const reqStr = reqs.map(r => CARD_SUBTYPE_EMOJIS[r] ? `${CARD_SUBTYPE_EMOJIS[r]} ${r}` : r).join(", ");
     reqHtml = `<div class="card-requirements"><span class="card-section-label">Requires</span><span class="card-req-list">${reqStr}</span></div>`;
   }
+  const nextTo = card.only_playable_next_to || [];
+  if (nextTo.length) {
+    const nextToStr = nextTo
+      .map(t => (typeof TILE_LABELS !== "undefined" && TILE_LABELS[t]) ? TILE_LABELS[t] : t)
+      .join(" ");
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">Only playable next to</span><span class="card-req-list">${nextToStr}</span></div>`;
+  }
+  const isBuildCard = !!card.build;
+  const onlyTerrains = card.only_playable_on_terrains || [];
+  if (onlyTerrains.length) {
+    const terrainStr = onlyTerrains.map(_terrainLabel).filter(Boolean).join(" • ");
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">Buildable terrains</span><span class="card-req-list">${terrainStr || "Any legal terrain"}</span></div>`;
+  } else if (isBuildCard) {
+    const boardTerrains = _buildableTerrainsFromBoardRules(card);
+    if (boardTerrains.length) {
+      const terrainStr = boardTerrains.map(_terrainLabel).filter(Boolean).join(" • ");
+      reqHtml += `<div class="card-requirements"><span class="card-section-label">Buildable terrains</span><span class="card-req-list">${terrainStr || "Any legal terrain"}</span></div>`;
+    } else {
+      reqHtml += `<div class="card-requirements"><span class="card-section-label">Buildable terrains</span><span class="card-req-list">Any legal terrain</span></div>`;
+    }
+  }
+  const placeAdjBonuses = card.bonuses_by_placing_next_to_building || [];
+  if (placeAdjBonuses.length) {
+    const txt = _formatConditionalBonuses(placeAdjBonuses, "Next to");
+    if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">On placement (adjacent)</span><span class="card-req-list">${txt}</span></div>`;
+  }
+  const terrainBonuses = card.bonuses_by_building_on_terrain_type || [];
+  if (terrainBonuses.length) {
+    const txt = _formatTerrainConditionalBonuses(terrainBonuses, "On terrain");
+    if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">On placement (terrain)</span><span class="card-req-list">${txt}</span></div>`;
+  }
+  const adjacentTerrainBonuses = card.bonuses_by_building_adjacent_to_terrain_type || [];
+  if (adjacentTerrainBonuses.length) {
+    const txt = _formatTerrainConditionalBonuses(adjacentTerrainBonuses, "Next to terrain");
+    if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">On placement (adjacent terrain)</span><span class="card-req-list">${txt}</span></div>`;
+  }
+  if (isBuildCard) {
+    const boardOnTopBonuses = _boardTerrainBonusesForCard(card, "build_bonuses");
+    if (boardOnTopBonuses.length) {
+      const txt = _formatTerrainConditionalBonuses(boardOnTopBonuses, "On terrain");
+      if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">Board bonus (on terrain)</span><span class="card-req-list">${txt}</span></div>`;
+    }
+    const boardAdjacentBonuses = _boardTerrainBonusesForCard(card, "adjacency_bonuses");
+    if (boardAdjacentBonuses.length) {
+      const txt = _formatTerrainConditionalBonuses(boardAdjacentBonuses, "Next to terrain");
+      if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">Board bonus (adjacent terrain)</span><span class="card-req-list">${txt}</span></div>`;
+    }
+  }
+  const placedAdjBonuses = card.placed_tile_adjacency_bonuses || [];
+  if (placedAdjBonuses.length) {
+    const txt = _formatConditionalBonuses(placedAdjBonuses, "When next to this");
+    if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">After placement (tile aura)</span><span class="card-req-list">${txt}</span></div>`;
+  }
+  if ((card.adjacent_placement_fee || 0) > 0) {
+    const feeTargets = card.adjacent_placement_fee_target_types || [];
+    const t = feeTargets.length
+      ? feeTargets.map(bt => (typeof TILE_LABELS !== "undefined" && TILE_LABELS[bt]) ? TILE_LABELS[bt] : bt).join(" ")
+      : "configured target types";
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">Placement fee</span><span class="card-req-list">Pay 💰$${card.adjacent_placement_fee}B if placed next to opponent ${t}</span></div>`;
+  }
 
   // Costs section (new format)
   let costsHtml = "";
@@ -1935,6 +2256,10 @@ function createCardElement(card, options = {}) {
   const myRes = lastPrivateState?.resources;
   const canAffordRes = (res, amt) => {
     if (!myRes || !amt) return null;
+    // Reputation is not a blocking resource — costs always apply (floored at -10 server-side).
+    if (res === "reputation") return true;
+    // Negative amounts are penalties — they always apply and never block play.
+    if (amt < 0) return true;
     if (res === "money") {
       const feeAmt = (!iOwnFeeCosts(costs)) ? (costs.fee || 0) : 0;
       return (myRes.money ?? 0) >= (costs.money || 0) + feeAmt;
@@ -1949,7 +2274,9 @@ function createCardElement(card, options = {}) {
       if (!amt || COST_SKIP.has(res)) continue;
       const ok = canAffordRes(res, amt);
       const cls = ok === null ? "" : ok ? " cost-ok" : " cost-nok";
-      costsHtml += `<span class="card-cost-item${cls}">${fmtCardVal(res, amt)} ${emojiRes(res)}</span>`;
+      // Positive costs show with "−" prefix; negative values are penalties and carry their own sign
+      const sign = amt > 0 ? "−" : "";
+      costsHtml += `<span class="card-cost-item${cls}">${sign}${fmtCardVal(res, amt)} ${emojiRes(res)}</span>`;
     }
     const feeAmt = costs.fee || 0;
     if (feeAmt) {
@@ -1967,7 +2294,7 @@ function createCardElement(card, options = {}) {
   } else if (card.cost) {
     const ok = myRes ? (myRes.money ?? 0) >= card.cost : null;
     const cls = ok === null ? "" : ok ? " cost-ok" : " cost-nok";
-    costsHtml = `<div class="card-costs"><span class="card-section-label">Cost</span><span class="card-cost-item${cls}">💰${card.cost}</span></div>`;
+    costsHtml = `<div class="card-costs"><span class="card-section-label">Cost</span><span class="card-cost-item${cls}">−${card.cost}💰</span></div>`;
   }
 
   el.innerHTML = `
@@ -1979,6 +2306,8 @@ function createCardElement(card, options = {}) {
     ${desc}
     ${effectsHtml}
     ${boostsHtml}
+    ${boostedByHtml}
+    ${feesCollectedHtml}
     ${buildHtml}
     ${tiersHtml}
     ${startHtml}
@@ -2090,8 +2419,9 @@ const paramsBody = document.getElementById("params-body");
 
 const PARAM_LABELS = {
   total_users: "Total Users in Pool (×1M)",
-  money_per_users: "$B/yr per 100M users",
-  data_per_users: "PB/yr per 100M users",
+  money_users_trigger: "Money trigger (M users)",
+  data_users_trigger: "Data trigger (M users)",
+  data_per_users: "PB per trigger",
   projects_draw: "Cards from Projects Deck",
   boosters_draw: "Cards from Boosters Deck",
   build_row_size: "Shared Build Row Size (cards below board)",
@@ -2397,6 +2727,7 @@ const COST_KEY_OPTIONS = [
 ];
 
 const DICT_KEY_OPTIONS = {
+  production: RESOURCE_OPTIONS,
   effect: RESOURCE_OPTIONS,
   costs: COST_KEY_OPTIONS,
   compliance: RESOURCE_OPTIONS,
@@ -2482,7 +2813,7 @@ editorModal.addEventListener("click", (e) => {
 });
 
 socket.on("all_cards", (data) => {
-  editorCards = data.cards;
+  editorCards = _sanitizeEditorValue(data.cards || {});
   editorLocksMap = data.locks || {};
   rebuildCardIndex();
   // Open the modal only when the user explicitly requested it;
@@ -2709,11 +3040,11 @@ function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = 
   row2.className = "editor-charts-row";
   panel.appendChild(row2);
 
-  // Platform breakdown — count by card type field
+  // Platform breakdown — count by card type field, weighted by card.number
   const platformTypeCounts = {};
   for (const card of (allCards.platform || [])) {
     const t = card.type || "(none)";
-    platformTypeCounts[t] = (platformTypeCounts[t] || 0) + 1;
+    platformTypeCounts[t] = (platformTypeCounts[t] || 0) + (card.number || 1);
   }
   const platformSlices = Object.entries(platformTypeCounts)
     .sort((a, b) => b[1] - a[1])
@@ -2723,12 +3054,12 @@ function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = 
     }));
   makeChart("Platform", platformSlices, row2);
 
-  // Cyber Warfare — split by card type (cyber attack vs cyber defense)
+  // Cyber Warfare — split by card type, weighted by card.number
   const cyberTypeCounts = {};
   for (const card of (allCards.cyber_attack || [])) {
     const t = card.type || "cyber attack";
     const label = t === "cyber defense" ? "Cyber Defense 🛡️" : "Cyber Attacks 🕵️";
-    cyberTypeCounts[label] = (cyberTypeCounts[label] || 0) + 1;
+    cyberTypeCounts[label] = (cyberTypeCounts[label] || 0) + (card.number || 1);
   }
   const cyberSlices = Object.entries(cyberTypeCounts)
     .map(([label, n]) => ({
@@ -2737,11 +3068,11 @@ function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = 
     }));
   makeChart("Cyber Warfare", cyberSlices, row2);
 
-  // Build — by tile type (build field)
+  // Build — by tile type (build field), weighted by card.number
   const buildTypeCounts = {};
   for (const card of (allCards.build || [])) {
     const b = card.build || "(none)";
-    buildTypeCounts[b] = (buildTypeCounts[b] || 0) + 1;
+    buildTypeCounts[b] = (buildTypeCounts[b] || 0) + (card.number || 1);
   }
   const buildSlices = Object.entries(buildTypeCounts)
     .sort((a, b) => b[1] - a[1])
@@ -2775,19 +3106,21 @@ function renderEditorGrid() {
     leverage: "Boosters", innovation: "Boosters",
     build: "Build",
   };
+  // Count by card.number (copies in the deck), not by unique card entries
+  const cardCount = (cards) => (cards || []).reduce((s, c) => s + (c.number || 1), 0);
+
   let totalCards = 0;
   const typeCounts = {};
   const deckCounts = {};
   const extraCounts = {}; // company, events (regulation+world_event) — shown in overall only
   for (const [ct, cards] of Object.entries(editorCards)) {
-    const n = (cards || []).length;
+    const n = cardCount(cards);
     if (ct === "company") {
       extraCounts.company = n;
       continue;
     }
     if (ct === "regulation" || ct === "world_event") {
       extraCounts.events = (extraCounts.events || 0) + n;
-      // track sub-counts for breakdown chart
       extraCounts.regulation = (extraCounts.regulation || 0) + (ct === "regulation" ? n : 0);
       extraCounts.world_event = (extraCounts.world_event || 0) + (ct === "world_event" ? n : 0);
       continue;
@@ -3016,17 +3349,33 @@ function renderEditorForm() {
   const fields = document.createElement("div");
   fields.className = "editor-fields";
 
-  const EDITOR_HIDDEN_FIELDS = new Set(["image", "starting_tiles"]);
-  const ALWAYS_SHOW_FIELDS = ["factory_refund", "dc_production_bonus"];
+  const EDITOR_HIDDEN_FIELDS = new Set(["image", "starting_tiles", "factory_refund", "dc_production_bonus"]);
+  const ALWAYS_SHOW_FIELDS = ["adjacent_placement_fee"];
   const renderedKeys = new Set();
 
   for (const [key, value] of Object.entries(card)) {
     if (EDITOR_HIDDEN_FIELDS.has(key)) continue;
     renderedKeys.add(key);
-    if (key === "boosts") {
+    if (key === "build") {
+      fields.appendChild(buildBuildField(value));
+    } else if (key === "boosts") {
       fields.appendChild(buildBoostsField(value || []));
     } else if (key === "requirements") {
       fields.appendChild(buildRequirementsField(value || []));
+    } else if (key === "only_playable_next_to") {
+      fields.appendChild(buildOnlyPlayableNextToField(value || []));
+    } else if (key === "only_playable_on_terrains") {
+      fields.appendChild(buildOnlyPlayableOnTerrainsField(value || []));
+    } else if (key === "adjacent_placement_fee_target_types") {
+      fields.appendChild(buildAdjacentPlacementFeeTargetTypesField(value || []));
+    } else if (key === "bonuses_by_placing_next_to_building") {
+      fields.appendChild(buildBonusesByPlacingNextToBuildingField(value || []));
+    } else if (key === "bonuses_by_building_on_terrain_type") {
+      fields.appendChild(buildBonusesByBuildingOnTerrainTypeField(value || []));
+    } else if (key === "bonuses_by_building_adjacent_to_terrain_type") {
+      fields.appendChild(buildBonusesByBuildingAdjacentToTerrainTypeField(value || []));
+    } else if (key === "placed_tile_adjacency_bonuses") {
+      fields.appendChild(buildPlacedTileAdjacencyBonusesField(value || []));
     } else if (key === "tiers") {
       fields.appendChild(buildTiersField(value || []));
     } else if (key === "current_tier" || key === "instance_id") {
@@ -3046,11 +3395,35 @@ function renderEditorForm() {
     }
   }
 
+  if (!("production" in card)) {
+    fields.appendChild(buildDictField("production", {}));
+  }
   if (!("boosts" in card)) {
     fields.appendChild(buildBoostsField([]));
   }
   if (!("requirements" in card)) {
     fields.appendChild(buildRequirementsField([]));
+  }
+  if (!("only_playable_next_to" in card)) {
+    fields.appendChild(buildOnlyPlayableNextToField([]));
+  }
+  if (!("only_playable_on_terrains" in card)) {
+    fields.appendChild(buildOnlyPlayableOnTerrainsField([]));
+  }
+  if (!("adjacent_placement_fee_target_types" in card)) {
+    fields.appendChild(buildAdjacentPlacementFeeTargetTypesField([]));
+  }
+  if (!("bonuses_by_placing_next_to_building" in card)) {
+    fields.appendChild(buildBonusesByPlacingNextToBuildingField([]));
+  }
+  if (!("bonuses_by_building_on_terrain_type" in card)) {
+    fields.appendChild(buildBonusesByBuildingOnTerrainTypeField([]));
+  }
+  if (!("bonuses_by_building_adjacent_to_terrain_type" in card)) {
+    fields.appendChild(buildBonusesByBuildingAdjacentToTerrainTypeField([]));
+  }
+  if (!("placed_tile_adjacency_bonuses" in card)) {
+    fields.appendChild(buildPlacedTileAdjacencyBonusesField([]));
   }
   if (!("tiers" in card)) {
     fields.appendChild(buildTiersField([]));
@@ -3099,21 +3472,36 @@ function renderEditorForm() {
 }
 
 const FIELD_OPTIONS = {
-  build: [null, "ad_campaign", "data_center", "factory", "hydroelectric_power_plant", "launching_pad", "lobby_group", "office", "power_plant", "pv_power_plant", "rare_metal_mine", "satellite_dc", "satellite_solar", "solar_thermal", "store", "wind_power_plant"],
+  build: [null, "ad_campaign", "coal_power_plant", "data_center", "distribution_center", "factory", "geothermal_power_plant", "hydroelectric_power_plant", "launching_pad", "lobby_group", "natural_gas_power_plant", "nuclear_power_plant", "office", "pv_power_plant", "rare_metal_mine", "satellite_dc", "satellite_solar", "solar_thermal", "store", "wind_power_plant"],
 };
 
 const TYPE_OPTIONS = [
   "social platform", "hardware manufacturer", "chip enterprise", "software service",
   "software platform", "software engine",
-  "online marketplace", "search service", "store", "power plant",
-  "pv power plant", "wind power plant", "solar thermal",
+  "online marketplace", "search service", "store",
+  "nuclear power plant", "natural gas power plant", "coal power plant",
+  "pv power plant", "wind power plant", "solar thermal", "geothermal power plant",
   "data center", "office", "ad campaign", "lobby", "rare metal mine",
   "hydroelectric power plant", "satellite solar", "satellite data center",
   "cyber attack", "cyber defense",
 ];
 
 // Fields that are always numeric (even when their current value is null)
-const NUMERIC_FIELDS = new Set(["factory_refund", "dc_production_bonus"]);
+const NUMERIC_FIELDS = new Set(["adjacent_placement_fee"]);
+
+function _isUnsetLike(v) {
+  return v === null || v === undefined || v === "null" || v === "undefined";
+}
+
+function _sanitizeEditorValue(v) {
+  if (Array.isArray(v)) return v.map(_sanitizeEditorValue);
+  if (v && typeof v === "object") {
+    const out = {};
+    Object.entries(v).forEach(([k, val]) => { out[k] = _sanitizeEditorValue(val); });
+    return out;
+  }
+  return v === "undefined" ? null : v;
+}
 
 // cardType: optional string ("company", "platform", etc.) used for conditional field rendering
 function buildSimpleField(key, value, cardType) {
@@ -3130,7 +3518,7 @@ function buildSimpleField(key, value, cardType) {
     sel.dataset.fieldKey = key;
     const noneOpt = document.createElement("option");
     noneOpt.value = ""; noneOpt.textContent = "(none)";
-    if (!value) noneOpt.selected = true;
+    if (_isUnsetLike(value) || !value) noneOpt.selected = true;
     sel.appendChild(noneOpt);
     TYPE_OPTIONS.forEach(opt => {
       const o = document.createElement("option");
@@ -3153,7 +3541,7 @@ function buildSimpleField(key, value, cardType) {
   } else if (key === "description") {
     const ta = document.createElement("textarea");
     ta.dataset.fieldKey = key;
-    ta.value = value ?? "";
+    ta.value = _isUnsetLike(value) ? "" : (value ?? "");
     ta.rows = 3;
     row.appendChild(ta);
   } else {
@@ -3161,11 +3549,72 @@ function buildSimpleField(key, value, cardType) {
     input.dataset.fieldKey = key;
     const isNum = typeof value === "number" || NUMERIC_FIELDS.has(key) || key === "id";
     input.type = isNum ? "number" : "text";
-    input.value = value ?? "";
+    input.value = _isUnsetLike(value) ? "" : (value ?? "");
     row.appendChild(input);
   }
 
   return row;
+}
+
+// ── Build field builder (supports multiple build outputs) ────
+function buildBuildField(buildValue) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.buildKey = "build";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "build";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-bottom:.4rem";
+  hint.textContent = "Add one or more build tile types this card can trigger.";
+  container.appendChild(hint);
+
+  const list = document.createElement("div");
+  list.className = "editor-requirements-list";
+  container.appendChild(list);
+
+  function addBuildRow(val) {
+    const row = document.createElement("div");
+    row.className = "editor-req-row editor-dict-row";
+
+    const sel = document.createElement("select");
+    sel.className = "editor-build-type";
+    sel.style.flex = "1";
+    const opts = FIELD_OPTIONS.build || [];
+    opts.forEach(opt => {
+      const o = document.createElement("option");
+      o.value = opt ?? "";
+      o.textContent = opt ?? "(none)";
+      if ((val ?? null) === opt) o.selected = true;
+      sel.appendChild(o);
+    });
+
+    const rmBtn = document.createElement("button");
+    rmBtn.className = "btn btn-sm editor-remove-btn";
+    rmBtn.textContent = "×";
+    rmBtn.addEventListener("click", () => row.remove());
+
+    row.appendChild(sel);
+    row.appendChild(rmBtn);
+    list.appendChild(row);
+  }
+
+  const initial = Array.isArray(buildValue)
+    ? buildValue
+    : (buildValue ? [buildValue] : [null]);
+  initial.forEach(v => addBuildRow(v));
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm";
+  addBtn.textContent = "+ Add Build Type";
+  addBtn.style.marginTop = ".4rem";
+  addBtn.addEventListener("click", () => addBuildRow(null));
+  container.appendChild(addBtn);
+
+  return container;
 }
 
 function buildDictField(key, dict) {
@@ -3230,7 +3679,7 @@ function buildDictRow(k, v, keyOptions) {
       sel.className = "editor-dict-val";
       const noneOpt = document.createElement("option");
       noneOpt.value = ""; noneOpt.textContent = "(none)";
-      if (!val) noneOpt.selected = true;
+      if (_isUnsetLike(val) || !val) noneOpt.selected = true;
       sel.appendChild(noneOpt);
       TYPE_OPTIONS.forEach(opt => {
         const o = document.createElement("option");
@@ -3242,8 +3691,8 @@ function buildDictRow(k, v, keyOptions) {
     }
     const inp = document.createElement("input");
     inp.className = "editor-dict-val";
-    inp.type = (val === null || val === undefined) ? "text" : "number";
-    inp.value = (val === null || val === undefined) ? "" : val;
+    inp.type = _isUnsetLike(val) ? "text" : "number";
+    inp.value = _isUnsetLike(val) ? "" : val;
     inp.placeholder = "value";
     return { el: inp, isSpinner: inp.type === "number" };
   }
@@ -3326,6 +3775,374 @@ function buildRequirementsField(requirements) {
   container.appendChild(addBtn);
 
   return container;
+}
+
+// ── Tile adjacency restriction field builder ──────────────────
+function buildOnlyPlayableNextToField(nextToList) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.onlyPlayableNextToKey = "only_playable_next_to";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "only playable next to";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-bottom:.4rem";
+  hint.textContent = "Optional: at least one adjacent placed tile must match one of these build types.";
+  container.appendChild(hint);
+
+  const list = document.createElement("div");
+  list.className = "editor-requirements-list";
+  container.appendChild(list);
+
+  const typeOptions = (typeof BUILDABLE_TILE_TYPE_OPTIONS !== "undefined" && Array.isArray(BUILDABLE_TILE_TYPE_OPTIONS))
+    ? BUILDABLE_TILE_TYPE_OPTIONS.map(([val]) => val).filter(Boolean)
+    : (FIELD_OPTIONS.build || []).filter(Boolean);
+
+  function addRow(val) {
+    const row = document.createElement("div");
+    row.className = "editor-req-row editor-dict-row";
+
+    const sel = document.createElement("select");
+    sel.className = "editor-only-next-to-type";
+    sel.style.flex = "1";
+
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "(choose build type)";
+    if (!val) noneOpt.selected = true;
+    sel.appendChild(noneOpt);
+
+    typeOptions.forEach(t => {
+      const o = document.createElement("option");
+      o.value = t;
+      const emoji = (typeof TILE_LABELS !== "undefined" && TILE_LABELS[t]) ? TILE_LABELS[t] : "▫";
+      o.textContent = `${emoji} ${t}`;
+      if (t === val) o.selected = true;
+      sel.appendChild(o);
+    });
+
+    const rmBtn = document.createElement("button");
+    rmBtn.className = "btn btn-sm editor-remove-btn";
+    rmBtn.textContent = "×";
+    rmBtn.addEventListener("click", () => row.remove());
+
+    row.appendChild(sel);
+    row.appendChild(rmBtn);
+    list.appendChild(row);
+  }
+
+  (nextToList || []).forEach(v => addRow(v));
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm";
+  addBtn.textContent = "+ Add Build Type";
+  addBtn.style.marginTop = ".4rem";
+  addBtn.addEventListener("click", () => addRow(""));
+  container.appendChild(addBtn);
+
+  return container;
+}
+
+// ── Terrain restriction field builder ─────────────────────────
+function buildOnlyPlayableOnTerrainsField(terrainList) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.onlyPlayableOnTerrainsKey = "only_playable_on_terrains";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "only played on top of these terrain types";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-bottom:.4rem";
+  hint.textContent = "Optional: tile from this card can only be placed on selected terrains.";
+  container.appendChild(hint);
+
+  const list = document.createElement("div");
+  list.className = "editor-requirements-list";
+  container.appendChild(list);
+
+  const terrainOptions = (typeof TERRAIN_OPTIONS !== "undefined" && Array.isArray(TERRAIN_OPTIONS))
+    ? TERRAIN_OPTIONS
+    : [];
+
+  function addRow(val) {
+    const row = document.createElement("div");
+    row.className = "editor-req-row editor-dict-row";
+    const sel = document.createElement("select");
+    sel.className = "editor-only-terrain-type";
+    sel.style.flex = "1";
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "(choose terrain)";
+    if (!val) noneOpt.selected = true;
+    sel.appendChild(noneOpt);
+    terrainOptions.forEach(t => {
+      const o = document.createElement("option");
+      o.value = t;
+      o.textContent = t;
+      if (t === val) o.selected = true;
+      sel.appendChild(o);
+    });
+    const rmBtn = document.createElement("button");
+    rmBtn.className = "btn btn-sm editor-remove-btn";
+    rmBtn.textContent = "×";
+    rmBtn.addEventListener("click", () => row.remove());
+    row.appendChild(sel);
+    row.appendChild(rmBtn);
+    list.appendChild(row);
+  }
+
+  (terrainList || []).forEach(v => addRow(v));
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm";
+  addBtn.textContent = "+ Add Terrain";
+  addBtn.style.marginTop = ".4rem";
+  addBtn.addEventListener("click", () => addRow(""));
+  container.appendChild(addBtn);
+  return container;
+}
+
+// ── Placement fee target types field builder ────────────────
+function buildAdjacentPlacementFeeTargetTypesField(nextToList) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.adjacentPlacementFeeTargetTypesKey = "adjacent_placement_fee_target_types";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "adjacent placement fee target types";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-bottom:.4rem";
+  hint.textContent = "If adjacent placement fee > 0, fee applies when placed next to these build types owned by another player.";
+  container.appendChild(hint);
+
+  const list = document.createElement("div");
+  list.className = "editor-requirements-list";
+  container.appendChild(list);
+
+  const typeOptions = (typeof BUILDABLE_TILE_TYPE_OPTIONS !== "undefined" && Array.isArray(BUILDABLE_TILE_TYPE_OPTIONS))
+    ? BUILDABLE_TILE_TYPE_OPTIONS.map(([val]) => val).filter(Boolean)
+    : (FIELD_OPTIONS.build || []).filter(Boolean);
+
+  function addRow(val) {
+    const row = document.createElement("div");
+    row.className = "editor-req-row editor-dict-row";
+    const sel = document.createElement("select");
+    sel.className = "editor-adj-fee-target-type";
+    sel.style.flex = "1";
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "(choose build type)";
+    if (!val) noneOpt.selected = true;
+    sel.appendChild(noneOpt);
+    typeOptions.forEach(t => {
+      const o = document.createElement("option");
+      o.value = t;
+      const emoji = (typeof TILE_LABELS !== "undefined" && TILE_LABELS[t]) ? TILE_LABELS[t] : "▫";
+      o.textContent = `${emoji} ${t}`;
+      if (t === val) o.selected = true;
+      sel.appendChild(o);
+    });
+    const rmBtn = document.createElement("button");
+    rmBtn.className = "btn btn-sm editor-remove-btn";
+    rmBtn.textContent = "×";
+    rmBtn.addEventListener("click", () => row.remove());
+    row.appendChild(sel);
+    row.appendChild(rmBtn);
+    list.appendChild(row);
+  }
+
+  (nextToList || []).forEach(v => addRow(v));
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm";
+  addBtn.textContent = "+ Add Build Type";
+  addBtn.style.marginTop = ".4rem";
+  addBtn.addEventListener("click", () => addRow(""));
+  container.appendChild(addBtn);
+  return container;
+}
+
+// ── Card placement-adjacent bonuses field ─────────────────────
+function buildBonusesByPlacingNextToBuildingField(savedRaw) {
+  const section = _makeConditionalBonusSection(
+    "bonuses by placing next to building",
+    savedRaw
+  );
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-bottom:.4rem";
+  hint.textContent = "One-time bonus when this tile is placed next to matching building types.";
+  section.insertBefore(hint, section.querySelector(".board-bonus-conditions-container"));
+  section.dataset.bonusesByPlacingNextToBuildingKey = "bonuses_by_placing_next_to_building";
+  return section;
+}
+
+// ── Card bonuses by building on terrain type ───────────────────
+const CARD_TERRAIN_BONUS_OPTIONS = [
+  [null,            "(any terrain type — always applies)"],
+  ["empty",         "🌫️ Empty"],
+  ["city",          "🏙️ City"],
+  ["lake",          "🌊 Lake"],
+  ["sea",           "🌊 Sea"],
+  ["offshore_wind", "💨 Offshore Wind"],
+  ["offshore_solar","☀️ Offshore Solar"],
+  ["government",    "🏛️ Government"],
+  ["commercial",    "💼 Commercial"],
+  ["industrial",    "⚙️ Industrial"],
+  ["sun",           "☀️ Sun"],
+  ["wind",          "💨 Wind"],
+  ["gas_reserve",   "🔥 Gas Reserve"],
+  ["coal",          "⛏️ Coal"],
+  ["geothermal",    "🌡️ Geothermal"],
+  ["wall",          "🧱 Wall"],
+  ["mountain",      "⛰️ Mountain"],
+  ["rare_metal_mine","🔩 Rare Metal Mine"],
+  ["natural_park",  "🌳 Natural Park"],
+  ["space",         "✨ Space"],
+  ["launching_pad", "🚀 Launching Pad"],
+];
+
+function _makeTerrainBonusConditionBlock(entry) {
+  const block = document.createElement("div");
+  block.className = "board-bonus-condition-block";
+
+  const header = document.createElement("div");
+  header.className = "board-bonus-condition-header";
+  const hLabel = document.createElement("span");
+  hLabel.textContent = "When building on terrain:";
+  header.appendChild(hLabel);
+
+  const terrainSelect = document.createElement("select");
+  terrainSelect.className = "editor-dict-key";
+  CARD_TERRAIN_BONUS_OPTIONS.forEach(([val, lbl]) => {
+    const o = document.createElement("option");
+    o.value = val ?? "";
+    o.textContent = lbl;
+    if ((entry.terrain_type ?? null) === val) o.selected = true;
+    terrainSelect.appendChild(o);
+  });
+  header.appendChild(terrainSelect);
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "btn btn-sm btn-danger-sm";
+  removeBtn.textContent = "× Remove";
+  removeBtn.style.marginLeft = "auto";
+  removeBtn.addEventListener("click", () => block.remove());
+  header.appendChild(removeBtn);
+  block.appendChild(header);
+
+  const immLabel = document.createElement("span");
+  immLabel.className = "board-bonus-sub";
+  immLabel.textContent = "Immediate";
+  block.appendChild(immLabel);
+  const immContainer = document.createElement("div");
+  immContainer.className = "board-res-container";
+  Object.entries(entry.immediate || {}).forEach(([k, v]) => immContainer.appendChild(_boardResRow(k, v)));
+  const addImm = document.createElement("button");
+  addImm.className = "btn btn-sm";
+  addImm.textContent = "+ Add";
+  addImm.addEventListener("click", () => immContainer.insertBefore(_boardResRow("", 0), addImm));
+  immContainer.appendChild(addImm);
+  block.appendChild(immContainer);
+
+  const prodLabel = document.createElement("span");
+  prodLabel.className = "board-bonus-sub";
+  prodLabel.textContent = "Production";
+  block.appendChild(prodLabel);
+  const prodContainer = document.createElement("div");
+  prodContainer.className = "board-res-container";
+  Object.entries(entry.production || {}).forEach(([k, v]) => prodContainer.appendChild(_boardResRow(k, v)));
+  const addProd = document.createElement("button");
+  addProd.className = "btn btn-sm";
+  addProd.textContent = "+ Add";
+  addProd.addEventListener("click", () => prodContainer.insertBefore(_boardResRow("", 0), addProd));
+  prodContainer.appendChild(addProd);
+  block.appendChild(prodContainer);
+
+  block._collect = () => ({
+    terrain_type: terrainSelect.value || null,
+    immediate: _collectResRows(immContainer),
+    production: _collectResRows(prodContainer),
+  });
+  return block;
+}
+
+function _makeTerrainConditionalBonusSection(sectionLabel, savedRaw) {
+  const section = document.createElement("div");
+  section.className = "editor-field board-bonus-section";
+
+  const title = document.createElement("label");
+  title.textContent = sectionLabel;
+  section.appendChild(title);
+
+  const blocksContainer = document.createElement("div");
+  blocksContainer.className = "board-bonus-conditions-container";
+  section.appendChild(blocksContainer);
+
+  const list = Array.isArray(savedRaw) ? savedRaw : [];
+  list.forEach(entry => {
+    if (Object.keys(entry.immediate || {}).length || Object.keys(entry.production || {}).length || entry.terrain_type) {
+      blocksContainer.appendChild(_makeTerrainBonusConditionBlock(entry));
+    }
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm";
+  addBtn.textContent = "+ Add condition";
+  addBtn.addEventListener("click", () => blocksContainer.appendChild(_makeTerrainBonusConditionBlock({})));
+  section.appendChild(addBtn);
+
+  section._collectList = () => {
+    const result = [];
+    blocksContainer.querySelectorAll(".board-bonus-condition-block").forEach(block => {
+      if (block._collect) {
+        const e = block._collect();
+        if (Object.keys(e.immediate || {}).length || Object.keys(e.production || {}).length) {
+          result.push(e);
+        }
+      }
+    });
+    return result;
+  };
+  return section;
+}
+
+function buildBonusesByBuildingOnTerrainTypeField(savedRaw) {
+  const section = _makeTerrainConditionalBonusSection(
+    "bonuses by building on terrain type",
+    savedRaw
+  );
+  section.dataset.bonusesByBuildingOnTerrainTypeKey = "bonuses_by_building_on_terrain_type";
+  return section;
+}
+
+function buildBonusesByBuildingAdjacentToTerrainTypeField(savedRaw) {
+  const section = _makeTerrainConditionalBonusSection(
+    "bonuses by building adjacent to terrain type",
+    savedRaw
+  );
+  section.dataset.bonusesByBuildingAdjacentToTerrainTypeKey = "bonuses_by_building_adjacent_to_terrain_type";
+  return section;
+}
+
+// ── Placed-tile adjacency bonuses field ────────────────────────
+function buildPlacedTileAdjacencyBonusesField(savedRaw) {
+  const section = _makeConditionalBonusSection(
+    "placed tile adjacency bonuses",
+    savedRaw
+  );
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-bottom:.4rem";
+  hint.textContent = "Ongoing aura after placement: future tiles built next to this tile get these bonuses.";
+  section.insertBefore(hint, section.querySelector(".board-bonus-conditions-container"));
+  section.dataset.placedTileAdjacencyBonusesKey = "placed_tile_adjacency_bonuses";
+  return section;
 }
 
 // ── Tiers field builder ───────────────────────────────────────
@@ -3464,8 +4281,9 @@ const BOOST_TYPE_OPTIONS = [
   null,
   "social platform", "hardware manufacturer", "chip enterprise", "software service",
   "software platform", "software engine",
-  "online marketplace", "search service", "store", "power plant",
-  "pv power plant", "wind power plant", "solar thermal",
+  "online marketplace", "search service", "store",
+  "nuclear power plant", "natural gas power plant", "coal power plant",
+  "pv power plant", "wind power plant", "solar thermal", "geothermal power plant",
   "data center", "office", "ad campaign", "lobby", "rare metal mine",
   "hydroelectric power plant", "satellite solar", "satellite data center",
   "cyber attack", "cyber defense",
@@ -3587,7 +4405,7 @@ function collectFormData(fieldsEl, originalCard) {
       val = val === "" ? null : val;
     } else if (el.type === "number") {
       val = val === "" ? 0 : Number(val);
-    } else if (val === "" || val === "null") {
+    } else if (val === "" || val === "null" || val === "undefined") {
       val = null;
     }
     data[key] = val;
@@ -3608,12 +4426,66 @@ function collectFormData(fieldsEl, originalCard) {
     data[dictKey] = Object.keys(dict).length > 0 ? dict : null;
   });
 
+  const buildContainer = fieldsEl.querySelector("[data-build-key='build']");
+  if (buildContainer) {
+    const builds = [...buildContainer.querySelectorAll(".editor-build-type")]
+      .map(sel => sel.value)
+      .filter(v => v && v !== "undefined" && v !== "null");
+    if (builds.length === 0) data.build = null;
+    else if (builds.length === 1) data.build = builds[0];
+    else data.build = builds;
+  }
+
   const reqContainer = fieldsEl.querySelector("[data-requirements-key='requirements']");
   if (reqContainer) {
     const reqs = [...reqContainer.querySelectorAll(".editor-req-type")]
       .map(sel => sel.value)
-      .filter(v => v);
+      .filter(v => v && v !== "undefined" && v !== "null");
     data.requirements = reqs.length > 0 ? reqs : null;
+  }
+
+  const nextToContainer = fieldsEl.querySelector("[data-only-playable-next-to-key='only_playable_next_to']");
+  if (nextToContainer) {
+    const nextTo = [...nextToContainer.querySelectorAll(".editor-only-next-to-type")]
+      .map(sel => sel.value)
+      .filter(v => v && v !== "undefined" && v !== "null");
+    data.only_playable_next_to = nextTo.length > 0 ? nextTo : null;
+  }
+  const terrainContainer = fieldsEl.querySelector("[data-only-playable-on-terrains-key='only_playable_on_terrains']");
+  if (terrainContainer) {
+    const terrains = [...terrainContainer.querySelectorAll(".editor-only-terrain-type")]
+      .map(sel => sel.value)
+      .filter(v => v && v !== "undefined" && v !== "null");
+    data.only_playable_on_terrains = terrains.length > 0 ? terrains : null;
+  }
+
+  const adjFeeTargetsContainer = fieldsEl.querySelector("[data-adjacent-placement-fee-target-types-key='adjacent_placement_fee_target_types']");
+  if (adjFeeTargetsContainer) {
+    const targets = [...adjFeeTargetsContainer.querySelectorAll(".editor-adj-fee-target-type")]
+      .map(sel => sel.value)
+      .filter(v => v && v !== "undefined" && v !== "null");
+    data.adjacent_placement_fee_target_types = targets.length > 0 ? targets : null;
+  }
+
+  const adjBonusContainer = fieldsEl.querySelector("[data-bonuses-by-placing-next-to-building-key='bonuses_by_placing_next_to_building']");
+  if (adjBonusContainer && typeof adjBonusContainer._collectList === "function") {
+    const bonusList = adjBonusContainer._collectList();
+    data.bonuses_by_placing_next_to_building = bonusList.length ? bonusList : null;
+  }
+  const terrainBonusContainer = fieldsEl.querySelector("[data-bonuses-by-building-on-terrain-type-key='bonuses_by_building_on_terrain_type']");
+  if (terrainBonusContainer && typeof terrainBonusContainer._collectList === "function") {
+    const bonusList = terrainBonusContainer._collectList();
+    data.bonuses_by_building_on_terrain_type = bonusList.length ? bonusList : null;
+  }
+  const adjacentTerrainBonusContainer = fieldsEl.querySelector("[data-bonuses-by-building-adjacent-to-terrain-type-key='bonuses_by_building_adjacent_to_terrain_type']");
+  if (adjacentTerrainBonusContainer && typeof adjacentTerrainBonusContainer._collectList === "function") {
+    const bonusList = adjacentTerrainBonusContainer._collectList();
+    data.bonuses_by_building_adjacent_to_terrain_type = bonusList.length ? bonusList : null;
+  }
+  const placedAdjBonusContainer = fieldsEl.querySelector("[data-placed-tile-adjacency-bonuses-key='placed_tile_adjacency_bonuses']");
+  if (placedAdjBonusContainer && typeof placedAdjBonusContainer._collectList === "function") {
+    const bonusList = placedAdjBonusContainer._collectList();
+    data.placed_tile_adjacency_bonuses = bonusList.length ? bonusList : null;
   }
 
   const tiersContainer = fieldsEl.querySelector("[data-tiers-key='tiers']");
@@ -3995,9 +4867,18 @@ const graveyardBtn = document.getElementById("graveyard-btn");
 const graveyardModal = document.getElementById("graveyard-modal");
 const closeGraveyardModal = document.getElementById("close-graveyard-modal");
 const graveyardBody = document.getElementById("graveyard-body");
+const graveyardDeleteAllBtn = document.getElementById("graveyard-delete-all-btn");
 
 graveyardBtn.addEventListener("click", () => {
   socket.emit("get_graveyard");
+});
+
+graveyardDeleteAllBtn.addEventListener("click", () => {
+  showConfirmDialog(
+    "Delete ALL cards in the graveyard?",
+    () => socket.emit("delete_all_graveyard"),
+    { detail: "This cannot be undone. Every card in the graveyard will be permanently erased.", confirmText: "Delete All Forever" }
+  );
 });
 
 closeGraveyardModal.addEventListener("click", () => {
@@ -4016,6 +4897,7 @@ socket.on("graveyard_data", (data) => {
 
 function renderGraveyard(cards) {
   graveyardBody.innerHTML = "";
+  graveyardDeleteAllBtn.style.display = (cards && cards.length > 0) ? "" : "none";
 
   if (!cards || cards.length === 0) {
     graveyardBody.innerHTML = '<p class="text-dim" style="padding:1rem;">The graveyard is empty. Deleted cards will appear here.</p>';
@@ -4119,13 +5001,18 @@ const TERRAIN_COLORS = {
   space:            "#05050f",
   launching_pad:    "#3a3a4a",  // dark charcoal (matching the build tile)
   mountain:         "#4a3f38",  // stone grey-brown
+  geothermal:       "#5a1a0a",  // dark volcanic red-brown
+  industrial:       "#2a2a1a",  // dark olive-grey (factory zone)
 };
 
 const TILE_COLORS = {
-  power_plant:               "#f1c40f",
+  nuclear_power_plant:       "#8bc34a",  // lime-green (clean nuclear)
+  natural_gas_power_plant:   "#ff7043",  // deep orange (gas flame)
+  coal_power_plant:          "#607d8b",  // blue-grey (coal/smoke)
   pv_power_plant:            "#e8a020",  // amber-orange (solar)
   wind_power_plant:          "#4fc3c0",  // teal-cyan (wind)
-  solar_thermal:             "#c0391b",  // deep red-orange (heat)
+  geothermal_power_plant:    "#c0391b",  // deep red-orange (heat)
+  solar_thermal:             "#d4820a",  // warm amber-orange (concentrated solar)
   factory:                   "#8b6914",
   data_center:               "#5dade2",
   store:                     "#27ae60",
@@ -4135,6 +5022,7 @@ const TILE_COLORS = {
   satellite_solar:           "#e8a020",  // amber (solar)
   satellite_dc:              "#8888cc",  // slate-purple (data)
   launching_pad:             "#3a3a4a",  // dark charcoal
+  distribution_center:       "#5a4a2a",  // warm brown (logistics)
 };
 
 function hexToRgba(hex, alpha) {
@@ -4149,16 +5037,20 @@ function hexToRgba(hex, alpha) {
 }
 
 const TILE_LABELS = {
-  power_plant:               "⚡",
+  nuclear_power_plant:       "☢️",
+  natural_gas_power_plant:   "🔥",
+  coal_power_plant:          "⛏️",
   pv_power_plant:            "☀️",
   wind_power_plant:          "💨",
-  solar_thermal:             "🌡️",
+  geothermal_power_plant:    "🌡️",
+  solar_thermal:             "☀️",
+  distribution_center:       "📦",
   factory:                   "🏭",
   data_center:               "🖥️",
   store:                     "🏪",
   ad_campaign:               "📢",
   office:                    "🏢",
-  lobby_group:               "💻",
+  lobby_group:               "🎓",
   rare_metal_mine:           "🔩",
   hydroelectric_power_plant: "💧",
   satellite_solar:           "🛰️☀️",
@@ -4167,10 +5059,14 @@ const TILE_LABELS = {
 };
 
 const TILE_FULL_NAMES = {
-  power_plant:               "Power Plant",
+  nuclear_power_plant:       "Nuclear Power Plant",
+  natural_gas_power_plant:   "Natural Gas Power Plant",
+  coal_power_plant:          "Coal Power Plant",
   pv_power_plant:            "PV Solar Power Plant",
   wind_power_plant:          "Wind Power Plant",
+  geothermal_power_plant:    "Geothermal Power Plant",
   solar_thermal:             "Solar Thermal Power Plant",
+  distribution_center:       "Distribution Center",
   factory:                   "Hardware Factory",
   data_center:               "Data Center",
   store:                     "Store",
@@ -4184,78 +5080,61 @@ const TILE_FULL_NAMES = {
   launching_pad:             "Launching Pad",
 };
 
-// Placement rules (mirrors board.py can_place logic):
-//   rare_metal_mine tile  → only on rare_metal_mine terrain
-//   store, lobby_group    → only on commercial terrain
-//   everything else       → empty, sun, wind, gas_reserve, coal, natural_park
-//   lake/sea/gov/city/wall/rare_metal_mine terrain → blocked for non-mine tiles
-const _NO_BUILD = new Set(["government", "city", "wall", "mountain"]);
-const _COMMERCIAL_ONLY = new Set(["store", "lobby_group", "office"]);
-const _OPEN_TERRAINS = new Set(["empty", "sun", "wind", "gas_reserve", "coal", "natural_park"]);
-const _SPACE_TILES_FE = new Set(["satellite_solar", "satellite_dc"]);
-const _SPACE_TERRAIN_TILES_FE = {
-  "space": new Set(["satellite_solar", "satellite_dc"]),
-};
-const _SPACE_TILE_TYPES_FE    = new Set(["satellite_solar", "satellite_dc"]);
-const _POWER_PLANT_TYPES_FE   = new Set(["power_plant", "pv_power_plant", "wind_power_plant", "solar_thermal", "satellite_solar"]);
-
-// canPlaceOn: checks terrain rules (no stacking mechanic — satellite types are standalone)
-function canPlaceOn(tileType, terrain, placedTileType) {
-  if (_NO_BUILD.has(terrain)) return false;
-  // space tiles → space terrains only
-  if (_SPACE_TILES_FE.has(tileType)) {
-    const allowed = _SPACE_TERRAIN_TILES_FE[terrain];
-    return !!(allowed && allowed.has(tileType));
-  }
-  if (_SPACE_TERRAIN_TILES_FE[terrain]) return _SPACE_TERRAIN_TILES_FE[terrain].has(tileType);
-  // hydroelectric → lake only; lake → hydroelectric only
-  if (tileType === "hydroelectric_power_plant") return terrain === "lake";
-  if (terrain === "lake") return false;
-  // rare_metal_mine → its terrain only
-  if (tileType === "rare_metal_mine") return terrain === "rare_metal_mine";
-  if (terrain === "rare_metal_mine") return false;
-  // launching_pad → launching_pad terrain only
-  if (tileType === "launching_pad") return terrain === "launching_pad";
-  if (terrain === "launching_pad") return false;
-  // offshore_wind → wind_power_plant only; offshore_solar → pv_power_plant only
-  if (terrain === "offshore_wind")  return tileType === "wind_power_plant";
-  if (terrain === "offshore_solar") return tileType === "pv_power_plant";
-  // solar_thermal cannot go on offshore terrain (heat-based, land only)
-  if (tileType === "solar_thermal" && (terrain === "offshore_wind" || terrain === "offshore_solar")) return false;
-  // sea → data_center only
-  if (terrain === "sea") return tileType === "data_center";
-  // commercial tiles → commercial terrain only
-  if (_COMMERCIAL_ONLY.has(tileType)) return terrain === "commercial";
-  if (terrain === "commercial") return false;
-  return _OPEN_TERRAINS.has(terrain);
+// canPlaceOn: data-driven rule from board tile config
+function canPlaceOn(tileType, tile) {
+  if (!tile || tile.placed_tile) return false;
+  const onlyBuild = tile.only_build;
+  // only_build: null/undefined=all allowed, []=none, [...]=whitelist
+  if (onlyBuild != null && Array.isArray(onlyBuild) && !onlyBuild.includes(tileType)) return false;
+  return true;
 }
 
 const CLIENT_TILE_BASE_BONUSES = {
-  power_plant:               {},
+  nuclear_power_plant:       {},
+  natural_gas_power_plant:   {},
+  coal_power_plant:          {},
   pv_power_plant:            {},
   wind_power_plant:          {},
+  geothermal_power_plant:    {},
   solar_thermal:             {},
+  distribution_center:       {},
   factory:                   {},
-  data_center:               { production: { data_centers: 1 } },
-  store:                     { production: { ad_campaigns: 1 } },
-  ad_campaign:               { production: { ad_campaigns: 1 } },
-  office:                    { production: { HR: 1 } },
+  data_center:               {},
+  store:                     {},
+  ad_campaign:               {},
+  office:                    {},
   lobby_group:               {},
-  rare_metal_mine:           { production: { money: 10 } },
-  hydroelectric_power_plant: { production: { data_centers: 2 } },
+  rare_metal_mine:           {},
+  hydroelectric_power_plant: {},
   satellite_solar:           {},                                  // boosts adjacent DCs (power plant synergy)
-  satellite_dc:              { production: { data_centers: 3 } }, // orbital data center
+  satellite_dc:              {}, // orbital data center
   launching_pad:             {},
 };
 
 // Normalize bonus data (old dict or new list) to list format for preview/display
 function _normBonusList(raw) {
-  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw)) {
+    return raw.map(entry => ({
+      ...entry,
+      build_type: _isUnsetLike(entry?.build_type) ? null : entry.build_type,
+    }));
+  }
   if (raw && typeof raw === "object") {
     if ("immediate" in raw || "production" in raw)
       return [{ build_type: null, immediate: raw.immediate || {}, production: raw.production || {} }];
     if (Object.keys(raw).length)
       return [{ build_type: null, immediate: raw, production: {} }];
+  }
+  return [];
+}
+
+function _normTerrainBonusList(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object") {
+    if ("immediate" in raw || "production" in raw)
+      return [{ terrain_type: null, immediate: raw.immediate || {}, production: raw.production || {} }];
+    if (Object.keys(raw).length)
+      return [{ terrain_type: null, immediate: raw, production: {} }];
   }
   return [];
 }
@@ -4275,6 +5154,16 @@ function previewPlacementBonuses(tile, tileType) {
     }
   }
 
+  // Card-level bonus: placed on matching terrain type
+  for (const entry of _normTerrainBonusList(lastPrivateState?.pending_tile_meta?.bonuses_by_building_on_terrain_type)) {
+    if (!entry.terrain_type || entry.terrain_type === tile.terrain) {
+      for (const [res, amt] of Object.entries(entry.immediate || {}))
+        immediate[res] = (immediate[res] || 0) + amt;
+      for (const [res, amt] of Object.entries(entry.production || {}))
+        production[res] = (production[res] || 0) + amt;
+    }
+  }
+
   const tilesByKey = {};
   boardTiles.forEach(t => { tilesByKey[`${t.row},${t.col}`] = t; });
   const dirs = tile.row & 1
@@ -4283,6 +5172,14 @@ function previewPlacementBonuses(tile, tileType) {
   for (const [dr, dc] of dirs) {
     const nb = tilesByKey[`${tile.row+dr},${tile.col+dc}`];
     if (!nb) continue;
+    for (const entry of _normTerrainBonusList(lastPrivateState?.pending_tile_meta?.bonuses_by_building_adjacent_to_terrain_type)) {
+      if (!entry.terrain_type || entry.terrain_type === nb.terrain) {
+        for (const [res, amt] of Object.entries(entry.immediate || {}))
+          immediate[res] = (immediate[res] || 0) + amt;
+        for (const [res, amt] of Object.entries(entry.production || {}))
+          production[res] = (production[res] || 0) + amt;
+      }
+    }
     // Adjacency bonuses — conditional on what type is being placed
     for (const entry of _normBonusList(nb.adjacency_bonuses)) {
       if (!entry.build_type || entry.build_type === tileType) {
@@ -4292,17 +5189,16 @@ function previewPlacementBonuses(tile, tileType) {
           production[res] = (production[res] || 0) + amt;
       }
     }
-    // Power plant ↔ data center synergy
     const pt = nb.placed_tile;
     if (pt) {
-      if (_POWER_PLANT_TYPES_FE.has(tileType) && pt.type === "data_center") {
-        const dcBonus = lastPrivateState?.pending_tile_meta?.dc_production_bonus ?? 1;
-        production["data_centers"] = (production["data_centers"] || 0) + dcBonus;
+      for (const entry of _normBonusList(pt.placed_tile_adjacency_bonuses)) {
+        if (!entry.build_type || entry.build_type === tileType) {
+          for (const [res, amt] of Object.entries(entry.immediate || {}))
+            immediate[res] = (immediate[res] || 0) + amt;
+          for (const [res, amt] of Object.entries(entry.production || {}))
+            production[res] = (production[res] || 0) + amt;
+        }
       }
-      if (tileType === "data_center" && _POWER_PLANT_TYPES_FE.has(pt.type))
-        production["data_centers"] = (production["data_centers"] || 0) + (pt.dc_production_bonus || 1);
-      if (tileType === "factory" && _POWER_PLANT_TYPES_FE.has(pt.type))
-        immediate["money"] = (immediate["money"] || 0) + (pt.factory_refund || 0);
     }
   }
 
@@ -4338,6 +5234,16 @@ socket.on("tile_placed", (data) => {
   boardInfoBar.innerHTML = `<div class="board-placed-msg">Placed ${TILE_FULL_NAMES[data.tile_type] || data.tile_type}! Bonuses: ${data.bonuses}</div>`;
   setTimeout(() => { boardInfoBar.innerHTML = ""; }, 5000);
   renderBoard();
+});
+
+socket.on("placement_fee_required", (data) => {
+  showPlacementFeePopup(data, (payTo) => {
+    socket.emit("place_tile", {
+      row: data.row,
+      col: data.col,
+      pay_to: payTo || {},
+    });
+  });
 });
 
 function hexCenter(row, col) {
@@ -4443,6 +5349,9 @@ function renderBoard() {
     } else if (tile.terrain === "commercial") {
       label = "💼";
       labelSize = "10";
+    } else if (tile.terrain === "government") {
+      label = "🏛️";
+      labelSize = "10";
     } else if (tile.terrain === "sun") {
       label = "☀️";
       labelSize = "10";
@@ -4482,6 +5391,12 @@ function renderBoard() {
     } else if (tile.terrain === "mountain") {
       label = "⛰️";
       labelSize = "12";
+    } else if (tile.terrain === "geothermal") {
+      label = "🌡️";
+      labelSize = "10";
+    } else if (tile.terrain === "industrial") {
+      label = "⚙️";
+      labelSize = "10";
     }
     if (label) {
       const txt = document.createElementNS(ns, "text");
@@ -4515,21 +5430,23 @@ function renderBoard() {
     g.addEventListener("mouseenter", (e) => {
       let info = `<strong>(${tile.row},${tile.col})</strong>`;
       if (tile.terrain === "city") info += ` — ${tile.name || "City"} (City)`;
-      else if (tile.terrain === "lake") info += ` — 🌊 ${tile.name || "Lake"} (hydroelectric only)`;
-      else if (tile.terrain === "sea")           info += ` — ${tile.name || "Sea"} (data center only)`;
-      else if (tile.terrain === "offshore_wind")  info += ` — 💨 ${tile.name || "Offshore Wind"} (wind power plant only)`;
-      else if (tile.terrain === "offshore_solar") info += ` — ☀️ ${tile.name || "Offshore Solar"} (PV power plant only)`;
-      else if (tile.terrain === "space")          info += ` — ✨ ${tile.name || "Space"} (satellite solar or satellite DC)`;
+      else if (tile.terrain === "lake") info += ` — 🌊 ${tile.name || "Lake"}`;
+      else if (tile.terrain === "sea")           info += ` — ${tile.name || "Sea"}`;
+      else if (tile.terrain === "offshore_wind")  info += ` — 💨 ${tile.name || "Offshore Wind"}`;
+      else if (tile.terrain === "offshore_solar") info += ` — ☀️ ${tile.name || "Offshore Solar"}`;
+      else if (tile.terrain === "space")          info += ` — ✨ ${tile.name || "Space"}`;
       else if (tile.terrain === "sun")         info += ` — ☀️ ${tile.name || "Sun terrain"}`;
       else if (tile.terrain === "wind")        info += ` — 💨 ${tile.name || "Wind terrain"}`;
       else if (tile.terrain === "gas_reserve") info += ` — 🔥 ${tile.name || "Gas Reserve"}`;
       else if (tile.terrain === "coal")        info += ` — ⛏️ ${tile.name || "Coal terrain"}`;
-      else if (tile.terrain === "wall")             info += ` — 🧱 ${tile.name || "Wall"} (cannot build)`;
+      else if (tile.terrain === "wall")             info += ` — 🧱 ${tile.name || "Wall"}`;
       else if (tile.terrain === "rare_metal_mine")  info += ` — 🔩 ${tile.name || "Rare Metal Deposit"} (mine only)`;
       else if (tile.terrain === "natural_park")     info += ` — 🌳 ${tile.name || "Natural Park"}`;
-      else if (tile.terrain === "launching_pad")    info += ` — 🚀 ${tile.name || "Launching Pad"} (Rockets card required)`;
-      else if (tile.terrain === "mountain")          info += ` — ⛰️ ${tile.name || "Mountain"} (cannot build)`;
-      else if (tile.terrain === "government") info += ` — ${tile.name || "Gov"} (cannot build)`;
+      else if (tile.terrain === "launching_pad")    info += ` — 🚀 ${tile.name || "Launching Pad"}`;
+      else if (tile.terrain === "mountain")    info += ` — ⛰️ ${tile.name || "Mountain"}`;
+      else if (tile.terrain === "geothermal")  info += ` — 🌡️ ${tile.name || "Geothermal terrain"}`;
+      else if (tile.terrain === "industrial")  info += ` — ⚙️ ${tile.name || "Industrial zone"}`;
+      else if (tile.terrain === "government") info += ` — 🏛️ ${tile.name || "Gov"}`;
       else if (tile.terrain === "commercial") info += ` — Commercial zone`;
       else if (tile.placed_tile) {
         const owner = lastGameState?.players?.[tile.placed_tile.owner_id];
@@ -4559,7 +5476,7 @@ function renderBoard() {
           .map(c => c.type).filter(Boolean)
       );
       const reqsMet = tileReqs.every(r => myPlayedTypes.has(r));
-      const isPlaceable = pending && reqsMet && !tile.placed_tile && canPlaceOn(pending, tile.terrain);
+      const isPlaceable = pending && reqsMet && canPlaceOn(pending, tile);
 
       if (isPlaceable) {
         const preview = previewPlacementBonuses(tile, pending);
@@ -4596,7 +5513,7 @@ function renderBoard() {
       tooltip.classList.add("hidden");
     });
 
-    const _placeable = pending && !tile.placed_tile && canPlaceOn(pending, tile.terrain);
+    const _placeable = pending && canPlaceOn(pending, tile);
     if (_placeable) {
       poly.classList.add("board-hex-placeable");
       g.style.cursor = "pointer";
@@ -4706,20 +5623,27 @@ const editTerrainTypeBtn = document.getElementById("edit-terrain-type-btn");
 let editorBoardTiles = [];
 let selectedEditorTile = null;
 let _boardEditorOpenIntent = false;  // true only when user explicitly clicked "Edit Board"
+let _boardEditorView = "map"; // "map" | "tile" | "terrain"
 
 editBoardBtn.addEventListener("click", () => {
   _boardEditorOpenIntent = true;
+  _boardEditorView = "map";
+  selectedEditorTile = null;
   socket.emit("get_board_editor");
 });
 editBoardLobbyBtn.addEventListener("click", () => {
   _boardEditorOpenIntent = true;
+  _boardEditorView = "map";
+  selectedEditorTile = null;
   socket.emit("get_board_editor");
 });
 
 closeBoardEditor.addEventListener("click", () => {
   boardEditorModal.classList.add("hidden");
   boardTileForm.classList.add("hidden");
+  terrainTypeForm.classList.add("hidden");
   selectedEditorTile = null;
+  _boardEditorView = "map";
 });
 
 boardEditorModal.addEventListener("click", (e) => {
@@ -4735,18 +5659,41 @@ socket.on("board_editor_data", (tiles) => {
   if (_boardEditorOpenIntent) {
     // User explicitly clicked "Edit Board" — open the modal
     _boardEditorOpenIntent = false;
-    renderBoardEditor();
+    renderBoardEditorView();
     boardEditorModal.classList.remove("hidden");
   } else if (!boardEditorModal.classList.contains("hidden")) {
     // Editor already open for this client — silently refresh in place
     // (another master saved a tile; don't disrupt current form state)
-    renderBoardEditor();
+    renderBoardEditorView();
   }
   // If the modal is hidden and this is a background broadcast, ignore — don't pop it open
 });
 
-function renderBoardEditor() {
+function renderBoardEditorView() {
+  if (_boardEditorView === "tile" && selectedEditorTile) {
+    const fresh = editorBoardTiles.find(
+      t => t.row === selectedEditorTile.row && t.col === selectedEditorTile.col
+    );
+    if (!fresh) {
+      _boardEditorView = "map";
+      selectedEditorTile = null;
+      renderBoardEditorMap();
+      return;
+    }
+    selectedEditorTile = fresh;
+    renderBoardTileForm(fresh);
+    return;
+  }
+  if (_boardEditorView === "terrain") {
+    renderTerrainTypeForm();
+    return;
+  }
+  renderBoardEditorMap();
+}
+
+function renderBoardEditorMap() {
   boardEditorContainer.innerHTML = "";
+  boardEditorContainer.classList.remove("board-editor-form-view");
   boardEditorTitle.textContent = "Board Editor";
 
   if (!editorBoardTiles.length) return;
@@ -4822,6 +5769,8 @@ function renderBoardEditor() {
       label = "🏙️"; edLabelSize = "10";
     } else if (tile.terrain === "commercial") {
       label = "💼"; edLabelSize = "10";
+    } else if (tile.terrain === "government") {
+      label = "🏛️"; edLabelSize = "10";
     } else if (tile.terrain === "sun") {
       label = "☀️"; edLabelSize = "10";
     } else if (tile.terrain === "wind") {
@@ -4848,6 +5797,10 @@ function renderBoardEditor() {
       label = "🚀"; edLabelSize = "10";
     } else if (tile.terrain === "mountain") {
       label = "⛰️"; edLabelSize = "12";
+    } else if (tile.terrain === "geothermal") {
+      label = "🌡️"; edLabelSize = "10";
+    } else if (tile.terrain === "industrial") {
+      label = "⚙️"; edLabelSize = "10";
     }
     if (label) {
       const txt = document.createElementNS(ns, "text");
@@ -4908,10 +5861,8 @@ function renderBoardEditor() {
     g.style.cursor = "pointer";
     g.addEventListener("click", () => {
       selectedEditorTile = tile;
-      // Mutual exclusion: close terrain-type form if open
-      terrainTypeForm.classList.add("hidden");
-      renderBoardEditor();
-      renderBoardTileForm(tile);
+      _boardEditorView = "tile";
+      renderBoardEditorView();
     });
 
     svg.appendChild(g);
@@ -5012,15 +5963,19 @@ function _collectResRows(container) {
 // Options for the "When building: [type]" dropdown in each bonus condition block
 const TILE_TYPE_BONUS_OPTIONS = [
   [null,                        "(any build type — always applies)"],
-  ["power_plant",               "⚡ Power Plant"],
+  ["nuclear_power_plant",       "☢️ Nuclear Power Plant"],
+  ["natural_gas_power_plant",   "🔥 Natural Gas Power Plant"],
+  ["coal_power_plant",          "⛏️ Coal Power Plant"],
   ["pv_power_plant",            "☀️ PV Solar Plant"],
   ["wind_power_plant",          "💨 Wind Power Plant"],
-  ["solar_thermal",             "🌡️ Solar Thermal"],
+  ["geothermal_power_plant",    "🌡️ Geothermal Power Plant"],
+  ["solar_thermal",             "☀️ Solar Thermal Plant"],
   ["data_center",               "🖥️ Data Center"],
   ["store",                     "🏪 Store"],
   ["ad_campaign",               "📢 Ad Campaign"],
   ["office",                    "🏢 Office"],
-  ["lobby_group",               "💻 Lobby Group"],
+  ["lobby_group",               "🎓 Lobby Group"],
+  ["distribution_center",       "📦 Distribution Center"],
   ["rare_metal_mine",           "🔩 Rare Metal Mine"],
   ["hydroelectric_power_plant", "💧 Hydro Plant"],
   ["satellite_solar",           "🛰️☀️ Satellite Solar"],
@@ -5074,10 +6029,25 @@ function _makeBonusConditionBlock(entry) {
   immContainer.appendChild(addImm);
   block.appendChild(immContainer);
 
+  // Production resources
+  const prodLabel = document.createElement("span");
+  prodLabel.className = "board-bonus-sub";
+  prodLabel.textContent = "Production";
+  block.appendChild(prodLabel);
+  const prodContainer = document.createElement("div");
+  prodContainer.className = "board-res-container";
+  Object.entries(entry.production || {}).forEach(([k, v]) => prodContainer.appendChild(_boardResRow(k, v)));
+  const addProd = document.createElement("button");
+  addProd.className = "btn btn-sm";
+  addProd.textContent = "+ Add";
+  addProd.addEventListener("click", () => prodContainer.insertBefore(_boardResRow("", 0), addProd));
+  prodContainer.appendChild(addProd);
+  block.appendChild(prodContainer);
+
   block._collect = () => ({
     build_type: typeSelect.value || null,
     immediate:  _collectResRows(immContainer),
-    production: {},
+    production: _collectResRows(prodContainer),
   });
   return block;
 }
@@ -5143,14 +6113,36 @@ function _formatConditionalBonuses(raw, prefix) {
   }).filter(Boolean).join("<br>");
 }
 
+function _formatTerrainConditionalBonuses(raw, prefix) {
+  const list = Array.isArray(raw) ? raw : [];
+  if (!list.length) return "";
+  return list.map(entry => {
+    const parts = [];
+    Object.entries(entry.immediate || {}).forEach(([k, v]) => {
+      if (v !== 0) parts.push(`${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`);
+    });
+    Object.entries(entry.production || {}).forEach(([k, v]) => {
+      if (v !== 0) parts.push(`${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}/yr`);
+    });
+    if (!parts.length) return "";
+    const tt = entry.terrain_type;
+    const terrainLabel = tt ? (_terrainLabel(tt) || "🌐") : "🌐";
+    return `${terrainLabel}: ${parts.join(", ")}`;
+  }).filter(Boolean).join("<br>");
+}
+
 function renderBoardTileForm(tile) {
-  boardTileForm.classList.remove("hidden");
-  boardTileForm.innerHTML = "";
+  boardEditorContainer.classList.add("board-editor-form-view");
+  boardEditorContainer.innerHTML = "";
+  boardEditorTitle.textContent = `Editing tile (${tile.row}, ${tile.col})`;
+
+  const formWrap = document.createElement("div");
+  formWrap.className = "board-tile-form";
 
   const title = document.createElement("h3");
   title.textContent = `Editing tile (${tile.row}, ${tile.col})`;
   title.style.marginBottom = ".8rem";
-  boardTileForm.appendChild(title);
+  formWrap.appendChild(title);
 
   const form = document.createElement("div");
   form.className = "editor-fields";
@@ -5165,7 +6157,7 @@ function renderBoardTileForm(tile) {
   terrainSelect.className = "editor-dict-key";
   terrainSelect.style.width = "100%";
   ["empty", "city", "lake", "sea", "offshore_wind", "offshore_solar", "government",
-   "commercial", "sun", "wind", "gas_reserve", "coal", "wall", "mountain",
+   "commercial", "industrial", "sun", "wind", "gas_reserve", "coal", "geothermal", "wall", "mountain",
    "rare_metal_mine", "natural_park", "space", "launching_pad"].forEach(t => {
     const o = document.createElement("option");
     o.value = t;
@@ -5256,7 +6248,7 @@ function renderBoardTileForm(tile) {
   hint.innerHTML = "<strong>Store/Lobby/Office</strong> → commercial only | <strong>Power/DC/Factory/etc.</strong> → open terrains | <strong>🔩Mine</strong> → rare_metal_mine | <strong>💧Hydro</strong> → 🌊lake | <strong>💨Offshore Wind</strong> → wind power plant | <strong>☀️Offshore Solar</strong> → PV power plant | <strong>🌊Sea</strong> → data_center | <strong>✨Space</strong> → satellite solar or satellite DC | <strong>Gov/City/Wall</strong> → no build";
   form.appendChild(hint);
 
-  boardTileForm.appendChild(form);
+  formWrap.appendChild(form);
 
   // --- Add tile left/right/top/bottom ---
   const MAX_BOARD_ROWS = 14;
@@ -5310,7 +6302,7 @@ function renderBoardTileForm(tile) {
       });
       addTileBar.appendChild(btn);
     }
-    boardTileForm.appendChild(addTileBar);
+    formWrap.appendChild(addTileBar);
   }
 
   // --- Actions ---
@@ -5327,7 +6319,7 @@ function renderBoardTileForm(tile) {
     const checkedTypes = Array.from(onlyBuildGrid.querySelectorAll("input[type=checkbox]:checked"))
       .map(cb => cb.value);
     // All checked = all allowed → null; none checked = block all → []; partial = whitelist
-    const only_build = checkedTypes.length === BUILDABLE_TILE_TYPES.length ? null : checkedTypes;
+    const only_build = checkedTypes.length === BUILDABLE_TILE_TYPE_OPTIONS.length ? null : checkedTypes;
     socket.emit("edit_board_tile", {
       row: tile.row,
       col: tile.col,
@@ -5339,7 +6331,8 @@ function renderBoardTileForm(tile) {
       only_build,
     });
     selectedEditorTile = null;
-    boardTileForm.classList.add("hidden");
+    _boardEditorView = "map";
+    renderBoardEditorView();
   });
 
   const cancelBtn = document.createElement("button");
@@ -5347,8 +6340,8 @@ function renderBoardTileForm(tile) {
   cancelBtn.textContent = "Cancel";
   cancelBtn.addEventListener("click", () => {
     selectedEditorTile = null;
-    boardTileForm.classList.add("hidden");
-    renderBoardEditor();
+    _boardEditorView = "map";
+    renderBoardEditorView();
   });
 
   const deleteBtn = document.createElement("button");
@@ -5361,40 +6354,52 @@ function renderBoardTileForm(tile) {
       () => {
         socket.emit("remove_board_tile", { row: tile.row, col: tile.col });
         selectedEditorTile = null;
-        boardTileForm.classList.add("hidden");
+        _boardEditorView = "map";
+        renderBoardEditorView();
       },
       { detail: "This removes it from the board.", confirmText: "Delete" }
     );
   });
 
+  const backBtn = document.createElement("button");
+  backBtn.className = "btn btn-sm";
+  backBtn.textContent = "← Back to board";
+  backBtn.addEventListener("click", () => {
+    selectedEditorTile = null;
+    _boardEditorView = "map";
+    renderBoardEditorView();
+  });
+
   actions.appendChild(saveBtn);
   actions.appendChild(cancelBtn);
+  actions.appendChild(backBtn);
   actions.appendChild(deleteBtn);
-  boardTileForm.appendChild(actions);
-
-  requestAnimationFrame(() => {
-    boardTileForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  });
+  formWrap.appendChild(actions);
+  boardEditorContainer.appendChild(formWrap);
 }
 
 // ── Edit by Terrain Type panel ────────────────────────────────
 const TERRAIN_OPTIONS = [
   "empty", "city", "lake", "sea", "offshore_wind", "offshore_solar",
-  "government", "commercial", "sun", "wind", "gas_reserve", "coal",
-  "wall", "mountain", "rare_metal_mine", "natural_park", "space", "launching_pad",
+  "government", "commercial", "industrial", "sun", "wind", "gas_reserve", "coal",
+  "geothermal", "wall", "mountain", "rare_metal_mine", "natural_park", "space", "launching_pad",
 ];
 
-// Shared with BUILDABLE_TILE_TYPES inside renderBoardTileForm
+// Used by both renderBoardTileForm and renderTerrainTypeForm
 const BUILDABLE_TILE_TYPE_OPTIONS = [
-  ["power_plant",               "⚡ Power Plant"],
+  ["nuclear_power_plant",       "☢️ Nuclear Power Plant"],
+  ["natural_gas_power_plant",   "🔥 Natural Gas Power Plant"],
+  ["coal_power_plant",          "⛏️ Coal Power Plant"],
   ["pv_power_plant",            "☀️ PV Solar Plant"],
   ["wind_power_plant",          "💨 Wind Power Plant"],
-  ["solar_thermal",             "🌡️ Solar Thermal Plant"],
+  ["geothermal_power_plant",    "🌡️ Geothermal Power Plant"],
+  ["solar_thermal",             "☀️ Solar Thermal Plant"],
   ["data_center",               "🖥️ Data Center"],
   ["store",                     "🏪 Store"],
   ["ad_campaign",               "📢 Ad Campaign"],
   ["office",                    "🏢 Office"],
-  ["lobby_group",               "💻 Lobby Group"],
+  ["lobby_group",               "🎓 Lobby Group"],
+  ["distribution_center",       "📦 Distribution Center"],
   ["rare_metal_mine",           "🔩 Rare Metal Mine"],
   ["hydroelectric_power_plant", "💧 Hydro Plant"],
   ["satellite_solar",           "🛰️☀️ Satellite Solar"],
@@ -5407,20 +6412,22 @@ const BUILDABLE_TILE_TYPE_OPTIONS = [
 let tileTypeConfig = {};
 
 function renderTerrainTypeForm() {
-  // Mutual exclusion: close tile form if open
-  boardTileForm.classList.add("hidden");
-  terrainTypeForm.classList.remove("hidden");
-  terrainTypeForm.innerHTML = "";
+  boardEditorContainer.classList.add("board-editor-form-view");
+  boardEditorContainer.innerHTML = "";
+  boardEditorTitle.textContent = "Edit by Terrain Type";
+
+  const formWrap = document.createElement("div");
+  formWrap.className = "board-tile-form";
 
   const title = document.createElement("h3");
   title.textContent = "Edit all tiles of a terrain type";
   title.style.marginBottom = ".4rem";
-  terrainTypeForm.appendChild(title);
+  formWrap.appendChild(title);
 
   const hint = document.createElement("p");
   hint.style.cssText = "font-size:.75rem;color:var(--text-dim);margin:.2rem 0 .8rem;";
   hint.textContent = "Saved to tile_type.yaml. Also applied to all existing board tiles of that terrain.";
-  terrainTypeForm.appendChild(hint);
+  formWrap.appendChild(hint);
 
   // ── Terrain selector ──────────────────────────────────────────
   const terrainRow = document.createElement("div");
@@ -5438,21 +6445,21 @@ function renderTerrainTypeForm() {
     terrainSel.appendChild(o);
   });
   terrainRow.appendChild(terrainSel);
-  terrainTypeForm.appendChild(terrainRow);
+  formWrap.appendChild(terrainRow);
 
   // ── Build bonuses ─────────────────────────────────────────────
   let buildSection = _makeConditionalBonusSection(
     "Build bonuses — given when player builds on this terrain (per build type)",
     null
   );
-  terrainTypeForm.appendChild(buildSection);
+  formWrap.appendChild(buildSection);
 
   // ── Adjacency bonuses ─────────────────────────────────────────
   let adjSection = _makeConditionalBonusSection(
     "Adjacency bonuses — given when player builds next to this terrain (per build type)",
     null
   );
-  terrainTypeForm.appendChild(adjSection);
+  formWrap.appendChild(adjSection);
 
   // ── Only-build checkboxes ─────────────────────────────────────
   const onlyBuildSection = document.createElement("div");
@@ -5505,7 +6512,7 @@ function renderTerrainTypeForm() {
   refreshFromTerrain();
   terrainSel.addEventListener("change", refreshFromTerrain);
   onlyBuildSection.appendChild(obGrid);
-  terrainTypeForm.appendChild(onlyBuildSection);
+  formWrap.appendChild(onlyBuildSection);
 
   // ── Actions ───────────────────────────────────────────────────
   const actions = document.createElement("div");
@@ -5532,7 +6539,8 @@ function renderTerrainTypeForm() {
       adjacency_bonuses: adjBonusList,
     });
     const onConfirm = () => {
-      terrainTypeForm.classList.add("hidden");
+      _boardEditorView = "map";
+      renderBoardEditorView();
       showFloatingSuccess("Terrain rules saved ✓");
       socket.off("board_editor_data", onConfirm);
     };
@@ -5542,14 +6550,28 @@ function renderTerrainTypeForm() {
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "btn btn-sm";
   cancelBtn.textContent = "Cancel";
-  cancelBtn.addEventListener("click", () => terrainTypeForm.classList.add("hidden"));
+  cancelBtn.addEventListener("click", () => {
+    _boardEditorView = "map";
+    renderBoardEditorView();
+  });
+
+  const backBtn = document.createElement("button");
+  backBtn.className = "btn btn-sm";
+  backBtn.textContent = "← Back to board";
+  backBtn.addEventListener("click", () => {
+    _boardEditorView = "map";
+    renderBoardEditorView();
+  });
 
   actions.appendChild(saveBtn);
   actions.appendChild(cancelBtn);
-  terrainTypeForm.appendChild(actions);
-
-  requestAnimationFrame(() =>
-    terrainTypeForm.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+  actions.appendChild(backBtn);
+  formWrap.appendChild(actions);
+  boardEditorContainer.appendChild(formWrap);
 }
 
-editTerrainTypeBtn.addEventListener("click", renderTerrainTypeForm);
+editTerrainTypeBtn.addEventListener("click", () => {
+  _boardEditorView = "terrain";
+  selectedEditorTile = null;
+  renderBoardEditorView();
+});

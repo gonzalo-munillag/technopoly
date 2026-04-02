@@ -1,34 +1,5 @@
-- name: AI Assistant
-  id: 36
-  image: ''
-  description: Automate routine tasks, boosting engineer output.
-  type: ai
-  number: 2
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 4
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    engineers: 1
-    HR: 1
-    data_centers: 0
-    ad_campaigns: 0
-  boosts:
-  - target_id: 22
-    bonus:
-      engineers: 2
-  disabled: true
 - name: Cloud Migration
-  id: 37
+  id: 49
   image: ''
   description: Move to the cloud for scalable server capacity.
   type: infrastructure
@@ -51,60 +22,10 @@
     data_centers: 0
     ad_campaigns: 0
   boosts:
-  - target_id: 24
+  - target_id: 37
     bonus:
       users: 3
-  - target_id: 26
+  - target_id: 39
     bonus:
       users: 2
-  disabled: true
-- name: AI Assistant 2
-  id: 38
-  description: Automate routine tasks, boosting engineer output.
-  type: ai
-  number: 2
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 4
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    engineers: 1
-    HR: 1
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: []
-  disabled: true
-- name: Cloud Migration 2
-  id: 39
-  image: ''
-  description: Move to the cloud for scalable server capacity.
-  type: infrastructure
-  number: 2
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 3
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    servers: 2
-    data_centers: 0
-    ad_campaigns: 0
-  boosts: []
   disabled: true

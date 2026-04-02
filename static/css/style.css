@@ -368,7 +368,7 @@ body::after {
   position: fixed;
   z-index: 600;
   width: 260px;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .floating-card-tooltip .game-card {
@@ -444,6 +444,16 @@ body::after {
 
 .draft-section .hand-container > .game-card {
   width: 238px;
+}
+
+.draft-card-wrap {
+  width: 238px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.draft-card-wrap > .game-card {
+  width: 100%;
 }
 
 #hand-container {
@@ -536,7 +546,7 @@ body::after {
 }
 
 .game-card .card-desc {
-  font-size: .7rem;
+  font-size: .62rem;
   color: var(--text-dim);
   padding: 0 .6rem;
   margin-bottom: .3rem;
@@ -1960,6 +1970,13 @@ select.editor-dict-key:focus {
   flex-shrink: 0;
 }
 
+.board-container.board-editor-form-view {
+  display: block;
+  justify-content: initial;
+  overflow: visible;
+  padding: .2rem 1rem 1rem;
+}
+
 .board-svg {
   display: block;
 }
@@ -2130,6 +2147,13 @@ select.editor-dict-key:focus {
   border-top: 1px solid var(--border);
   max-height: 50vh;
   overflow-y: auto;
+}
+
+.board-editor-form-view .board-tile-form {
+  border-top: none;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
 }
 
 .board-tile-form h3 { color: var(--accent); }

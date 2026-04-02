@@ -2,247 +2,42 @@
 
 - card_type: platform
   card_data:
-    name: New Card
-    id: 74
-    image: ''
-    description: ''
-    type: ''
+    name: Blockchain Platform
+    id: 25
+    description: Network of nodes that maintain an immutable, distributed ledger (Perfect
+      for your fancier Ponzi schemes)
+    type: software platform
     number: 1
     build: null
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    effect: {}
-    boosts: []
-- card_type: cyber_attack
-  card_data:
-    name: New Card
-    id: 73
-    description: null
-    type: null
-    number: 1
-    build: null
-    effect: null
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    boosts: null
-- card_type: cyber_attack
-  card_data:
-    name: New Card
-    id: 71
-    image: ''
-    description: ''
-    type: ''
-    number: 1
-    build: null
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    effect: {}
-    boosts: []
-- card_type: fuck_up
-  card_data:
-    name: fuck up 4
-    id: 21
-    image: ''
-    description: Product recall due to manufacturing defect.
-    type: scandal
-    number: 1
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    effect:
-      money: -4
-      reputation: -2
-      data_centers: 0
-      ad_campaigns: 0
-    boosts: []
-- card_type: fuck_up
-  card_data:
-    name: fuck up 2
-    id: 19
-    description: Executive caught in a financial scandal. Lose money and suits.
-    type: scandal
-    number: 1
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    effect:
-      money: -5
-      suits: -1
-      data_centers: 0
-      ad_campaigns: 0
-    boosts: null
-- card_type: cyber_attack
-  card_data:
-    name: Ransomware
-    id: 17
-    image: ''
-    description: Encrypt a competitor's data and demand payment.
-    type: malware
-    number: 2
-    costs:
-      engineers: 2
-      suits: 0
-      ads: 0
-      money: 5
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    effect:
-      money: 8
-      reputation: -1
-      data_centers: 0
-      ad_campaigns: 0
-    boosts: []
-- card_type: build
-  card_data:
-    name: Data Center
-    id: 23
-    description: A warehouse full of servers crunching numbers.
-    type: computing
-    number: 2
-    costs:
-      engineers: 1
-      suits: 0
-      ads: 0
-      money: 5
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    effect:
-      servers: 1
-      data_centers: 0
-      ad_campaigns: 0
-    boosts:
-    - target_id: 9
-      bonus:
-        users: 4
-- card_type: build
-  card_data:
-    name: Content Delivery Network
-    id: 910
-    description: null
-    type: data center
-    number: 1
-    build: data_center
     factory_refund: 0
     dc_production_bonus: 0
     costs:
       engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
+      suits: 8
+      ads: 4
+      money: 200
+      servers: 8
       data_centers: 0
       ad_campaigns: 0
-      reputation: 0
+      reputation: 3
       HR: 0
       users: 0
-      fee: 0
-      fee_card_id: null
-    effect: null
-    boosts: null
-- card_type: build
-  card_data:
-    name: Mining Operation
-    id: 38
-    description: Extract raw minerals from the earth.
-    type: null
-    number: 2
-    factory_refund: 0
-    dc_production_bonus: 0
-    costs:
-      engineers: 1
-      suits: 0
-      ads: 0
-      money: 3
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
     effect:
+      users: 40
+    production:
+      money: 1
+    requirements: null
+    tiers:
+    - users: 20
       money: 2
-      engineers: 1
-      data_centers: 0
-      ad_campaigns: 0
-    boosts:
-    - target_id: 11
-      target_type: null
-      bonus:
-        money: 1
-        reputation: 2
-- card_type: innovation
+      data_cost: 200
+    boosts: null
+- card_type: platform
   card_data:
-    name: Geothermal Power Plant
-    id: 34
+    name: New Card
+    id: 44
     description: null
-    type: power plant
+    type: null
     number: 1
     build: null
     factory_refund: 0
@@ -263,18 +58,20 @@
       fee_card_type: null
       fee_company_type: null
     effect: null
+    production: null
+    requirements: null
+    tiers: null
     boosts: null
-- card_type: build
+- card_type: innovation
   card_data:
-    name: Coal Power Plant
-    id: 51
-    description: A conventional power plant providing steady energy.
-    type: power plant
+    name: AI Assistant
+    id: 49
+    image: ''
+    description: Automate routine tasks, boosting engineer output.
+    type: ai
     number: 2
-    factory_refund: 0
-    dc_production_bonus: 0
     costs:
-      engineers: 1
+      engineers: 0
       suits: 0
       ads: 0
       money: 4
@@ -287,163 +84,54 @@
       fee: 0
       fee_card_id: null
     effect:
-      money: 2
+      engineers: 1
+      HR: 1
       data_centers: 0
       ad_campaigns: 0
     boosts:
-    - target_id: 21
-      target_type: null
+    - target_id: 35
       bonus:
-        money: 2
-        reputation: 1
-- card_type: platform
+        engineers: 2
+- card_type: innovation
   card_data:
-    name: Rare Metal Mine
-    id: 24
-    description: including significant deposits in Montana, Wyoming, and California
-    type: factory
-    number: 1
-    build: null
-    factory_refund: 0
-    dc_production_bonus: 0
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-      fee_card_type: null
-      fee_company_type: null
-    effect: null
-    boosts: null
-- card_type: build
-  card_data:
-    name: Rare Metal Mine
-    id: 65
-    description: null
-    type: rare metal mine
-    number: 3
-    build: rare_metal_mine
-    factory_refund: 0
-    dc_production_bonus: 0
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-      fee_card_type: null
-      fee_company_type: null
-    effect: null
-    requirements: null
-    tiers: null
-    boosts: null
-- card_type: company
-  card_data:
-    name: New Company
-    id: 13
-    type: ''
-    description: ''
-    image: null
-    starting_resources:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      reputation: 0
-      users: 0
-    starting_production:
-      HR: 0
-      data_centers: 0
-      ad_campaigns: 0
-    starting_tiles: []
-- card_type: cyber_attack
-  card_data:
-    name: New Card
-    id: 24
-    description: null
-    type: null
-    number: 1
-    build: null
-    factory_refund: 0
-    dc_production_bonus: 0
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    effect: null
-    requirements: null
-    boosts: null
-- card_type: build
-  card_data:
-    name: Rooftop Solar Array
-    id: 52
-    description: Distributed solar panels across facilities. Lower cost, good for
-      tight grids.
-    type: pv power plant
+    name: AI Assistant 2
+    id: 50
+    description: Automate routine tasks, boosting engineer output.
+    type: ai
     number: 2
-    build: pv_power_plant
-    factory_refund: 0
-    dc_production_bonus: 1
     costs:
       engineers: 0
       suits: 0
       ads: 0
-      money: 2
+      money: 4
       servers: 0
       data_centers: 0
       ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
       fee: 0
       fee_card_id: null
-      fee_card_type: null
-      fee_company_type: null
     effect:
-      money: 0
-      reputation: 1
+      engineers: 1
+      HR: 1
       data_centers: 0
       ad_campaigns: 0
-    boosts: null
-    disabled: false
-- card_type: build
+    boosts: []
+    disabled: true
+- card_type: innovation
   card_data:
-    name: Hydroelectric Power Plant
-    id: 55
-    description: null
-    type: power plant
+    name: Cloud Migration 2
+    id: 50
+    image: ''
+    description: Move to the cloud for scalable server capacity.
+    type: infrastructure
     number: 2
-    build: hydroelectric_power_plant
-    factory_refund: 0
-    dc_production_bonus: 0
-    disabled: 'true'
     costs:
       engineers: 0
       suits: 0
       ads: 0
-      money: 0
+      money: 3
       servers: 0
       data_centers: 0
       ad_campaigns: 0
@@ -452,219 +140,9 @@
       users: 0
       fee: 0
       fee_card_id: null
-      fee_card_type: null
-      fee_company_type: null
-    effect: null
-    requirements: null
-    tiers: null
-    boosts: null
-- card_type: build
-  card_data:
-    name: Solar Thermal Power Plant
-    id: 69
-    description: null
-    type: power plant
-    number: 1
-    build: solar_thermal
-    factory_refund: 0
-    dc_production_bonus: 0
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-      fee_card_type: null
-      fee_company_type: null
-    effect: null
-    requirements: null
-    tiers: null
-    boosts: null
-    disabled: true
-- card_type: build
-  card_data:
-    name: Orbital Data Center
-    id: 68
-    description: Place a data center in orbit. Immune to terrestrial disruptions.
-      Space terrain only. Costs $200B extra. Produces +3 DC/yr.
-    type: satellite data center
-    number: 1
-    build: satellite_dc
-    factory_refund: 0
-    dc_production_bonus: 0
-    costs:
-      engineers: 3
-      suits: 2
-      money: 80
-      data_centers: 0
-      ad_campaigns: 0
-      fee: 0
-      fee_card_id: null
-      fee_card_type: null
-      fee_company_type: null
     effect:
-      data_centers: 3
-      ad_campaigns: 0
-    requirements: null
-    tiers: null
-    boosts: null
-    disabled: true
-- card_type: build
-  card_data:
-    name: Satellite Solar Array
-    id: 67
-    description: Deploy a solar power satellite in orbit. Powers adjacent orbital
-      data centers. Space terrain only. Costs $200B extra.
-    type: satellite solar
-    number: 1
-    build: satellite_solar
-    factory_refund: 0
-    dc_production_bonus: 2
-    costs:
-      engineers: 3
-      suits: 1
-      money: 50
+      servers: 2
       data_centers: 0
       ad_campaigns: 0
-      fee: 0
-      fee_card_id: null
-      fee_card_type: null
-      fee_company_type: null
-    effect:
-      reputation: 2
-      data_centers: 0
-      ad_campaigns: 0
-    requirements: null
-    tiers: null
-    boosts: null
-    disabled: true
-- card_type: innovation
-  card_data:
-    name: New Card
-    id: 37
-    image: null
-    description: ''
-    type: ''
-    number: 1
-    build: null
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-      fee_card_type: null
-      fee_company_type: null
-    effect: {}
     boosts: []
-    factory_refund: null
-    dc_production_bonus: null
     disabled: true
-- card_type: innovation
-  card_data:
-    name: New Card
-    id: 36
-    image: null
-    description: ''
-    type: ''
-    number: 1
-    build: null
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    effect: {}
-    boosts: []
-    factory_refund: null
-    dc_production_bonus: null
-    disabled: true
-- card_type: innovation
-  card_data:
-    name: New Card
-    id: 34
-    image: null
-    description: ''
-    type: ''
-    number: 1
-    build: null
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    effect: {}
-    boosts: []
-    factory_refund: null
-    dc_production_bonus: null
-    disabled: true
-- card_type: innovation
-  card_data:
-    name: New Card
-    id: 34
-    image: null
-    description: ''
-    type: ''
-    number: 1
-    build: null
-    costs:
-      engineers: 0
-      suits: 0
-      ads: 0
-      money: 0
-      servers: 0
-      data_centers: 0
-      ad_campaigns: 0
-      reputation: 0
-      HR: 0
-      users: 0
-      fee: 0
-      fee_card_id: null
-    effect: {}
-    boosts: []
-    factory_refund: null
-    dc_production_bonus: null
-    disabled: true
-- card_type: regulation
-  card_data:
-    name: New Regulation
-    id: 74
-    tag: ''
-    description: ''
-    image: null
-    targets_all: 1
-    target_id: null
-    target_type: null
-    compliance: {}
-    court_penalty: {}
-    court_threshold: 4

@@ -455,8 +455,9 @@ class Game:
         bankrupt = []
         for pid, player in list(self.players.items()):
             went_bankrupt = player.collect_production(
-                P("money_per_users", 20),
+                P("money_users_trigger", 10),
                 P("data_per_users", 200),
+                P("data_users_trigger", 10),
             )
             player.reset_turn()
             player.year_done = False
@@ -505,6 +506,7 @@ class Game:
             player.regulation_resolved = False
             player.year_done = False
             player.pending_tile = None
+            player.pending_tile_queue = []
             player.resources = {k: 0 for k in player.resources}
             player.production = {k: 0 for k in player.production}
             player.users = 0

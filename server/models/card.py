@@ -29,7 +29,7 @@ class Card:
     # Card connections: list of {"target_id": int|list, "bonus": {resource: amount}}
     boosts: list[dict] = field(default_factory=list)
     tile_type: str | None = None        # legacy, use build instead
-    build: str | None = None            # "data_center", "store", "ad_campaign", "power_plant", "lobby_group", "factory"
+    build: str | list[str] | None = None  # single build type or list of build types
     # New platform card fields
     costs: dict = field(default_factory=dict)
     card_color_type: str = ""           # "social platform", "hardware manufacturer", etc.
@@ -37,9 +37,33 @@ class Card:
     image: str = ""
     payee_card_id: int | None = None
     starting_tiles: list[str] = field(default_factory=list)
-    factory_refund: int = 0          # $ refund per adjacent factory when this power plant is placed
-    dc_production_bonus: int = 0     # +N data_centers production per adjacent data center
+    # Bonus entries carried by the placed tile itself.
+    # Format: [{"build_type": "<tile_type>|None", "immediate": {...}, "production": {...}}, ...]
+    placed_tile_adjacency_bonuses: list[dict] = field(default_factory=list)
     requirements: list[str] = field(default_factory=list)  # card types player must have played
+    # Optional tile-adjacency restriction for build cards:
+    # card can place its tile only if at least one adjacent placed tile type matches.
+    only_playable_next_to: list[str] = field(default_factory=list)
+    # Optional terrain restriction for build cards:
+    # card tile can only be placed on these terrain types.
+    only_playable_on_terrains: list[str] = field(default_factory=list)
+    # Card-level placement bonus: when this card's tile is placed next to matching
+    # building types, grant immediate/production bonuses.
+    # Format: [{"build_type": "<tile_type>|None", "immediate": {...}, "production": {...}}, ...]
+    bonuses_by_placing_next_to_building: list[dict] = field(default_factory=list)
+    # Card-level placement bonus: when this card's tile is built on matching terrain
+    # types, grant immediate/production bonuses.
+    # Format: [{"terrain_type": "<terrain>|None", "immediate": {...}, "production": {...}}, ...]
+    bonuses_by_building_on_terrain_type: list[dict] = field(default_factory=list)
+    # Card-level placement bonus: when this card's tile is built adjacent to matching
+    # terrain types, grant immediate/production bonuses.
+    # Format: [{"terrain_type": "<terrain>|None", "immediate": {...}, "production": {...}}, ...]
+    bonuses_by_building_adjacent_to_terrain_type: list[dict] = field(default_factory=list)
+    # Optional placement fee rule:
+    # when placing this card's tile adjacent to one of these build types owned by
+    # another player, pay adjacent_placement_fee to one eligible adjacent owner.
+    adjacent_placement_fee: int = 0
+    adjacent_placement_fee_target_types: list[str] = field(default_factory=list)
     # Optional responsible-mining upgrade: {extra_cost: {resource: amount}, extra_effect: {resource: amount}}
     responsible_mining: dict = field(default_factory=dict)
     # Enhancement tiers: [{users, data_cost}, ...] — tier 1 is base, upgrade by spending data
@@ -98,9 +122,15 @@ class Card:
             "image": self.image,
             "payee_card_id": self.payee_card_id,
             "starting_tiles": self.starting_tiles,
-            "factory_refund": self.factory_refund,
-            "dc_production_bonus": self.dc_production_bonus,
+            "placed_tile_adjacency_bonuses": self.placed_tile_adjacency_bonuses or [],
             "requirements": self.requirements or [],
+            "only_playable_next_to": self.only_playable_next_to or [],
+            "only_playable_on_terrains": self.only_playable_on_terrains or [],
+            "bonuses_by_placing_next_to_building": self.bonuses_by_placing_next_to_building or [],
+            "bonuses_by_building_on_terrain_type": self.bonuses_by_building_on_terrain_type or [],
+            "bonuses_by_building_adjacent_to_terrain_type": self.bonuses_by_building_adjacent_to_terrain_type or [],
+            "adjacent_placement_fee": self.adjacent_placement_fee or 0,
+            "adjacent_placement_fee_target_types": self.adjacent_placement_fee_target_types or [],
             "tiers": self.tiers or [],
             "current_tier": self.current_tier,
             "responsible_mining": self.responsible_mining or {},
@@ -116,6 +146,35 @@ class Card:
         # Use `is not None` to preserve empty dicts {} instead of collapsing to None
         eff_dict = effect_raw if isinstance(effect_raw, dict) else None
         eff_str = effect_raw if isinstance(effect_raw, str) else None
+
+        build_raw = data.get("build")
+        first_build = None
+        if isinstance(build_raw, list):
+            first_build = next((b for b in build_raw if b), None)
+        elif build_raw:
+            first_build = build_raw
+
+        legacy_factory_refund = int(data.get("factory_refund", 0) or 0)
+        legacy_dc_bonus = int(data.get("dc_production_bonus", 0) or 0)
+        placed_tile_adjacency_bonuses = data.get("placed_tile_adjacency_bonuses")
+        if not placed_tile_adjacency_bonuses:
+            placed_tile_adjacency_bonuses = []
+            if legacy_factory_refund > 0:
+                placed_tile_adjacency_bonuses.append({
+                    "build_type": "factory",
+                    "production": {"money": legacy_factory_refund},
+                })
+            if legacy_dc_bonus > 0:
+                placed_tile_adjacency_bonuses.append({
+                    "build_type": "data_center",
+                    "production": {"data_centers": legacy_dc_bonus},
+                })
+        bonuses_by_placing_next_to_building = data.get("bonuses_by_placing_next_to_building") or []
+        if not bonuses_by_placing_next_to_building and legacy_dc_bonus > 0:
+            bonuses_by_placing_next_to_building = [{
+                "build_type": "data_center",
+                "production": {"data_centers": legacy_dc_bonus},
+            }]
 
         return cls(
             name=data["name"],
@@ -137,17 +196,23 @@ class Card:
             court_penalty=data.get("court_penalty") or {},
             court_threshold=data.get("court_threshold", 4),
             boosts=data.get("boosts") or [],
-            tile_type=data.get("tile_type") or data.get("build"),
-            build=data.get("build"),
+            tile_type=data.get("tile_type") or first_build,
+            build=build_raw,
             costs=costs_raw,
             card_color_type=data.get("type", "") or "",
             number=data.get("number", 1),
             image=data.get("image", ""),
             payee_card_id=data.get("payee_card_id"),
             starting_tiles=data.get("starting_tiles") or [],
-            factory_refund=data.get("factory_refund", 0),
-            dc_production_bonus=data.get("dc_production_bonus", 0),
+            placed_tile_adjacency_bonuses=placed_tile_adjacency_bonuses,
             requirements=data.get("requirements") or [],
+            only_playable_next_to=data.get("only_playable_next_to") or [],
+            only_playable_on_terrains=data.get("only_playable_on_terrains") or [],
+            bonuses_by_placing_next_to_building=bonuses_by_placing_next_to_building,
+            bonuses_by_building_on_terrain_type=data.get("bonuses_by_building_on_terrain_type") or [],
+            bonuses_by_building_adjacent_to_terrain_type=data.get("bonuses_by_building_adjacent_to_terrain_type") or [],
+            adjacent_placement_fee=data.get("adjacent_placement_fee", 0) or 0,
+            adjacent_placement_fee_target_types=data.get("adjacent_placement_fee_target_types") or [],
             tiers=data.get("tiers") or [],
             responsible_mining=data.get("responsible_mining") or {},
         )

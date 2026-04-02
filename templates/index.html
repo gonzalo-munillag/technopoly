@@ -291,7 +291,10 @@
       <div class="modal-content editor-modal-content">
         <div class="modal-header">
           <h2>Card Graveyard</h2>
-          <button id="close-graveyard-modal" class="btn btn-sm">Back to cards overview</button>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <button id="graveyard-delete-all-btn" class="btn btn-sm btn-danger-sm">🗑️ Delete All Forever</button>
+            <button id="close-graveyard-modal" class="btn btn-sm">Back to cards overview</button>
+          </div>
         </div>
         <div id="graveyard-body" class="modal-body editor-body"></div>
       </div>

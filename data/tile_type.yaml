@@ -1,4 +1,132 @@
-# Terrain-type level defaults for the board editor.
-# Edited via "Edit by Terrain Type" in the Board Editor.
-# Keys are terrain type names (e.g. commercial, lake, sun, ...).
-# Each entry can have: only_build, requirements, build_bonuses, adjacency_bonuses.
+mountain:
+  only_build: []
+  build_bonuses: []
+  adjacency_bonuses: []
+wall:
+  only_build: []
+  build_bonuses: []
+  adjacency_bonuses: []
+city:
+  only_build: []
+  build_bonuses: []
+  adjacency_bonuses: []
+offshore_wind:
+  only_build:
+  - wind_power_plant
+  build_bonuses: []
+  adjacency_bonuses: []
+lake:
+  only_build:
+  - data_center
+  - hydroelectric_power_plant
+  build_bonuses: []
+  adjacency_bonuses: []
+sea:
+  only_build:
+  - data_center
+  build_bonuses: []
+  adjacency_bonuses: []
+empty:
+  only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - geothermal_power_plant
+  - solar_thermal
+  - data_center
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
+  - distribution_center
+  - rare_metal_mine
+  - factory
+  build_bonuses: []
+  adjacency_bonuses: []
+offshore_solar:
+  only_build:
+  - pv_power_plant
+  build_bonuses: []
+  adjacency_bonuses: []
+government:
+  only_build: []
+  build_bonuses: []
+  adjacency_bonuses:
+  - build_type: lobby_group
+    immediate:
+      reputation: 2
+    production: {}
+commercial:
+  only_build:
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
+  build_bonuses: []
+  adjacency_bonuses: []
+industrial:
+  only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - geothermal_power_plant
+  - solar_thermal
+  - data_center
+  - distribution_center
+  - factory
+  build_bonuses: []
+  adjacency_bonuses: []
+sun:
+  only_build:
+  - pv_power_plant
+  - solar_thermal
+  build_bonuses: []
+  adjacency_bonuses: []
+wind:
+  only_build:
+  - wind_power_plant
+  build_bonuses: []
+  adjacency_bonuses: []
+gas_reserve:
+  only_build:
+  - natural_gas_power_plant
+  build_bonuses: []
+  adjacency_bonuses: []
+coal:
+  only_build:
+  - coal_power_plant
+  build_bonuses: []
+  adjacency_bonuses: []
+geothermal:
+  only_build:
+  - geothermal_power_plant
+  build_bonuses: []
+  adjacency_bonuses: []
+rare_metal_mine:
+  only_build:
+  - rare_metal_mine
+  build_bonuses: []
+  adjacency_bonuses: []
+natural_park:
+  only_build:
+  - nuclear_power_plant
+  - data_center
+  - distribution_center
+  - factory
+  build_bonuses: []
+  adjacency_bonuses: []
+space:
+  only_build:
+  - satellite_solar
+  - satellite_dc
+  build_bonuses: []
+  adjacency_bonuses: []
+launching_pad:
+  only_build:
+  - launching_pad
+  build_bonuses: []
+  adjacency_bonuses: []

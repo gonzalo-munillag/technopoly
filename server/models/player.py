@@ -26,6 +26,7 @@ class Player:
     hiring_done: bool = False
     pending_tile: str | None = None
     pending_tile_meta: dict = field(default_factory=dict)
+    pending_tile_queue: list[str] = field(default_factory=list, repr=False)
     color: str = "#c9a227"
     users: int = 0
     _remaining_starting_tiles: list = field(default_factory=list, repr=False)
@@ -283,7 +284,12 @@ class Player:
     _PRODUCTION_ONLY = {"HR", "data_centers", "ad_campaigns"}
     _PRODUCTION_MAP = {"data_centers": "servers", "ad_campaigns": "ads"}
 
-    def collect_production(self, money_per_users: int = 20, data_per_users: int = 200) -> bool:
+    def collect_production(
+        self,
+        money_users_trigger: int = 10,
+        data_per_users: int = 200,
+        data_users_trigger: int = 10,
+    ) -> bool:
         """Apply yearly production. Returns True if the player goes bankrupt this year.
 
         Bankruptcy: negative money production drives money to 0 or below.
@@ -297,12 +303,12 @@ class Player:
                 self.resources[resource] = self.resources.get(resource, 0) + amount
 
         # User income from captured users (always non-negative)
-        if money_per_users and self.users:
-            self.resources["money"] = self.resources.get("money", 0) + self.users // money_per_users
+        if money_users_trigger and self.users:
+            self.resources["money"] = self.resources.get("money", 0) + self.users // money_users_trigger
 
-        # Data accumulation: configurable PB/yr per 100M users
-        if self.users and data_per_users:
-            data_gain = (self.users // 100) * data_per_users
+        # Data accumulation: configurable PB/yr every N users (N in M-users units)
+        if self.users and data_per_users and data_users_trigger > 0:
+            data_gain = (self.users // data_users_trigger) * data_per_users
             self.resources["data"] = self.resources.get("data", 0) + data_gain
 
         # Clamp users to zero
@@ -328,12 +334,28 @@ class Player:
         pool = getattr(self, self._get_pool(res))
         return pool.get(res, 0)
 
+    # Minimum reputation a player can have (reputation is not a normal resource —
+    # costs always apply and can never block play, but reputation is floored at this value).
+    _REP_MIN = -10
+
     def _deduct(self, res: str, amt: int):
         if res == "users":
             self.users = max(0, self.users - amt)
             return
         pool = getattr(self, self._get_pool(res))
-        pool[res] = pool.get(res, 0) - amt
+        if res == "reputation":
+            # Reputation costs always subtract from current reputation,
+            # regardless of whether YAML entered 3 or -3.
+            new_val = pool.get(res, 0) - abs(amt)
+            pool[res] = max(self._REP_MIN, new_val)
+            return
+        if amt < 0:
+            # Negative costs (e.g. reputation: -4) are penalties — they reduce
+            # the resource by |amt|, i.e. add the negative value directly.
+            new_val = pool.get(res, 0) + amt
+        else:
+            new_val = pool.get(res, 0) - amt
+        pool[res] = new_val
 
     _COST_SKIP = {"fee", "fee_card_id", "fee_card_type", "fee_company_type", "payee_card_id"}
 
@@ -377,6 +399,12 @@ class Player:
                 continue
             if res == "money":
                 total_money += amt
+                continue
+            # Reputation is not a blocking resource — costs always apply (floored at _REP_MIN).
+            if res == "reputation":
+                continue
+            # Negative cost amounts are penalties — they always apply and never block play.
+            if amt < 0:
                 continue
             if self._get_amount(res) < amt:
                 return f"Not enough {res} (need {amt}, have {self._get_amount(res)})."
