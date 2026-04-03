@@ -15,6 +15,7 @@
     - data_center
     - distribution_center
     - factory
+    - communication_tower
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -24,6 +25,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 0
   col: 4
   terrain: empty
@@ -41,6 +43,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 0
   col: 5
   terrain: empty
@@ -58,6 +61,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 0
   col: 6
   terrain: empty
@@ -75,6 +79,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 0
   col: 7
   terrain: empty
@@ -92,6 +97,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 0
   col: 8
   terrain: empty
@@ -109,6 +115,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 0
   col: 9
   terrain: empty
@@ -126,6 +133,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 0
   col: 10
   terrain: natural_park
@@ -140,19 +148,20 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 0
   col: 11
   terrain: lake
   name: ''
   build_bonuses: &id003
   - immediate:
-      money: -100
+      money: -200
     production: {}
     build_type: data_center
   adjacency_bonuses: &id004
-  - immediate:
-      money: 200
-    production: {}
+  - immediate: {}
+    production:
+      money: 1
     build_types:
     - nuclear_power_plant
     - natural_gas_power_plant
@@ -175,10 +184,16 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 2
   terrain: rare_metal_mine
   name: ''
+  build_bonuses: &id011
+  - immediate:
+      money: -200
+    production: {}
+    build_type: data_center
   only_build:
   - data_center
   - rare_metal_mine
@@ -196,6 +211,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 4
   terrain: empty
@@ -213,14 +229,15 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 5
   terrain: industrial
   name: ''
   build_bonuses: &id002
-  - immediate: {}
-    production:
-      money: 1
+  - immediate:
+      money: 100
+    production: {}
     build_types:
     - nuclear_power_plant
     - natural_gas_power_plant
@@ -230,6 +247,7 @@
     - data_center
     - distribution_center
     - factory
+    - communication_tower
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -239,6 +257,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 6
   terrain: industrial
@@ -253,6 +272,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 7
   terrain: industrial
@@ -267,6 +287,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 8
   terrain: empty
@@ -284,6 +305,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 9
   terrain: natural_park
@@ -298,6 +320,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 10
   terrain: lake
@@ -321,6 +344,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 12
   terrain: lake
@@ -349,6 +373,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 2
   terrain: coal
@@ -357,7 +382,20 @@
   - immediate:
       money: 100
     production: {}
-    build_type: coal_power_plant
+    build_types:
+    - coal_power_plant
+    - communication_tower
+  - immediate:
+      money: -200
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - pv_power_plant
+    - wind_power_plant
+    - data_center
+    - distribution_center
+    - factory
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -365,6 +403,7 @@
   - pv_power_plant
   - wind_power_plant
   - data_center
+  - communication_tower
 - row: 2
   col: 3
   terrain: coal
@@ -377,6 +416,7 @@
   - pv_power_plant
   - wind_power_plant
   - data_center
+  - communication_tower
 - row: 2
   col: 4
   terrain: empty
@@ -394,6 +434,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 5
   terrain: empty
@@ -411,6 +452,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 6
   terrain: industrial
@@ -425,6 +467,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 7
   terrain: industrial
@@ -439,6 +482,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 8
   terrain: empty
@@ -456,6 +500,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 9
   terrain: empty
@@ -473,6 +518,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 10
   terrain: city
@@ -495,6 +541,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 12
   terrain: empty
@@ -512,6 +559,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 13
   terrain: mountain
@@ -532,6 +580,10 @@
       HR: 1
     production: {}
     build_type: office
+  - immediate: {}
+    production:
+      money: 1
+    build_type: lobby_group
   only_build:
   - store
   - ad_campaign
@@ -556,6 +608,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 3
   col: 2
   terrain: coal
@@ -568,6 +621,7 @@
   - pv_power_plant
   - wind_power_plant
   - data_center
+  - communication_tower
 - row: 3
   col: 3
   terrain: lake
@@ -594,6 +648,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 3
   col: 5
   terrain: industrial
@@ -608,6 +663,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 3
   col: 6
   terrain: industrial
@@ -622,6 +678,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 3
   col: 7
   terrain: industrial
@@ -636,6 +693,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 3
   col: 8
   terrain: empty
@@ -653,6 +711,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 3
   col: 9
   terrain: commercial
@@ -690,6 +749,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 3
   col: 12
   terrain: mountain
@@ -743,6 +803,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: 3
   terrain: natural_park
@@ -757,6 +818,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: 4
   terrain: mountain
@@ -779,6 +841,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: 6
   terrain: empty
@@ -796,6 +859,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: 7
   terrain: empty
@@ -813,6 +877,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: 8
   terrain: empty
@@ -830,6 +895,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: 9
   terrain: empty
@@ -847,6 +913,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: 10
   terrain: empty
@@ -864,6 +931,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: 11
   terrain: empty
@@ -881,6 +949,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: 12
   terrain: mountain
@@ -905,6 +974,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 5
   col: 2
   terrain: natural_park
@@ -919,6 +989,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 5
   col: 3
   terrain: empty
@@ -936,6 +1007,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 5
   col: 4
   terrain: empty
@@ -953,6 +1025,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 5
   col: 5
   terrain: empty
@@ -970,6 +1043,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 5
   col: 6
   terrain: natural_park
@@ -984,6 +1058,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 5
   col: 7
   terrain: lake
@@ -1007,6 +1082,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 5
   col: 9
   terrain: empty
@@ -1024,6 +1100,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 5
   col: 10
   terrain: empty
@@ -1041,6 +1118,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 5
   col: 11
   terrain: mountain
@@ -1084,6 +1162,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 6
   col: 4
   terrain: empty
@@ -1101,6 +1180,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 6
   col: 5
   terrain: empty
@@ -1118,6 +1198,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 6
   col: 6
   terrain: empty
@@ -1135,6 +1216,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 6
   col: 7
   terrain: natural_park
@@ -1149,6 +1231,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 6
   col: 8
   terrain: natural_park
@@ -1163,6 +1246,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 6
   col: 9
   terrain: empty
@@ -1180,6 +1264,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 6
   col: 10
   terrain: empty
@@ -1197,6 +1282,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 6
   col: 11
   terrain: mountain
@@ -1216,6 +1302,18 @@
       money: 200
     production: {}
     build_type: wind_power_plant
+  - immediate:
+      money: -200
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - pv_power_plant
+    - data_center
+    - distribution_center
+    - factory
+    - communication_tower
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -1225,6 +1323,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 7
   col: 4
   terrain: wind
@@ -1239,6 +1338,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 7
   col: 5
   terrain: wind
@@ -1253,6 +1353,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 7
   col: 6
   terrain: industrial
@@ -1267,6 +1368,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 7
   col: 7
   terrain: industrial
@@ -1281,6 +1383,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 7
   col: 8
   terrain: industrial
@@ -1295,6 +1398,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 7
   col: 9
   terrain: empty
@@ -1312,21 +1416,12 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 7
   col: 10
   terrain: commercial
   name: ''
-  build_bonuses:
-  - immediate:
-      users: 10
-    production: {}
-    build_types:
-    - store
-    - ad_campaign
-  - immediate:
-      HR: 1
-    production: {}
-    build_type: office
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1359,6 +1454,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 8
   col: 7
   terrain: industrial
@@ -1373,6 +1469,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 14
   terrain: city
@@ -1406,6 +1503,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 0
   col: 15
   terrain: commercial
@@ -1430,13 +1528,14 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: 15
   terrain: sea
   name: ''
   build_bonuses: &id008
   - immediate:
-      money: -200
+      money: -300
     production: {}
     build_type: data_center
   only_build:
@@ -1480,6 +1579,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 4
   col: -2
   terrain: commercial
@@ -1504,6 +1604,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 1
   col: 0
   terrain: lake
@@ -1527,6 +1628,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 0
   col: 0
   terrain: mountain
@@ -1596,6 +1698,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 0
   terrain: mountain
@@ -1615,6 +1718,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: -3
   terrain: sea
@@ -1666,6 +1770,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 7
   col: -2
   terrain: commercial
@@ -1695,6 +1800,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 6
   col: -1
   terrain: city
@@ -1714,6 +1820,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 6
   col: 0
   terrain: mountain
@@ -1743,6 +1850,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 7
   col: 2
   terrain: natural_park
@@ -1757,6 +1865,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 8
   col: 2
   terrain: empty
@@ -1774,6 +1883,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 8
   col: 3
   terrain: gas_reserve
@@ -1783,6 +1893,17 @@
       money: 100
     production: {}
     build_type: natural_gas_power_plant
+  - immediate:
+      money: -200
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - coal_power_plant
+    - pv_power_plant
+    - data_center
+    - distribution_center
+    - factory
+    - communication_tower
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -1790,6 +1911,9 @@
   - pv_power_plant
   - wind_power_plant
   - data_center
+  - distribution_center
+  - factory
+  - communication_tower
 - row: 8
   col: 4
   terrain: commercial
@@ -1829,17 +1953,7 @@
   col: 13
   terrain: commercial
   name: ''
-  build_bonuses:
-  - immediate:
-      users: 10
-    production: {}
-    build_types:
-    - store
-    - ad_campaign
-  - immediate:
-      HR: 1
-    production: {}
-    build_type: office
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1862,18 +1976,14 @@
   - lobby_group
 - row: 8
   col: 12
-  terrain: industrial
+  terrain: commercial
   name: ''
-  build_bonuses: *id002
+  build_bonuses: *id006
   only_build:
-  - nuclear_power_plant
-  - natural_gas_power_plant
-  - coal_power_plant
-  - pv_power_plant
-  - wind_power_plant
-  - data_center
-  - distribution_center
-  - factory
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
 - row: 8
   col: 13
   terrain: sea
@@ -1909,6 +2019,9 @@
   - pv_power_plant
   - wind_power_plant
   - data_center
+  - distribution_center
+  - factory
+  - communication_tower
 - row: 10
   col: 4
   terrain: commercial
@@ -1966,6 +2079,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 8
   col: 9
   terrain: industrial
@@ -1980,6 +2094,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 8
   col: 10
   terrain: empty
@@ -1997,6 +2112,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 8
   col: 1
   terrain: industrial
@@ -2011,6 +2127,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 8
   col: -1
   terrain: empty
@@ -2028,6 +2145,7 @@
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
 - row: 8
   col: 0
   terrain: industrial
@@ -2042,15 +2160,28 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 9
   col: 0
   terrain: sun
   name: ''
   build_bonuses: &id010
   - immediate:
-      money: 100
+      money: 200
     production: {}
     build_type: pv_power_plant
+  - immediate:
+      money: -200
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - wind_power_plant
+    - data_center
+    - distribution_center
+    - factory
+    - communication_tower
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -2060,6 +2191,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 9
   col: 1
   terrain: sun
@@ -2074,6 +2206,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 7
   col: -3
   terrain: city
@@ -2109,6 +2242,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 10
   col: 3
   terrain: industrial
@@ -2123,13 +2257,14 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 9
   col: 6
   terrain: sea
   name: ''
   build_bonuses:
   - immediate:
-      money: -200
+      money: -300
     production: {}
     build_type: data_center
   adjacency_bonuses:
@@ -2140,8 +2275,11 @@
     - nuclear_power_plant
     - natural_gas_power_plant
     - coal_power_plant
+    - pv_power_plant
+    - wind_power_plant
     - data_center
     - distribution_center
+    - factory
     target_coords:
     - - 8
       - 7
@@ -2225,7 +2363,7 @@
   name: ''
   build_bonuses:
   - immediate:
-      money: -200
+      money: -300
     production: {}
     build_type: data_center
   adjacency_bonuses:
@@ -2236,8 +2374,11 @@
     - nuclear_power_plant
     - natural_gas_power_plant
     - coal_power_plant
+    - pv_power_plant
+    - wind_power_plant
     - data_center
     - distribution_center
+    - factory
     target_coords:
     - - 8
       - 8
@@ -2251,7 +2392,7 @@
   name: ''
   build_bonuses:
   - immediate:
-      money: -200
+      money: -300
     production: {}
     build_type: data_center
   adjacency_bonuses:
@@ -2262,8 +2403,11 @@
     - nuclear_power_plant
     - natural_gas_power_plant
     - coal_power_plant
+    - pv_power_plant
+    - wind_power_plant
     - data_center
     - distribution_center
+    - factory
     target_coords:
     - - 8
       - 9
@@ -2277,7 +2421,7 @@
   name: ''
   build_bonuses:
   - immediate:
-      money: -200
+      money: -300
     production: {}
     build_type: data_center
   adjacency_bonuses:
@@ -2288,8 +2432,11 @@
     - nuclear_power_plant
     - natural_gas_power_plant
     - coal_power_plant
+    - pv_power_plant
+    - wind_power_plant
     - data_center
     - distribution_center
+    - factory
     target_coords:
     - - 8
       - 10
@@ -2303,7 +2450,7 @@
   name: ''
   build_bonuses:
   - immediate:
-      money: -200
+      money: -300
     production: {}
     build_type: data_center
   adjacency_bonuses:
@@ -2314,11 +2461,14 @@
     - nuclear_power_plant
     - natural_gas_power_plant
     - coal_power_plant
+    - pv_power_plant
+    - wind_power_plant
     - data_center
     - distribution_center
+    - factory
     target_coords:
     - - 8
-      - 11
+      - 10
   only_build:
   - data_center
 - row: 10
@@ -2377,6 +2527,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 2
   col: 16
   terrain: sea
@@ -2412,6 +2563,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: 11
   col: 3
   terrain: gas_reserve
@@ -2424,6 +2576,9 @@
   - pv_power_plant
   - wind_power_plant
   - data_center
+  - distribution_center
+  - factory
+  - communication_tower
 - row: 9
   col: -2
   terrain: wall
@@ -2483,6 +2638,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 3
   terrain: space
@@ -2490,6 +2646,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 5
   terrain: space
@@ -2497,6 +2654,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 2
   terrain: space
@@ -2504,6 +2662,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 1
   terrain: space
@@ -2511,6 +2670,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 0
   terrain: space
@@ -2518,6 +2678,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: -1
   terrain: space
@@ -2525,6 +2686,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: -2
   terrain: space
@@ -2532,6 +2694,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: -3
   terrain: space
@@ -2539,6 +2702,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 6
   terrain: space
@@ -2546,6 +2710,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 7
   terrain: space
@@ -2553,6 +2718,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 8
   terrain: space
@@ -2560,6 +2726,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 9
   terrain: space
@@ -2567,6 +2734,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 10
   terrain: space
@@ -2574,6 +2742,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 11
   terrain: space
@@ -2581,6 +2750,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 12
   terrain: space
@@ -2588,6 +2758,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 13
   terrain: space
@@ -2595,6 +2766,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -3
   col: 14
   terrain: space
@@ -2602,6 +2774,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 13
   terrain: space
@@ -2609,6 +2782,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 14
   terrain: space
@@ -2616,6 +2790,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 12
   terrain: space
@@ -2623,6 +2798,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 11
   terrain: space
@@ -2630,6 +2806,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 10
   terrain: space
@@ -2637,6 +2814,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 9
   terrain: space
@@ -2644,6 +2822,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 8
   terrain: space
@@ -2651,6 +2830,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 7
   terrain: space
@@ -2658,6 +2838,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 6
   terrain: space
@@ -2665,6 +2846,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 5
   terrain: space
@@ -2672,6 +2854,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 4
   terrain: space
@@ -2679,6 +2862,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 3
   terrain: space
@@ -2686,6 +2870,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 2
   terrain: space
@@ -2693,6 +2878,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 1
   terrain: space
@@ -2700,6 +2886,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: 0
   terrain: space
@@ -2707,6 +2894,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: -1
   terrain: space
@@ -2714,6 +2902,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: -2
   terrain: space
@@ -2721,6 +2910,7 @@
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
 - row: -2
   col: -7
   terrain: natural_park
@@ -2735,10 +2925,12 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: -2
   col: -6
   terrain: rare_metal_mine
   name: ''
+  build_bonuses: *id011
   only_build:
   - data_center
   - rare_metal_mine
@@ -2756,6 +2948,7 @@
   - data_center
   - distribution_center
   - factory
+  - communication_tower
 - row: -3
   col: -7
   terrain: lake

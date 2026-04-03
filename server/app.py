@@ -94,6 +94,14 @@ def _placement_fee_options(player_id: str, row: int, col: int, meta: dict | None
     }
     if fee_amt <= 0 or not target_types:
         return None
+    # If the player already owns an adjacent tile of the required type,
+    # no fee is charged — they're using their own infrastructure.
+    for nb in game.board.get_neighbors(row, col):
+        pt = nb.get("placed_tile")
+        if not pt:
+            continue
+        if pt.get("owner_id") == player_id and pt.get("type") in target_types:
+            return None
     payees = set()
     for nb in game.board.get_neighbors(row, col):
         pt = nb.get("placed_tile")
@@ -107,6 +115,23 @@ def _placement_fee_options(player_id: str, row: int, col: int, meta: dict | None
     if not payees:
         return None
     return {"amount": fee_amt, "payees": list(payees)}
+
+
+def _placement_error_hint(tile_type: str, meta: dict | None = None) -> str:
+    """Build a human-readable error explaining why no placement is possible."""
+    bt_label = tile_type.replace("_", " ")
+    parts = [f"No legal board placement for {bt_label}."]
+    only_next_to = (meta or {}).get("only_playable_next_to") or []
+    only_terrains = (meta or {}).get("only_playable_on_terrains") or []
+    fee = (meta or {}).get("adjacent_placement_fee") or 0
+    if only_next_to:
+        labels = [t.replace("_", " ") for t in only_next_to]
+        parts.append(f"It must be placed next to: {', '.join(labels)}. Build one first, or place next to another player's.")
+    if only_terrains:
+        parts.append(f"It can only be built on: {', '.join(only_terrains)}.")
+    if fee:
+        parts.append(f"Placement fee of ${fee}B may also be required.")
+    return " ".join(parts)
 
 
 def _has_any_legal_tile_placement(
@@ -420,28 +445,20 @@ def _finish_player_draft(player_id: str):
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
 
-    if game.all_drafts_done():
-        game.finalize_draft()
-        _begin_hiring()
-
-
-def _begin_hiring():
-    game.phase = Phase.HIRING
-    game.clear_ready()
-    for player in game.players.values():
-        player.hiring_done = False
-    socketio.emit("game_state", game.to_dict(), room="game")
-    _send_private_states()
+    _check_all_drafted_and_hired()
 
 
 @socketio.on("submit_hiring")
 def on_submit_hiring(data):
     _touch_activity()
     player_id = connected_players.get(request.sid)
-    if not player_id or game.phase != Phase.HIRING:
+    if not player_id or game.phase not in (Phase.YEAR_START_DRAFT, Phase.HIRING):
         return
     player = game.players.get(player_id)
     if not player or player.hiring_done:
+        return
+    if game.phase == Phase.YEAR_START_DRAFT and not player.ready:
+        emit("error", {"message": "Finish drafting before hiring."})
         return
 
     engineers = int(data.get("engineers", 0))
@@ -475,11 +492,16 @@ def on_submit_hiring(data):
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
 
-    if all(p.hiring_done for p in game.players.values()):
-        _after_hiring()
+    _check_all_drafted_and_hired()
 
 
-def _after_hiring():
+def _check_all_drafted_and_hired():
+    """Once every player has both drafted and hired, finalize and move on."""
+    if not game.all_drafts_done():
+        return
+    if not all(p.hiring_done for p in game.players.values()):
+        return
+    game.finalize_draft()
     _begin_player_turns()
 
 
@@ -705,7 +727,7 @@ def on_play_card(data):
         money_after_card = (player.resources.get("money", 0) - _money_cost_for_card_play(player, card))
         for bt in build_tiles:
             if not _has_any_legal_tile_placement(player, bt, tile_meta, money_after_card=money_after_card):
-                emit("error", {"message": f"No legal board placement available for {bt.replace('_', ' ')} with your current money/placement fee constraints. Cannot play this card now."})
+                emit("error", {"message": _placement_error_hint(bt, tile_meta)})
                 return
     player.pay_costs(card, use_optional)
 
@@ -837,7 +859,7 @@ def on_play_build_card(data):
         money_after_card = (player.resources.get("money", 0) - _money_cost_for_card_play(player, card))
         for bt in build_tiles:
             if not _has_any_legal_tile_placement(player, bt, tile_meta, money_after_card=money_after_card):
-                emit("error", {"message": f"No legal board placement available for {bt.replace('_', ' ')} with your current money/placement fee constraints. Cannot play this card now."})
+                emit("error", {"message": _placement_error_hint(bt, tile_meta)})
                 return
 
     try:
@@ -920,6 +942,149 @@ def on_play_build_card(data):
         _send_private_states()
         traceback.print_exc()
         emit("error", {"message": f"Build card error: {exc}"})
+
+
+@socketio.on("produce_item")
+def on_produce_item(data):
+    """Produce a craftable item from a played card (e.g. a satellite)."""
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.PLAYER_TURNS:
+        return
+    if player_id != game.current_player_id:
+        emit("error", {"message": "It's not your turn."})
+        return
+    player = game.players.get(player_id)
+    if not player:
+        return
+    if player.pending_tile:
+        emit("error", {"message": "Place your pending tile on the board first."})
+        return
+
+    instance_id = data.get("instance_id")
+    item_index = int(data.get("item_index", -1))
+
+    card = next(
+        (c for c in player.played_cards if c is not None and c._instance_id == instance_id),
+        None,
+    )
+    if not card:
+        emit("error", {"message": "Card not found in your played cards."})
+        return
+
+    producibles = getattr(card, "producibles", []) or []
+    if item_index < 0 or item_index >= len(producibles):
+        emit("error", {"message": "Invalid producible index."})
+        return
+
+    item = producibles[item_index]
+    build_type = (item.get("build") or "").replace(" ", "_").lower()
+    cost = item.get("cost") or {}
+    fee = int(item.get("fee") or 0)
+    fee_card_type = (item.get("fee_card_type") or "").strip() or None
+    requires_placed = (item.get("requires_placed_build") or "").replace(" ", "_").lower() or None
+    only_next_to = item.get("only_playable_next_to") or []
+    only_on_terrains = item.get("only_playable_on_terrains") or []
+
+    if not build_type:
+        emit("error", {"message": "Producible has no build type configured."})
+        return
+
+    # ── Once-per-year-per-producible check ────────────────────────
+    if card._producibles_used:
+        emit("error", {"message": f"You already produced from this card this year. Only one producible per card per year."})
+        return
+
+    # ── Check requires_placed_build ──────────────────────────────
+    if requires_placed:
+        has_tile = any(
+            t.get("placed_tile") and
+            (t["placed_tile"].get("type") or "").replace(" ", "_").lower() == requires_placed and
+            t["placed_tile"].get("owner_id") == player_id
+            for t in game.board._tiles.values()
+        )
+        if not has_tile:
+            label = requires_placed.replace("_", " ")
+            emit("error", {"message": f"You must have a {label} placed on the board first."})
+            return
+
+    # ── Check whether player owns the fee card (pays fee to themselves → free) ──
+    owns_fee_card = fee_card_type and any(
+        (getattr(c, "card_color_type", None) or "") == fee_card_type
+        for c in player.played_cards if c is not None
+    )
+    effective_fee = 0 if owns_fee_card else fee
+
+    # ── Affordability checks ─────────────────────────────────────
+    money_needed = cost.get("money", 0) + effective_fee
+    if player.resources.get("money", 0) < money_needed:
+        emit("error", {"message": f"Not enough money (need {money_needed}, have {player.resources.get('money', 0)})."})
+        return
+    for res, amount in cost.items():
+        if res == "money":
+            continue  # already checked above with fee
+        if player.resources.get(res, 0) < amount:
+            emit("error", {"message": f"Not enough {res} (need {amount})."})
+            return
+
+    # ── Check a legal tile placement exists ──────────────────────
+    tile_meta = {
+        "only_playable_next_to": only_next_to,
+        "only_playable_on_terrains": only_on_terrains,
+        "adjacent_placement_fee": 0,
+        "adjacent_placement_fee_target_types": [],
+    }
+    money_after = player.resources.get("money", 0) - money_needed
+    if not _has_any_legal_tile_placement(player, build_type, tile_meta, money_after_card=money_after):
+        emit("error", {"message": _placement_error_hint(build_type, tile_meta)})
+        return
+
+    # ── Deduct cost ──────────────────────────────────────────────
+    for res, amount in cost.items():
+        player.resources[res] = player.resources.get(res, 0) - amount
+
+    # ── Pay fee ──────────────────────────────────────────────────
+    if effective_fee > 0:
+        player.resources["money"] = player.resources.get("money", 0) - effective_fee
+        pay_to = data.get("pay_to")
+        if pay_to and pay_to in game.players and pay_to != player_id:
+            target_player = game.players[pay_to]
+            if fee_card_type and any(
+                (getattr(c, "card_color_type", None) or "") == fee_card_type
+                for c in target_player.played_cards if c is not None
+            ):
+                target_player.resources["money"] = target_player.resources.get("money", 0) + effective_fee
+
+    # ── Apply immediate / production bonuses ─────────────────────
+    for res, amt in (item.get("immediate") or {}).items():
+        if res == "users":
+            player.gain_users(amt, game)
+        else:
+            pool = getattr(player, player._get_pool(res))
+            pool[res] = pool.get(res, 0) + amt
+    for res, amt in (item.get("production") or {}).items():
+        player.production[res] = player.production.get(res, 0) + amt
+
+    # ── Mark producible as used this year ────────────────────────
+    card._producibles_used.add(item_index)
+
+    # ── Queue pending tile ────────────────────────────────────────
+    player.pending_tile = build_type
+    player.pending_tile_queue = []
+    player.pending_tile_meta = {
+        "only_playable_next_to": only_next_to,
+        "only_playable_on_terrains": only_on_terrains,
+        "bonuses_by_placing_next_to_building": [],
+        "bonuses_by_building_on_terrain_type": [],
+        "bonuses_by_building_adjacent_to_terrain_type": [],
+        "placed_tile_adjacency_bonuses": [],
+        "adjacent_placement_fee": 0,
+        "adjacent_placement_fee_target_types": [],
+    }
+
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+    _check_win_condition()
 
 
 @socketio.on("buy_resource")
@@ -1801,6 +1966,7 @@ def on_add_card(data):
                 "adjacent_placement_fee": 0,
                 "adjacent_placement_fee_target_types": [],
                 "tiers": [],
+                "producibles": [],
                 "pollution_tag": "neutral",
                 "fee_for_green": None,
                 "court_threshold_modifier": None}

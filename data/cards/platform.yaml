@@ -1498,8 +1498,7 @@
   disabled: true
 - name: Satellite OEM
   id: 43
-  description: 'internal comment: you can produce satellites with this card, one per
-    generation'
+  description: null
   type: hardware manufacturer
   number: 3
   adjacent_placement_fee: 200
@@ -1524,6 +1523,39 @@
     money: 2
   build: factory
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles:
+  - name: Data Center Satellite
+    build: satellite_dc
+    cost:
+      money: 200
+      engineers: 3
+    fee: 200
+    fee_card_type: rocket oem
+    requires_placed_build: null
+    only_playable_next_to: []
+    only_playable_on_terrains:
+    - space
+    immediate: null
+    production:
+      data_centers: 2
+  - name: Communication Satellite
+    build: communication_satellite
+    cost:
+      money: 200
+      engineers: 3
+    fee: 200
+    fee_card_type: rocket oem
+    requires_placed_build: null
+    only_playable_next_to: []
+    only_playable_on_terrains:
+    - space
+    immediate:
+      users: 10
+    production: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -1543,10 +1575,7 @@
   bonuses_by_building_on_terrain_type: null
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
-  tiers:
-  - users: 10
-    money: 2
-    data_cost: 200
+  tiers: null
   boosts: null
 - name: Rocket OEM
   id: 44
@@ -1554,12 +1583,12 @@
     to reach space.
   type: hardware manufacturer
   number: 2
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 0
   costs:
     engineers: 9
     suits: 1
     ads: 0
-    money: 800
+    money: 1000
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -1576,22 +1605,85 @@
     money: 4
   build: launching_pad
   requirements: null
-  only_playable_next_to:
-  - nuclear_power_plant
-  - natural_gas_power_plant
-  - coal_power_plant
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
   only_playable_on_terrains:
   - launching_pad
-  adjacent_placement_fee_target_types:
-  - nuclear_power_plant
-  - natural_gas_power_plant
-  - coal_power_plant
+  adjacent_placement_fee_target_types: null
   bonuses_by_placing_next_to_building: null
   bonuses_by_building_on_terrain_type: null
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
-  tiers:
-  - users: 0
-    money: 2
-    data_cost: 200
+  tiers: null
+  boosts: null
+- name: Telco
+  id: 45
+  description: null
+  type: hardware manufacturer
+  number: 1
+  undefined: empty
+  adjacent_placement_fee: 200
+  costs:
+    engineers: 10
+    suits: 3
+    ads: 3
+    money: 800
+    servers: 5
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 40
+  production:
+    money: 1
+  build: factory
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles:
+  - name: Cell Tower
+    build: communication_tower
+    cost:
+      money: 200
+      engineers: 3
+    fee: 0
+    fee_card_type: null
+    requires_placed_build: null
+    only_playable_next_to: []
+    only_playable_on_terrains: []
+    immediate:
+      users: 10
+    production: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
   boosts: null

@@ -1,5 +1,5 @@
 - name: Headquarters
-  id: 51
+  id: 52
   description: null
   type: office
   number: 3
@@ -26,7 +26,7 @@
   boosts: null
   disabled: true
 - name: Home Office Gear
-  id: 52
+  id: 53
   description: null
   type: office
   number: 2
@@ -62,7 +62,7 @@
   boosts: null
   disabled: true
 - name: Coworking Rental
-  id: 53
+  id: 54
   description: null
   type: office
   number: 1
@@ -97,7 +97,7 @@
   boosts: null
   disabled: true
 - name: Office Building
-  id: 54
+  id: 55
   description: null
   type: office
   number: 2
@@ -125,7 +125,7 @@
   boosts: null
   disabled: true
 - name: Office Building Rental
-  id: 55
+  id: 56
   description: null
   type: office
   number: 1
@@ -150,7 +150,7 @@
   boosts: null
   disabled: true
 - name: Brand-Owned Store
-  id: 56
+  id: 57
   description: Sell only one brand’s products. Apple Store
   type: store
   number: 3
@@ -184,7 +184,7 @@
   boosts: null
   disabled: true
 - name: Electronics Retailer
-  id: 57
+  id: 58
   description: 'Large stores selling many brands and categories
 
     TVs, laptops, phones, appliances
@@ -224,7 +224,7 @@
   boosts: null
   disabled: true
 - name: Authorized Reseller
-  id: 58
+  id: 59
   description: 'Official partners of brands
 
     Sell genuine products with warranty support
@@ -264,11 +264,11 @@
   boosts: null
   disabled: true
 - name: Hyperscale Data Center
-  id: 59
+  id: 60
   description: "INT NOTE: fee to HW someone who has a HW focused company. choose to\
     \ pay  \nMassive facilities built for huge-scale operations."
   type: data center
-  number: 1
+  number: 2
   adjacent_placement_fee: 0
   costs:
     engineers: 4
@@ -284,6 +284,10 @@
     data_centers: 5
   build: data_center
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
   adjacent_placement_fee_target_types: null
@@ -295,11 +299,12 @@
   boosts: null
   disabled: true
 - name: Data Center
-  id: 60
+  id: 61
   description: Third-party facilities where multiple businesses rent space.
   type: data center
-  number: 1
+  number: 3
   adjacent_placement_fee: 0
+  disabled: 'true'
   costs:
     engineers: 3
     suits: 0
@@ -318,6 +323,10 @@
     data_centers: 3
   build: data_center
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
   adjacent_placement_fee_target_types: null
@@ -327,15 +336,15 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-  disabled: true
 - name: On-Premise Data Center
-  id: 61
+  id: 62
   description: "INT NOTE: fee to HW vendor. \nOwned and operated by a single company\
     \ for its own internal use."
   type: data center
-  number: 1
+  number: 3
   adjacent_placement_fee: 0
   undefined: empty
+  disabled: 'true'
   costs:
     engineers: 3
     suits: 0
@@ -354,6 +363,10 @@
     data_centers: 1
   build: data_center
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
   adjacent_placement_fee_target_types: null
@@ -367,15 +380,15 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-  disabled: true
 - name: Edge Data Center
-  id: 62
+  id: 63
   description: "INT NOTE: fee to HW vendor. \nSmaller distributed data center closer\
     \ to users. "
   type: data center
   number: 2
   adjacent_placement_fee: 0
   undefined: empty
+  disabled: 'true'
   costs:
     engineers: 2
     suits: 0
@@ -391,6 +404,10 @@
     data_centers: 1
   build: data_center
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
   adjacent_placement_fee_target_types: null
@@ -404,16 +421,14 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-  disabled: true
 - name: Nuclear Power Plant
-  id: 63
+  id: 64
   description: High-output zero-emission power. Essential for data centers. Requires
     significant investment but delivers clean energy at scale.
   type: nuclear power plant
   number: 2
   undefined: null
   adjacent_placement_fee: 0
-  disabled: 'true'
   costs:
     suits: 0
     ads: 0
@@ -446,14 +461,13 @@
   tiers: null
   boosts: null
 - name: Natural Gas Power Plant
-  id: 64
+  id: 65
   description: Fast to build and flexible. A reliable bridge fuel for powering your
     data centers, though it carries a reputation cost.
   type: natural gas power plant
   number: 3
   undefined: empty
   adjacent_placement_fee: 0
-  disabled: 'true'
   costs:
     engineers: 5
     suits: 0
@@ -490,14 +504,13 @@
   tiers: null
   boosts: null
 - name: PV Power Plant
-  id: 65
+  id: 66
   description: Photovoltaic solar array. Ideal on sun or offshore solar terrain. Boosts
     adjacent data centers.
   type: pv power plant
-  number: 5
+  number: 3
   undefined: empty
   adjacent_placement_fee: 0
-  disabled: 'true'
   costs:
     engineers: 3
     suits: 0
@@ -536,11 +549,11 @@
   tiers: null
   boosts: null
 - name: Wind Farm
-  id: 66
+  id: 67
   description: Onshore or offshore wind turbines. Best on wind or offshore wind terrain.
     Boosts adjacent data centers.
   type: wind power plant
-  number: 6
+  number: 3
   undefined: empty
   adjacent_placement_fee: 0
   disabled: 'true'
@@ -582,7 +595,7 @@
   tiers: null
   boosts: null
 - name: Coal Power Plant
-  id: 67
+  id: 68
   description: Cheap and abundant but highly polluting. Cheap energy that hurts your
     reputation.
   type: coal power plant
@@ -628,7 +641,7 @@
   tiers: null
   boosts: null
 - name: Hydroelectric Power Plant
-  id: 68
+  id: 69
   description: 'Build a hydroelectric dam on a lake tile. Generates clean power, boosting
     data center production.
 
@@ -661,7 +674,7 @@
   tiers: null
   boosts: null
 - name: Digital Banner Ads
-  id: 69
+  id: 70
   description: Targeted advertising infrastructure reaching billions of eyeballs.
   type: ad campaign
   number: 3
@@ -696,7 +709,7 @@
   boosts: null
   disabled: true
 - name: Video Ads
-  id: 70
+  id: 71
   description: null
   type: ad campaign
   number: 3
@@ -733,7 +746,7 @@
   boosts: null
   disabled: true
 - name: Influencer Advertising
-  id: 71
+  id: 72
   description: Pay a soulless influencer to advertise your ads.
   type: ad campaign
   number: 1
@@ -770,7 +783,7 @@
   boosts: null
   disabled: true
 - name: Billboard Blitz
-  id: 72
+  id: 73
   description: Plaster your brand across every surface. Old school, still works.
   type: ad campaign
   number: 1
@@ -802,7 +815,7 @@
   boosts: null
   disabled: true
 - name: Lobbying Group
-  id: 73
+  id: 74
   description: Get together with your Big Tech buddies and finance a group to say
     the things you cannot afford to say yourself in public.
   type: lobby
@@ -837,7 +850,7 @@
   boosts: null
   disabled: true
 - name: Grassroots Lobbying
-  id: 74
+  id: 75
   description: mobilize public to pressure officials
   type: lobby
   number: 1
@@ -874,7 +887,7 @@
   boosts: null
   disabled: true
 - name: Law Firm
-  id: 75
+  id: 76
   description: null
   type: lobby
   number: 2
@@ -911,7 +924,7 @@
   boosts: null
   disabled: true
 - name: Consolidation Center
-  id: 76
+  id: 77
   description: Gather smaller shipments from multiple suppliers into one larger shipment
     to maximize shipping efficiency.
   type: distribution center
@@ -958,7 +971,7 @@
       money: 2
   disabled: true
 - name: E-Commerce Center
-  id: 77
+  id: 78
   description: Focus on processing individual, smaller orders at high speed for end
     consumers.
   type: distribution center
@@ -1001,7 +1014,7 @@
       money: 1
   disabled: true
 - name: Cross-Docking Center
-  id: 78
+  id: 79
   description: Goods arrive and are directly transferred to outbound vehicles, minimizing
     inventory holding costs and time.
   type: distribution center
@@ -1048,7 +1061,7 @@
       money: 1
   disabled: true
 - name: Airborne Distribution Network
-  id: 79
+  id: 80
   description: null
   type: distribution center
   number: 1
@@ -1099,7 +1112,7 @@
       money: 1
   disabled: true
 - name: Rare Metal Mine
-  id: 80
+  id: 81
   description: null
   type: rare metal mine
   number: 2

@@ -245,6 +245,7 @@ class Game:
         for player in self.players.values():
             player.draft_pool = []
             player.year_done = False
+            player.hiring_done = False
             player.regulation_resolved = False
             player.went_to_court = False
             player.court_start_ready = False
@@ -477,6 +478,9 @@ class Game:
             )
             player.reset_turn()
             player.year_done = False
+            for c in player.played_cards:
+                if c is not None:
+                    c._producibles_used.clear()
             if went_bankrupt:
                 bankrupt.append((pid, player.name))
         for pid, _ in bankrupt:

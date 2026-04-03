@@ -527,33 +527,45 @@ class Board:
                 for res, amt in (entry.get("production") or {}).items():
                     production[res] = production.get(res, 0) + amt
 
-        # Adjacency bonuses from neighbours — conditional on what type is being placed
+        # Adjacency bonuses from neighbours — fire once per unique neighbour terrain,
+        # so being next to 2 sea tiles only counts the sea bonus once.
+        seen_adj_terrains = set()
+        seen_adj_placed = set()
         for nb in self.get_neighbors(row, col):
-            for entry in _normalize_adjacency_bonuses(nb.get("adjacency_bonuses", {})):
-                target_ok = _matches_target_coords(entry, row, col)
-                if _matches_build_type(entry, tile_type) and target_ok:
-                    for res, amt in (entry.get("immediate") or {}).items():
-                        immediate[res] = immediate.get(res, 0) + amt
-                    for res, amt in (entry.get("production") or {}).items():
-                        production[res] = production.get(res, 0) + amt
+            nb_terrain = nb.get("terrain")
+            if nb_terrain and nb_terrain not in seen_adj_terrains:
+                seen_adj_terrains.add(nb_terrain)
+                for entry in _normalize_adjacency_bonuses(nb.get("adjacency_bonuses", {})):
+                    target_ok = _matches_target_coords(entry, row, col)
+                    if _matches_build_type(entry, tile_type) and target_ok:
+                        for res, amt in (entry.get("immediate") or {}).items():
+                            immediate[res] = immediate.get(res, 0) + amt
+                        for res, amt in (entry.get("production") or {}).items():
+                            production[res] = production.get(res, 0) + amt
             pt = nb.get("placed_tile") or {}
-            for entry in _normalize_adjacency_bonuses(pt.get("placed_tile_adjacency_bonuses", {})):
-                if _matches_build_type(entry, tile_type):
-                    for res, amt in (entry.get("immediate") or {}).items():
-                        immediate[res] = immediate.get(res, 0) + amt
-                    for res, amt in (entry.get("production") or {}).items():
-                        production[res] = production.get(res, 0) + amt
+            pt_type = _normalize_tile_type(pt.get("type"))
+            if pt_type and pt_type not in seen_adj_placed:
+                seen_adj_placed.add(pt_type)
+                for entry in _normalize_adjacency_bonuses(pt.get("placed_tile_adjacency_bonuses", {})):
+                    if _matches_build_type(entry, tile_type):
+                        for res, amt in (entry.get("immediate") or {}).items():
+                            immediate[res] = immediate.get(res, 0) + amt
+                        for res, amt in (entry.get("production") or {}).items():
+                            production[res] = production.get(res, 0) + amt
 
         # Card-level "bonuses by placing next to building":
-        # if this placed tile is adjacent to matching placed tile types, apply bonus.
+        # Fires once per unique adjacent build type (not once per adjacent tile),
+        # so being next to 2 factories still only grants the factory bonus once.
         if bonuses_by_placing_next_to_building:
-            for nb in self.get_neighbors(row, col):
-                pt = nb.get("placed_tile")
-                if not pt:
-                    continue
-                adjacent_type = _normalize_tile_type(pt.get("type"))
+            adjacent_build_types = {
+                _normalize_tile_type(nb.get("placed_tile", {}).get("type"))
+                for nb in self.get_neighbors(row, col)
+                if nb.get("placed_tile")
+            }
+            adjacent_build_types.discard(None)
+            for adj_type in adjacent_build_types:
                 for entry in _normalize_adjacency_bonuses(bonuses_by_placing_next_to_building):
-                    if _matches_build_type(entry, adjacent_type):
+                    if _matches_build_type(entry, adj_type):
                         for res, amt in (entry.get("immediate") or {}).items():
                             immediate[res] = immediate.get(res, 0) + amt
                         for res, amt in (entry.get("production") or {}).items():

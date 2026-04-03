@@ -154,7 +154,7 @@ function showConfirmDialog(message, onConfirm, opts = {}) {
   noBtn.textContent = opts.cancelText || "Cancel";
   noBtn.addEventListener("click", () => dismiss());
 
-  actions.appendChild(yesBtn);
+  if (opts.confirmText !== null) actions.appendChild(yesBtn);
   // Optional extra buttons inserted between confirm and cancel
   (opts.extraButtons || []).forEach(eb => {
     const btn = document.createElement("button");
@@ -178,9 +178,19 @@ function showScreen(screen) {
 
 function showPhaseArea(phase) {
   [companyPickArea, draftArea, hiringArea, regulationArea, turnsArea].forEach(a => a.classList.add("hidden"));
+
+  if (phase === "year_start_draft") {
+    const me = lastGameState?.players?.[myPlayerId];
+    if (me && me.ready) {
+      hiringArea.classList.remove("hidden");
+    } else {
+      draftArea.classList.remove("hidden");
+    }
+    return;
+  }
+
   const map = {
     company_pick: companyPickArea,
-    year_start_draft: draftArea,
     hiring: hiringArea,
     regulation: regulationArea,
     player_turns: turnsArea,
@@ -307,7 +317,9 @@ socket.on("your_state", (data) => {
   updateTurnsUI();
   updateRegulationUI();
 
-  if (lastGameState?.phase === "hiring") {
+  if (lastGameState?.phase === "hiring"
+      || (lastGameState?.phase === "year_start_draft"
+          && lastGameState.players?.[myPlayerId]?.ready)) {
     renderHiringPhase();
   }
 
@@ -515,7 +527,12 @@ function renderGameState(state) {
   rebuildPlayerColors();
   rebuildCardIndex();
   yearBadge.textContent = `Year ${state.year}`;
-  phaseBadge.textContent = PHASE_LABELS[state.phase] || state.phase;
+  if (state.phase === "year_start_draft" && state.players?.[myPlayerId]?.ready) {
+    const meHired = state.players[myPlayerId].hiring_done;
+    phaseBadge.textContent = meHired ? "Waiting for others" : "Hiring";
+  } else {
+    phaseBadge.textContent = PHASE_LABELS[state.phase] || state.phase;
+  }
 
   if (state.params) {
     const p = state.params;
@@ -563,14 +580,10 @@ function renderGameState(state) {
     }
   }
 
-  if (state.phase === "hiring") {
-    // Clear dirty flag when entering hiring phase so dials start fresh each year
-    if (lastGameState?.phase !== "hiring") {
-      const hireEng = document.getElementById("hire-engineers");
-      const hireSuit = document.getElementById("hire-suits");
-      if (hireEng) delete hireEng.dataset.dirty;
-      if (hireSuit) delete hireSuit.dataset.dirty;
-    }
+  const _meForHiring = state.players?.[myPlayerId];
+  const _showHiring = state.phase === "hiring"
+    || (state.phase === "year_start_draft" && _meForHiring?.ready);
+  if (_showHiring) {
     renderHiringPhase();
   }
 
@@ -720,7 +733,13 @@ function renderDraft(pool, draftedFuckups) {
   }
 }
 
-doneDraftBtn.addEventListener("click", () => socket.emit("done_drafting"));
+doneDraftBtn.addEventListener("click", () => {
+  const hireEng = document.getElementById("hire-engineers");
+  const hireSuit = document.getElementById("hire-suits");
+  if (hireEng) delete hireEng.dataset.dirty;
+  if (hireSuit) delete hireSuit.dataset.dirty;
+  socket.emit("done_drafting");
+});
 
 // ── Hiring Phase ────────────────────────────────────────────
 function renderHiringPhase() {
@@ -1349,10 +1368,35 @@ function renderHand(hand) {
           responsible_mining: responsibleMining,
         });
       };
-      if (hasFee) {
-        showPaymentPopup(card, {}, emitPlay);
+
+      const adjFee = card.adjacent_placement_fee || 0;
+      const feeTargets = (card.adjacent_placement_fee_target_types || []).map(t => (t || "").replace(/ /g, "_"));
+      let needsFeeWarning = false;
+      if (adjFee > 0 && feeTargets.length) {
+        needsFeeWarning = !boardTiles.some(t => {
+          const pt = t.placed_tile;
+          return pt && pt.owner_id === myPlayerId
+            && feeTargets.includes((pt.type || "").replace(/ /g, "_"));
+        });
+      }
+
+      const doPlay = () => {
+        if (hasFee) {
+          showPaymentPopup(card, {}, emitPlay);
+        } else {
+          emitPlay({});
+        }
+      };
+
+      if (needsFeeWarning) {
+        const labels = feeTargets.map(t => (TILE_FULL_NAMES[t] || t.replace(/_/g, " ")));
+        showConfirmDialog(
+          `You don't own a ${labels.join("/")}. Playing "${card.name}" will require paying 💰$${adjFee}B to the owner of an adjacent one. Proceed?`,
+          doPlay,
+          { confirmText: "Yes, play", cancelText: "Cancel" }
+        );
       } else {
-        emitPlay({});
+        doPlay();
       }
     });
     // Show fee status hint on the card itself
@@ -1947,6 +1991,11 @@ const CARD_SUBTYPE_EMOJIS = {
   "satellite data center":    "🛰️🖥️",
   "cyber attack":             "🕵️",
   "cyber defense":            "🛡️",
+  "rocket oem":               "🚀",
+  "satellite oem":            "🛰️",
+  "telecommunication provider":"📡",
+  "communication tower":      "📡",
+  "communication satellite":  "🛰️📡",
 };
 
 const CARD_TYPE_TINTS = {
@@ -2433,6 +2482,7 @@ function createCardElement(card, options = {}) {
     ${imageBlock}
     ${desc}
     ${effectsHtml}
+    <div class="card-producibles-slot"></div>
     ${boostsHtml}
     ${boostedByHtml}
     ${feesCollectedHtml}
@@ -2535,6 +2585,134 @@ function createCardElement(card, options = {}) {
       }
 
       tiersContainer.appendChild(btn);
+    });
+  }
+
+  // ── Produce buttons ───────────────────────────────────────────
+  const cardProducibles = card.producibles || [];
+  const prodSlot = el.querySelector(".card-producibles-slot");
+  const isPlayedCard = card.instance_id && (
+    (lastGameState?.players?.[myPlayerId]?.played_cards || [])
+      .some(c => c.instance_id === card.instance_id)
+  );
+  if (prodSlot && cardProducibles.length > 0) {
+    prodSlot.style.cssText = "display:flex;flex-wrap:wrap;gap:.3rem;justify-content:flex-end;padding:.2rem .4rem .25rem;";
+
+    cardProducibles.forEach((item, idx) => {
+      const costParts = Object.entries(item.cost || {}).map(([k, v]) =>
+        `${fmtCardVal(k, v)}${emojiRes(k)}`
+      );
+      const fee = item.fee || 0;
+      const feeCardType = item.fee_card_type || "";
+      if (fee > 0) costParts.push(`+💰$${fee}B fee`);
+      const feeLabel = (fee > 0 && feeCardType) ? `→ ${feeCardType} owner` : "";
+
+      // Placement constraints
+      const nextTo = item.only_playable_next_to || [];
+      const onTerrains = item.only_playable_on_terrains || [];
+      const reqPlaced = item.requires_placed_build || "";
+      const constraintParts = [];
+      if (reqPlaced) {
+        const label = (typeof TILE_LABELS !== "undefined" && TILE_LABELS[reqPlaced]) || "";
+        constraintParts.push(`needs ${label} ${reqPlaced.replace(/_/g, " ")}`);
+      }
+      if (nextTo.length) {
+        const labels = nextTo.map(t => ((typeof TILE_LABELS !== "undefined" && TILE_LABELS[t]) || "") + " " + t.replace(/_/g, " ")).join(", ");
+        constraintParts.push(`next to ${labels}`);
+      }
+      if (onTerrains.length) constraintParts.push(`on ${onTerrains.join(", ")}`);
+
+      // Bonuses
+      const immEntries = Object.entries(item.immediate || {}).filter(([, v]) => v);
+      const prodEntries = Object.entries(item.production || {}).filter(([, v]) => v);
+      const bonusParts = [
+        ...immEntries.map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)}${emojiRes(k)}`),
+        ...prodEntries.map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)}${emojiRes(k)}/yr`),
+      ];
+
+      const btn = document.createElement("button");
+      btn.className = "card-produce-btn";
+
+      let btnHtml =
+        `<span class="produce-btn-name">🔨 ${item.name || (item.build || "").replace(/_/g, " ") || "?"}</span>` +
+        `<span class="produce-btn-cost">${costParts.join(" ")}${feeLabel ? " " + feeLabel : ""}</span>`;
+      if (constraintParts.length) {
+        btnHtml += ` <span class="produce-btn-constraint">📌 ${constraintParts.join(" · ")}</span>`;
+      }
+      if (bonusParts.length) {
+        btnHtml += ` <span class="produce-btn-bonus">${bonusParts.join(" ")}</span>`;
+      }
+      btn.innerHTML = btnHtml;
+
+      const anyUsedThisYear = (card.producibles_used || []).length > 0;
+      if (anyUsedThisYear) {
+        btn.disabled = true;
+        btn.style.opacity = "0.35";
+        btn.title = "Already produced from this card this year — resets next year";
+        const usedBadge = document.createElement("span");
+        usedBadge.style.cssText = "font-size:.48rem;opacity:.7;margin-left:.3rem;";
+        usedBadge.textContent = "✓ built this year";
+        btn.querySelector(".produce-btn-cost")?.appendChild(usedBadge);
+      } else if (isPlayedCard) {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+
+          const doEmit = (payTo) => {
+            btn.disabled = true;
+            socket.emit("produce_item", {
+              instance_id: card.instance_id,
+              item_index: idx,
+              pay_to: payTo || null,
+            });
+            setTimeout(() => { btn.disabled = false; }, 2500);
+          };
+
+          if (fee > 0 && feeCardType) {
+            const fakeCosts = { fee, fee_card_type: feeCardType };
+            if (iOwnFeeCosts(fakeCosts)) {
+              doEmit(null);
+            } else {
+              const payees = findPayeesForFee(fakeCosts);
+              if (payees.length === 0) {
+                showConfirmDialog(
+                  `Craft "${item.name || item.build}"?`,
+                  () => doEmit(null),
+                  { detail: `Cost: ${costParts.join(", ")}. Fee of 💰$${fee}B goes to the bank (no one owns a ${feeCardType}).`,
+                    confirmText: "Craft & Pay Bank", cancelText: "Cancel" }
+                );
+              } else if (payees.length === 1) {
+                showConfirmDialog(
+                  `Craft "${item.name || item.build}"?`,
+                  () => doEmit(payees[0].pid),
+                  { detail: `Cost: ${costParts.join(", ")}. Fee of 💰$${fee}B goes to ${payees[0].name} (owns ${feeCardType}).`,
+                    confirmText: `Craft & Pay ${payees[0].name}`, cancelText: "Cancel" }
+                );
+              } else {
+                const extraButtons = payees.map(p => ({
+                  text: `💰 Pay ${p.name}`,
+                  className: "btn btn-sm btn-accent",
+                  onClick: () => doEmit(p.pid),
+                }));
+                showConfirmDialog(
+                  `Craft "${item.name || item.build}"?`,
+                  () => {},
+                  { detail: `Cost: ${costParts.join(", ")}. Fee of 💰$${fee}B — choose who to pay:`,
+                    confirmText: null, cancelText: "Cancel", extraButtons }
+                );
+              }
+            }
+          } else {
+            doEmit(null);
+          }
+        });
+      } else {
+        btn.style.opacity = "0.6";
+        btn.style.cursor = "default";
+        btn.title = "Play this card first to craft items";
+        btn.addEventListener("click", (e) => e.stopPropagation());
+      }
+
+      prodSlot.appendChild(btn);
     });
   }
 
@@ -3601,6 +3779,8 @@ function renderEditorForm() {
       fields.appendChild(buildMinReputationField(value));
     } else if (key === "court_threshold_modifier") {
       fields.appendChild(buildCourtThresholdModifierField(value));
+    } else if (key === "producibles") {
+      fields.appendChild(buildProduciblesField(value || []));
     } else if (key === "pollution_tag") {
       fields.appendChild(buildPollutionTagField(value));
     } else if (key === "fee_for_green") {
@@ -3654,6 +3834,9 @@ function renderEditorForm() {
   }
   if (!("court_threshold_modifier" in card)) {
     fields.appendChild(buildCourtThresholdModifierField(null));
+  }
+  if (!("producibles" in card)) {
+    fields.appendChild(buildProduciblesField([]));
   }
   if (!("pollution_tag" in card)) {
     fields.appendChild(buildPollutionTagField("neutral"));
@@ -3729,7 +3912,7 @@ function renderEditorForm() {
 }
 
 const FIELD_OPTIONS = {
-  build: [null, "ad_campaign", "coal_power_plant", "data_center", "distribution_center", "factory", "hydroelectric_power_plant", "launching_pad", "lobby_group", "natural_gas_power_plant", "nuclear_power_plant", "office", "pv_power_plant", "rare_metal_mine", "satellite_dc", "satellite_solar", "store", "wind_power_plant"],
+  build: [null, "ad_campaign", "coal_power_plant", "communication_satellite", "communication_tower", "data_center", "distribution_center", "factory", "hydroelectric_power_plant", "launching_pad", "lobby_group", "natural_gas_power_plant", "nuclear_power_plant", "office", "pv_power_plant", "rare_metal_mine", "satellite_dc", "satellite_solar", "store", "wind_power_plant"],
 };
 
 const TYPE_OPTIONS = [
@@ -3740,6 +3923,8 @@ const TYPE_OPTIONS = [
   "pv power plant", "wind power plant",
   "data center", "distribution center", "office", "ad campaign", "lobby", "rare metal mine",
   "hydroelectric power plant", "satellite solar", "satellite data center",
+  "rocket oem", "satellite oem", "telecommunication provider",
+  "communication tower", "communication satellite",
   "cyber attack", "cyber defense",
 ];
 
@@ -4185,6 +4370,243 @@ function buildFeeForGreenField(value) {
   dictEl.appendChild(addBtn);
 
   container.appendChild(dictEl);
+  return container;
+}
+
+// ── Producibles field builder ─────────────────────────────────
+function buildProduciblesField(producibles) {
+  const RESOURCE_KEYS = ["money", "engineers", "suits", "servers", "ads", "reputation", "users", "data"];
+
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.produciblesKey = "producibles";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "producibles (craftable items)";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.className = "editor-field-hint";
+  hint.textContent = "Items this card lets the player craft and place on the board. Each has its own cost, optional fee, and placement constraints.";
+  container.appendChild(hint);
+
+  const list = document.createElement("div");
+  list.className = "editor-producibles-list";
+  container.appendChild(list);
+
+  // Shared helpers for selects
+  const buildTypeOptions = (typeof BUILDABLE_TILE_TYPE_OPTIONS !== "undefined" && Array.isArray(BUILDABLE_TILE_TYPE_OPTIONS))
+    ? BUILDABLE_TILE_TYPE_OPTIONS
+    : (FIELD_OPTIONS.build || []).map(v => [v, v]);
+  const terrainOpts = (typeof TERRAIN_OPTIONS !== "undefined") ? TERRAIN_OPTIONS : [];
+  const cardTypeOpts = (typeof BOOST_TYPE_OPTIONS !== "undefined") ? BOOST_TYPE_OPTIONS.filter(Boolean) : [];
+
+  function makeBuildSelect(cls, currentVal) {
+    const sel = document.createElement("select");
+    sel.className = cls;
+    sel.style.cssText = "flex:1;";
+    const none = document.createElement("option");
+    none.value = ""; none.textContent = "(choose build type)";
+    if (!currentVal) none.selected = true;
+    sel.appendChild(none);
+    buildTypeOptions.forEach(([val, lbl]) => {
+      const o = document.createElement("option");
+      o.value = val; o.textContent = lbl;
+      if (val === currentVal) o.selected = true;
+      sel.appendChild(o);
+    });
+    return sel;
+  }
+
+  function makeTerrainSelect(cls, currentVal) {
+    const sel = document.createElement("select");
+    sel.className = cls;
+    sel.style.cssText = "flex:1;";
+    const none = document.createElement("option");
+    none.value = ""; none.textContent = "(choose terrain)";
+    if (!currentVal) none.selected = true;
+    sel.appendChild(none);
+    terrainOpts.forEach(t => {
+      const o = document.createElement("option");
+      o.value = t; o.textContent = t;
+      if (t === currentVal) o.selected = true;
+      sel.appendChild(o);
+    });
+    return sel;
+  }
+
+  function makeCardTypeSelect(cls, currentVal) {
+    const sel = document.createElement("select");
+    sel.className = cls;
+    sel.style.cssText = "flex:1;";
+    const none = document.createElement("option");
+    none.value = ""; none.textContent = "(none — goes to bank)";
+    if (!currentVal) none.selected = true;
+    sel.appendChild(none);
+    cardTypeOpts.forEach(t => {
+      const o = document.createElement("option");
+      o.value = t; o.textContent = t;
+      if (t === currentVal) o.selected = true;
+      sel.appendChild(o);
+    });
+    return sel;
+  }
+
+  function buildProducibleEntry(item) {
+    item = item || {};
+    const entry = document.createElement("div");
+    entry.className = "editor-producible-entry";
+    entry.style.cssText = "border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:.5rem .6rem;margin-top:.4rem;background:rgba(0,0,0,.15);";
+
+    function sectionLabel(text) {
+      const d = document.createElement("div");
+      d.style.cssText = "margin-top:.45rem;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.65;";
+      d.textContent = text;
+      return d;
+    }
+
+    function labeledRow(labelText, el) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:.4rem;margin-top:.3rem;";
+      const lbl = document.createElement("span");
+      lbl.style.cssText = "font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;opacity:.7;min-width:110px;flex-shrink:0;";
+      lbl.textContent = labelText;
+      row.appendChild(lbl);
+      row.appendChild(el);
+      return row;
+    }
+
+    // Remove button
+    const removeRow = document.createElement("div");
+    removeRow.style.cssText = "display:flex;justify-content:flex-end;";
+    const rmBtn = document.createElement("button");
+    rmBtn.className = "btn btn-sm editor-remove-btn";
+    rmBtn.textContent = "× Remove item";
+    rmBtn.addEventListener("click", () => entry.remove());
+    removeRow.appendChild(rmBtn);
+    entry.appendChild(removeRow);
+
+    // Name (free text — human readable label shown on the button)
+    const nameInp = document.createElement("input");
+    nameInp.type = "text"; nameInp.className = "editor-input producible-name";
+    nameInp.placeholder = "Display name, e.g. PV Satellite";
+    nameInp.style.cssText = "flex:1;";
+    if (item.name) nameInp.value = item.name;
+    entry.appendChild(labeledRow("Name", nameInp));
+
+    // Build type — dropdown
+    entry.appendChild(sectionLabel("Build type (tile placed on board):"));
+    entry.appendChild(makeBuildSelect("producible-build", item.build));
+
+    // Cost dict
+    entry.appendChild(sectionLabel("Cost to craft:"));
+    const costDict = document.createElement("div");
+    costDict.className = "editor-dict-container producible-cost-dict";
+    Object.entries(item.cost || {}).forEach(([k, v]) => costDict.appendChild(buildDictRow(k, v, RESOURCE_KEYS)));
+    const addCostBtn = document.createElement("button");
+    addCostBtn.className = "btn btn-sm editor-add-btn";
+    addCostBtn.textContent = "+ Add resource";
+    addCostBtn.style.marginTop = ".2rem";
+    addCostBtn.addEventListener("click", () => costDict.insertBefore(buildDictRow(RESOURCE_KEYS[0], 0, RESOURCE_KEYS), addCostBtn));
+    costDict.appendChild(addCostBtn);
+    entry.appendChild(costDict);
+
+    // Fee amount + fee card type
+    entry.appendChild(sectionLabel("Fee paid to card-type owner:"));
+    const feeRow = document.createElement("div");
+    feeRow.style.cssText = "display:flex;align-items:center;gap:.5rem;margin-top:.25rem;flex-wrap:wrap;";
+    const feeInp = document.createElement("input");
+    feeInp.type = "number"; feeInp.className = "editor-input producible-fee";
+    feeInp.placeholder = "💰 amount"; feeInp.style.width = "80px";
+    if (item.fee) feeInp.value = item.fee;
+    const feeArrow = document.createElement("span");
+    feeArrow.style.cssText = "font-size:.65rem;opacity:.6;";
+    feeArrow.textContent = "→ to owner of:";
+    feeRow.append(feeInp, feeArrow, makeCardTypeSelect("producible-fee-card-type", item.fee_card_type));
+    entry.appendChild(feeRow);
+
+    // Requires placed build — single dropdown (prerequisite at craft time)
+    entry.appendChild(sectionLabel("Requires already placed on board (prerequisite to craft):"));
+    entry.appendChild(makeBuildSelect("producible-requires", item.requires_placed_build));
+
+    // Only playable next to — add/remove rows of build-type dropdowns
+    entry.appendChild(sectionLabel("Resulting tile: only placeable next to:"));
+    const nextToList = document.createElement("div");
+    nextToList.className = "producible-next-to-list";
+    function addNextToRow(val) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;gap:.3rem;margin-top:.2rem;";
+      row.appendChild(makeBuildSelect("producible-next-to-sel", val));
+      const x = document.createElement("button");
+      x.className = "btn btn-sm editor-remove-btn"; x.textContent = "×";
+      x.addEventListener("click", () => row.remove());
+      row.appendChild(x); nextToList.appendChild(row);
+    }
+    (item.only_playable_next_to || []).forEach(v => addNextToRow(v));
+    const addNextToBtn = document.createElement("button");
+    addNextToBtn.className = "btn btn-sm editor-add-btn"; addNextToBtn.textContent = "+ Add build type";
+    addNextToBtn.style.marginTop = ".2rem";
+    addNextToBtn.addEventListener("click", () => addNextToRow(""));
+    entry.appendChild(nextToList); entry.appendChild(addNextToBtn);
+
+    // Only playable on terrains — add/remove rows of terrain dropdowns
+    entry.appendChild(sectionLabel("Resulting tile: only placeable on terrain:"));
+    const terrainList = document.createElement("div");
+    terrainList.className = "producible-terrains-list";
+    function addTerrainRow(val) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;gap:.3rem;margin-top:.2rem;";
+      row.appendChild(makeTerrainSelect("producible-terrain-sel", val));
+      const x = document.createElement("button");
+      x.className = "btn btn-sm editor-remove-btn"; x.textContent = "×";
+      x.addEventListener("click", () => row.remove());
+      row.appendChild(x); terrainList.appendChild(row);
+    }
+    (item.only_playable_on_terrains || []).forEach(v => addTerrainRow(v));
+    const addTerrainBtn = document.createElement("button");
+    addTerrainBtn.className = "btn btn-sm editor-add-btn"; addTerrainBtn.textContent = "+ Add terrain";
+    addTerrainBtn.style.marginTop = ".2rem";
+    addTerrainBtn.addEventListener("click", () => addTerrainRow(""));
+    entry.appendChild(terrainList); entry.appendChild(addTerrainBtn);
+
+    // Immediate bonuses on craft
+    entry.appendChild(sectionLabel("Immediate bonus on craft:"));
+    const immDict = document.createElement("div");
+    immDict.className = "editor-dict-container producible-immediate-dict";
+    Object.entries(item.immediate || {}).forEach(([k, v]) => immDict.appendChild(buildDictRow(k, v, RESOURCE_KEYS)));
+    const addImmBtn = document.createElement("button");
+    addImmBtn.className = "btn btn-sm editor-add-btn"; addImmBtn.textContent = "+ Add resource";
+    addImmBtn.style.marginTop = ".2rem";
+    addImmBtn.addEventListener("click", () => immDict.insertBefore(buildDictRow(RESOURCE_KEYS[0], 0, RESOURCE_KEYS), addImmBtn));
+    immDict.appendChild(addImmBtn);
+    entry.appendChild(immDict);
+
+    // Production bonuses on craft
+    const PROD_KEYS = ["HR", "data_centers", "ad_campaigns", "money"];
+    entry.appendChild(sectionLabel("Production bonus on craft (/yr):"));
+    const prodDict = document.createElement("div");
+    prodDict.className = "editor-dict-container producible-production-dict";
+    Object.entries(item.production || {}).forEach(([k, v]) => prodDict.appendChild(buildDictRow(k, v, PROD_KEYS)));
+    const addProdBtn = document.createElement("button");
+    addProdBtn.className = "btn btn-sm editor-add-btn"; addProdBtn.textContent = "+ Add production";
+    addProdBtn.style.marginTop = ".2rem";
+    addProdBtn.addEventListener("click", () => prodDict.insertBefore(buildDictRow(PROD_KEYS[0], 0, PROD_KEYS), addProdBtn));
+    prodDict.appendChild(addProdBtn);
+    entry.appendChild(prodDict);
+
+    return entry;
+  }
+
+  (producibles || []).forEach(item => list.appendChild(buildProducibleEntry(item)));
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm editor-add-btn";
+  addBtn.textContent = "+ Add producible item";
+  addBtn.style.marginTop = ".4rem";
+  addBtn.addEventListener("click", () => list.appendChild(buildProducibleEntry({})));
+  container.appendChild(addBtn);
+
   return container;
 }
 
@@ -4750,6 +5172,8 @@ const BOOST_TYPE_OPTIONS = [
   "pv power plant", "wind power plant",
   "data center", "distribution center", "office", "ad campaign", "lobby", "rare metal mine",
   "hydroelectric power plant", "satellite solar", "satellite data center",
+  "rocket oem", "satellite oem",
+  "telecommunication provider",
   "cyber attack", "cyber defense",
 ];
 
@@ -4942,6 +5366,48 @@ function collectFormData(fieldsEl, originalCard) {
     const inp = courtModContainer.querySelector(".editor-court-threshold-modifier-input");
     const raw = inp ? inp.value.trim() : "";
     data.court_threshold_modifier = raw !== "" ? parseInt(raw, 10) : null;
+  }
+
+  const produciblesContainer = fieldsEl.querySelector("[data-producibles-key='producibles']");
+  if (produciblesContainer) {
+    const items = [];
+    produciblesContainer.querySelectorAll(".editor-producible-entry").forEach(entry => {
+      const name = entry.querySelector(".producible-name")?.value.trim() || "";
+      const build = entry.querySelector("select.producible-build")?.value || "";
+      const feeVal = Number(entry.querySelector(".producible-fee")?.value) || 0;
+      const feeCardType = entry.querySelector("select.producible-fee-card-type")?.value || null;
+      const requires = entry.querySelector("select.producible-requires")?.value || null;
+      const nextTo = [...entry.querySelectorAll(".producible-next-to-list select.producible-next-to-sel")]
+        .map(s => s.value).filter(Boolean);
+      const terrains = [...entry.querySelectorAll(".producible-terrains-list select.producible-terrain-sel")]
+        .map(s => s.value).filter(Boolean);
+      const cost = {};
+      entry.querySelectorAll(".producible-cost-dict .editor-dict-row").forEach(row => {
+        const k = row.querySelector(".editor-dict-key")?.value.trim();
+        const v = Number(row.querySelector(".editor-dict-val")?.value) || 0;
+        if (k) cost[k] = v;
+      });
+      const immediate = {};
+      entry.querySelectorAll(".producible-immediate-dict .editor-dict-row").forEach(row => {
+        const k = row.querySelector(".editor-dict-key")?.value.trim();
+        const v = Number(row.querySelector(".editor-dict-val")?.value) || 0;
+        if (k) immediate[k] = v;
+      });
+      const production = {};
+      entry.querySelectorAll(".producible-production-dict .editor-dict-row").forEach(row => {
+        const k = row.querySelector(".editor-dict-key")?.value.trim();
+        const v = Number(row.querySelector(".editor-dict-val")?.value) || 0;
+        if (k) production[k] = v;
+      });
+      if (name || build) {
+        items.push({ name, build, cost, fee: feeVal, fee_card_type: feeCardType || null,
+                     requires_placed_build: requires || null, only_playable_next_to: nextTo,
+                     only_playable_on_terrains: terrains,
+                     immediate: Object.keys(immediate).length ? immediate : null,
+                     production: Object.keys(production).length ? production : null });
+      }
+    });
+    data.producibles = items;
   }
 
   const pollutionContainer = fieldsEl.querySelector("[data-pollution-tag-key='pollution_tag']");
@@ -5584,6 +6050,8 @@ const TILE_LABELS = {
   satellite_solar:           "🛰️☀️",
   satellite_dc:              "🛰️🖥️",
   launching_pad:             "🚀",
+  communication_tower:       "📡",
+  communication_satellite:   "🛰️📡",
 };
 
 const TILE_FULL_NAMES = {
@@ -5606,6 +6074,8 @@ const TILE_FULL_NAMES = {
   satellite_solar:           "Satellite Solar",
   satellite_dc:              "Satellite Data Center",
   launching_pad:             "Launching Pad",
+  communication_tower:       "Communication Tower",
+  communication_satellite:   "Communication Satellite",
 };
 
 // canPlaceOn: data-driven rule from board tile config
@@ -5708,30 +6178,49 @@ function previewPlacementBonuses(tile, tileType) {
   const dirs = tile.row & 1
     ? [[-1,1],[-1,0],[0,-1],[1,0],[1,1],[0,1]]
     : [[-1,0],[-1,-1],[0,-1],[1,-1],[1,0],[0,1]];
+
+  const seenAdjTerrains = new Set();
+  const seenAdjPlaced = new Set();
+  const seenCardTerrains = new Set();
+  const seenCardBuilds = new Set();
+
   for (const [dr, dc] of dirs) {
     const nb = tilesByKey[`${tile.row+dr},${tile.col+dc}`];
     if (!nb) continue;
-    for (const entry of _normTerrainBonusList(lastPrivateState?.pending_tile_meta?.bonuses_by_building_adjacent_to_terrain_type)) {
-      if (_entryMatchesTerrainType(entry, nb.terrain)) {
-        for (const [res, amt] of Object.entries(entry.immediate || {}))
-          immediate[res] = (immediate[res] || 0) + amt;
-        for (const [res, amt] of Object.entries(entry.production || {}))
-          production[res] = (production[res] || 0) + amt;
+
+    // Card-level bonuses_by_building_adjacent_to_terrain_type — once per unique terrain
+    if (nb.terrain && !seenCardTerrains.has(nb.terrain)) {
+      seenCardTerrains.add(nb.terrain);
+      for (const entry of _normTerrainBonusList(lastPrivateState?.pending_tile_meta?.bonuses_by_building_adjacent_to_terrain_type)) {
+        if (_entryMatchesTerrainType(entry, nb.terrain)) {
+          for (const [res, amt] of Object.entries(entry.immediate || {}))
+            immediate[res] = (immediate[res] || 0) + amt;
+          for (const [res, amt] of Object.entries(entry.production || {}))
+            production[res] = (production[res] || 0) + amt;
+        }
       }
     }
-    // Adjacency bonuses — conditional on what type is being placed
-    for (const entry of _normBonusList(nb.adjacency_bonuses)) {
-      const targetKeys = _parseTargetCoordKeys(entry);
-      const targetOk = !targetKeys.length || targetKeys.includes(`${tile.row},${tile.col}`);
-      if (_entryMatchesBuildType(entry, tileType) && targetOk) {
-        for (const [res, amt] of Object.entries(entry.immediate || {}))
-          immediate[res] = (immediate[res] || 0) + amt;
-        for (const [res, amt] of Object.entries(entry.production || {}))
-          production[res] = (production[res] || 0) + amt;
+
+    // Terrain-tile adjacency_bonuses — once per unique terrain type
+    if (nb.terrain && !seenAdjTerrains.has(nb.terrain)) {
+      seenAdjTerrains.add(nb.terrain);
+      for (const entry of _normBonusList(nb.adjacency_bonuses)) {
+        const targetKeys = _parseTargetCoordKeys(entry);
+        const targetOk = !targetKeys.length || targetKeys.includes(`${tile.row},${tile.col}`);
+        if (_entryMatchesBuildType(entry, tileType) && targetOk) {
+          for (const [res, amt] of Object.entries(entry.immediate || {}))
+            immediate[res] = (immediate[res] || 0) + amt;
+          for (const [res, amt] of Object.entries(entry.production || {}))
+            production[res] = (production[res] || 0) + amt;
+        }
       }
     }
+
+    // Placed-tile adjacency bonuses — once per unique placed tile type
     const pt = nb.placed_tile;
-    if (pt) {
+    const ptType = pt?.type?.replace(/ /g, "_");
+    if (pt && ptType && !seenAdjPlaced.has(ptType)) {
+      seenAdjPlaced.add(ptType);
       for (const entry of _normBonusList(pt.placed_tile_adjacency_bonuses)) {
         if (_entryMatchesBuildType(entry, tileType)) {
           for (const [res, amt] of Object.entries(entry.immediate || {}))
@@ -5739,6 +6228,22 @@ function previewPlacementBonuses(tile, tileType) {
           for (const [res, amt] of Object.entries(entry.production || {}))
             production[res] = (production[res] || 0) + amt;
         }
+      }
+    }
+
+    // Card-level bonuses_by_placing_next_to_building — collect unique build types
+    if (pt && ptType) seenCardBuilds.add(ptType);
+  }
+
+  // Apply card-level bonuses_by_placing_next_to_building once per unique adjacent build type
+  const cardBuildBonuses = _normBonusList(lastPrivateState?.pending_tile_meta?.bonuses_by_placing_next_to_building);
+  for (const adjType of seenCardBuilds) {
+    for (const entry of cardBuildBonuses) {
+      if (_entryMatchesBuildType(entry, adjType)) {
+        for (const [res, amt] of Object.entries(entry.immediate || {}))
+          immediate[res] = (immediate[res] || 0) + amt;
+        for (const [res, amt] of Object.entries(entry.production || {}))
+          production[res] = (production[res] || 0) + amt;
       }
     }
   }
@@ -6158,11 +6663,27 @@ function renderBuildRow() {
 
         const pollTag = card.pollution_tag || "neutral";
         const pollNote = pollTag === "polluting" ? " · 🏭 Polluting" : pollTag === "green" ? " · 🌿 Green" : "";
+
+        let feeWarning = "";
+        const adjFee = card.adjacent_placement_fee || 0;
+        const feeTargets = (card.adjacent_placement_fee_target_types || []).map(t => (t || "").replace(/ /g, "_"));
+        if (adjFee > 0 && feeTargets.length) {
+          const ownsTarget = boardTiles.some(t => {
+            const pt = t.placed_tile;
+            return pt && pt.owner_id === myPlayerId
+              && feeTargets.includes((pt.type || "").replace(/ /g, "_"));
+          });
+          if (!ownsTarget) {
+            const labels = feeTargets.map(t => (TILE_FULL_NAMES[t] || t.replace(/_/g, " ")));
+            feeWarning = `\n⚠️ You don't own a ${labels.join("/")}. You will pay 💰$${adjFee}B to the owner of an adjacent one.`;
+          }
+        }
+
         showConfirmDialog(
           `Play "${card.name}" from the Build Market?`,
           () => socket.emit("play_build_card", { row_index: rowIdx, green_upgrade: false }),
           {
-            detail: `Cost: ${costStr}${pollNote}`,
+            detail: `Cost: ${costStr}${pollNote}${feeWarning}`,
             confirmText: feeForGreen ? "🏭 Play (polluting)" : "Build",
             cancelText: "Cancel",
             extraButtons,
@@ -6617,6 +7138,8 @@ const TILE_TYPE_BONUS_OPTIONS = [
   ["satellite_dc",              "🛰️🖥️ Satellite DC"],
   ["factory",                   "🏭 Hardware Factory"],
   ["launching_pad",             "🚀 Launching Pad"],
+  ["communication_tower",       "📡 Communication Tower"],
+  ["communication_satellite",   "🛰️📡 Communication Satellite"],
 ];
 
 function _adjacentCoordOptionsForTile(tile) {
@@ -7190,6 +7713,8 @@ const BUILDABLE_TILE_TYPE_OPTIONS = [
   ["satellite_dc",              "🛰️🖥️ Satellite DC"],
   ["factory",                   "🏭 Hardware Factory"],
   ["launching_pad",             "🚀 Launching Pad"],
+  ["communication_tower",       "📡 Communication Tower"],
+  ["communication_satellite",   "🛰️📡 Communication Satellite"],
 ];
 
 // Terrain-type defaults loaded from tile_type.yaml via server

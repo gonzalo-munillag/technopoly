@@ -72,6 +72,10 @@ class Card:
     tiers: list[dict] = field(default_factory=list)
     # Which tier the card is currently at (0 = no tiers; 1 = base tier; 2/3 = upgraded)
     current_tier: int = 0
+    # Craftable items: things a player can produce from this played card.
+    # Each entry: {name, build, cost: {res: amount}, fee: int, fee_card_type: str,
+    #              requires_placed_build: str|None, only_playable_next_to: [], only_playable_on_terrains: []}
+    producibles: list[dict] = field(default_factory=list)
     # Pollution classification: "neutral" (default), "polluting", or "green"
     pollution_tag: str = "neutral"
     # Optional extra cost a player can pay when playing to upgrade from polluting → green
@@ -82,6 +86,8 @@ class Card:
     _instance_id: str = field(default_factory=lambda: str(uuid.uuid4()), repr=False, compare=False, hash=False)
     # Runtime override: set to "green" when the player pays fee_for_green at play time
     _effective_pollution_tag: str | None = field(default=None, repr=False, compare=False, hash=False)
+    # Tracks which producible indices have been used this year (reset at year start)
+    _producibles_used: set[int] = field(default_factory=set, repr=False, compare=False, hash=False)
 
     @property
     def effective_pollution_tag(self) -> str:
@@ -148,9 +154,11 @@ class Card:
             "tiers": self.tiers or [],
             "current_tier": self.current_tier,
             "responsible_mining": self.responsible_mining or {},
+            "producibles": self.producibles or [],
             "pollution_tag": self.pollution_tag,
             "fee_for_green": self.fee_for_green,
             "effective_pollution_tag": self.effective_pollution_tag,
+            "producibles_used": list(self._producibles_used),
             "instance_id": self._instance_id,
         }
         return d
@@ -234,6 +242,7 @@ class Card:
             adjacent_placement_fee_target_types=data.get("adjacent_placement_fee_target_types") or [],
             tiers=data.get("tiers") or [],
             responsible_mining=data.get("responsible_mining") or {},
+            producibles=data.get("producibles") or [],
             pollution_tag=data.get("pollution_tag") or "neutral",
             fee_for_green=data.get("fee_for_green") or None,
         )

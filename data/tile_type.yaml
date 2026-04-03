@@ -25,13 +25,13 @@ lake:
   - hydroelectric_power_plant
   build_bonuses:
   - immediate:
-      money: -100
+      money: -200
     production: {}
     build_type: data_center
   adjacency_bonuses:
-  - immediate:
-      money: 200
-    production: {}
+  - immediate: {}
+    production:
+      money: 1
     build_types:
     - nuclear_power_plant
     - natural_gas_power_plant
@@ -42,7 +42,7 @@ sea:
   - data_center
   build_bonuses:
   - immediate:
-      money: -200
+      money: -300
     production: {}
     build_type: data_center
   adjacency_bonuses: []
@@ -60,6 +60,7 @@ empty:
   - lobby_group
   - distribution_center
   - factory
+  - communication_tower
   build_bonuses: []
   adjacency_bonuses: []
 offshore_solar:
@@ -92,6 +93,10 @@ commercial:
       HR: 1
     production: {}
     build_type: office
+  - immediate: {}
+    production:
+      money: 1
+    build_type: lobby_group
   adjacency_bonuses: []
 industrial:
   only_build:
@@ -103,10 +108,11 @@ industrial:
   - data_center
   - distribution_center
   - factory
+  - communication_tower
   build_bonuses:
-  - immediate: {}
-    production:
-      money: 1
+  - immediate:
+      money: 100
+    production: {}
     build_types:
     - nuclear_power_plant
     - natural_gas_power_plant
@@ -116,6 +122,7 @@ industrial:
     - data_center
     - distribution_center
     - factory
+    - communication_tower
   adjacency_bonuses: []
 sun:
   only_build:
@@ -127,11 +134,24 @@ sun:
   - data_center
   - distribution_center
   - factory
+  - communication_tower
   build_bonuses:
   - immediate:
-      money: 100
+      money: 200
     production: {}
     build_type: pv_power_plant
+  - immediate:
+      money: -200
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - wind_power_plant
+    - data_center
+    - distribution_center
+    - factory
+    - communication_tower
   adjacency_bonuses: []
 wind:
   only_build:
@@ -143,11 +163,24 @@ wind:
   - data_center
   - distribution_center
   - factory
+  - communication_tower
   build_bonuses:
   - immediate:
       money: 200
     production: {}
     build_type: wind_power_plant
+  - immediate:
+      money: -200
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - pv_power_plant
+    - data_center
+    - distribution_center
+    - factory
+    - communication_tower
   adjacency_bonuses: []
 gas_reserve:
   only_build:
@@ -157,11 +190,25 @@ gas_reserve:
   - pv_power_plant
   - wind_power_plant
   - data_center
+  - distribution_center
+  - factory
+  - communication_tower
   build_bonuses:
   - immediate:
       money: 100
     production: {}
     build_type: natural_gas_power_plant
+  - immediate:
+      money: -200
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - coal_power_plant
+    - pv_power_plant
+    - data_center
+    - distribution_center
+    - factory
+    - communication_tower
   adjacency_bonuses: []
 coal:
   only_build:
@@ -171,11 +218,25 @@ coal:
   - pv_power_plant
   - wind_power_plant
   - data_center
+  - communication_tower
   build_bonuses:
   - immediate:
       money: 100
     production: {}
-    build_type: coal_power_plant
+    build_types:
+    - coal_power_plant
+    - communication_tower
+  - immediate:
+      money: -200
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - pv_power_plant
+    - wind_power_plant
+    - data_center
+    - distribution_center
+    - factory
   adjacency_bonuses: []
 geothermal:
   only_build:
@@ -186,7 +247,11 @@ rare_metal_mine:
   only_build:
   - data_center
   - rare_metal_mine
-  build_bonuses: []
+  build_bonuses:
+  - immediate:
+      money: -200
+    production: {}
+    build_type: data_center
   adjacency_bonuses: []
 natural_park:
   only_build:
@@ -198,6 +263,7 @@ natural_park:
   - data_center
   - distribution_center
   - factory
+  - communication_tower
   build_bonuses:
   - immediate:
       reputation: -1
@@ -211,11 +277,13 @@ natural_park:
     - data_center
     - distribution_center
     - factory
+    - communication_tower
   adjacency_bonuses: []
 space:
   only_build:
   - satellite_solar
   - satellite_dc
+  - communication_satellite
   build_bonuses: []
   adjacency_bonuses: []
 launching_pad:
