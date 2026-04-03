@@ -3,6 +3,7 @@ import os
 import time
 import uuid
 import threading
+import traceback
 from pathlib import Path
 
 import yaml
@@ -34,6 +35,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 PLAYER_PASSWORD = os.environ["PLAYER_PASSWORD"]
 MASTER_PASSWORD = os.environ["MASTER_PASSWORD"]
+_PRODUCTION_ONLY_KEYS = {"HR", "data_centers", "ad_campaigns"}
 
 game = Game()
 connected_players: dict[str, str] = {}  # sid -> player_id
@@ -54,13 +56,19 @@ def _touch_activity():
 
 def _card_build_types(card) -> list[str]:
     """Return build tile types from a card (supports scalar or list)."""
+    def _norm(v):
+        if not v:
+            return None
+        return str(v).strip().replace(" ", "_")
     raw = getattr(card, "build", None)
     if isinstance(raw, list):
-        return [b for b in raw if b]
+        return [b for b in (_norm(x) for x in raw) if b]
     if raw:
-        return [raw]
+        n = _norm(raw)
+        return [n] if n else []
     tile = getattr(card, "tile_type", None)
-    return [tile] if tile else []
+    n = _norm(tile)
+    return [n] if n else []
 
 
 def _money_cost_for_card_play(player, card) -> int:
@@ -108,7 +116,7 @@ def _has_any_legal_tile_placement(
     money_after_card: int | None = None,
 ) -> bool:
     """Check if player can legally place this tile anywhere right now."""
-    played_types = {c.card_color_type for c in player.played_cards if c.card_color_type}
+    played_types = {getattr(c, "card_color_type", None) for c in player.played_cards if c is not None and getattr(c, "card_color_type", None)}
     only_next_to = (meta or {}).get("only_playable_next_to") or []
     only_terrains = (meta or {}).get("only_playable_on_terrains") or []
     for t in game.board.to_list():
@@ -607,6 +615,7 @@ def _send_regulation_alerts():
             "compliance": reg.compliance if affected else {},
             "court_penalty": reg.court_penalty if affected else {},
             "court_threshold": reg.court_threshold,
+            "effective_court_threshold": game.effective_court_threshold(player_id) if affected else reg.court_threshold,
             "targeted_cards": [c.to_dict() for c in targeted_cards],
         }, room=sid)
 
@@ -716,9 +725,9 @@ def on_play_card(data):
             target_player = game.players[fee_target]
             eligible = False
             if card.fee_card_id:
-                eligible = any(c.id == card.fee_card_id for c in target_player.played_cards)
+                eligible = any(getattr(c, "id", None) == card.fee_card_id for c in target_player.played_cards if c is not None)
             elif card.fee_card_type:
-                eligible = any(c.card_color_type == card.fee_card_type for c in target_player.played_cards)
+                eligible = any(getattr(c, "card_color_type", None) == card.fee_card_type for c in target_player.played_cards if c is not None)
             elif card.fee_company_type:
                 eligible = bool(
                     target_player.company and
@@ -808,6 +817,16 @@ def on_play_build_card(data):
     if err:
         emit("error", {"message": err})
         return
+
+    # Green upgrade: if player chose to pay fee_for_green, check extra affordability
+    green_upgrade = bool(data.get("green_upgrade", False))
+    fee_for_green = getattr(card, "fee_for_green", None) or {}
+    if green_upgrade and fee_for_green:
+        for res, amount in fee_for_green.items():
+            have = player.resources.get(res, 0)
+            if have < amount:
+                emit("error", {"message": f"Cannot afford green upgrade: need {amount} {res} (have {have})."})
+                return
     if build_tiles:
         tile_meta = {
             "only_playable_next_to": card.only_playable_next_to or [],
@@ -822,7 +841,25 @@ def on_play_build_card(data):
                 return
 
     try:
+        # Snapshot state so any runtime error cannot leave a half-applied build play.
+        resources_before = dict(player.resources)
+        production_before = dict(player.production)
+        users_before = player.users
+        played_before = list(player.played_cards)
+        cards_played_before = player.cards_played_this_turn
+        pending_tile_before = player.pending_tile
+        pending_queue_before = list(player.pending_tile_queue)
+        pending_meta_before = dict(player.pending_tile_meta or {})
+        shared_row_before = list(game.shared_build_row)
+        build_deck_before = list(game.build_deck)
+
         player.pay_costs(card, {})
+
+        # Deduct green upgrade fee and mark card as green
+        if green_upgrade and fee_for_green:
+            for res, amount in fee_for_green.items():
+                player.resources[res] = player.resources.get(res, 0) - amount
+            card._effective_pollution_tag = "green"
 
         # Remove from shared row and refill slot
         game.shared_build_row[row_index] = None
@@ -868,6 +905,20 @@ def on_play_build_card(data):
         _check_win_condition()
 
     except Exception as exc:
+        # Rollback local mutations done in this handler.
+        player.resources = resources_before
+        player.production = production_before
+        player.users = users_before
+        player.played_cards = played_before
+        player.cards_played_this_turn = cards_played_before
+        player.pending_tile = pending_tile_before
+        player.pending_tile_queue = pending_queue_before
+        player.pending_tile_meta = pending_meta_before
+        game.shared_build_row = shared_row_before
+        game.build_deck = build_deck_before
+        socketio.emit("game_state", game.to_dict(), room="game")
+        _send_private_states()
+        traceback.print_exc()
         emit("error", {"message": f"Build card error: {exc}"})
 
 
@@ -1045,7 +1096,7 @@ def on_place_tile(data):
     row, col = data.get("row"), data.get("col")
 
     # Check tile requirements against player's played card subtypes (card_color_type = "social platform", etc.)
-    played_types = {c.card_color_type for c in player.played_cards if c.card_color_type}
+    played_types = {getattr(c, "card_color_type", None) for c in player.played_cards if c is not None and getattr(c, "card_color_type", None)}
     if not game.board.player_meets_requirements(row, col, played_types):
         tile = game.board.get_tile(row, col)
         reqs = tile.get("requirements", []) if tile else []
@@ -1092,6 +1143,10 @@ def on_place_tile(data):
     for res, amt in bonuses.get("immediate", {}).items():
         if res == "users":
             player.gain_users(amt, game)
+        elif res in _PRODUCTION_ONLY_KEYS:
+            # Some terrain/tile bonuses historically store HR/DC/ads in "immediate".
+            # Treat those as production increments so gameplay matches expectations.
+            player.production[res] = player.production.get(res, 0) + amt
         else:
             player.resources[res] = player.resources.get(res, 0) + amt
     for res, amt in bonuses.get("production", {}).items():
@@ -1344,8 +1399,8 @@ def _send_private_states():
             )
             socketio.emit("your_state", {
                 "player_id": player_id,
-                "hand": [c.to_dict() for c in player.hand],
-                "draft_pool": [c.to_dict() for c in player.draft_pool],
+                "hand": [c.to_dict() for c in player.hand if c is not None],
+                "draft_pool": [c.to_dict() for c in player.draft_pool if c is not None],
                 "resources": player.resources,
                 "production": player.production,
                 "users": player.users,
@@ -1736,7 +1791,7 @@ def on_add_card(data):
     }
     _DEFAULT = {"name": "New Card", "id": _next_card_id(), "image": None, "description": "",
                 "type": "", "number": 1, "build": None, "costs": dict(_COSTS_TEMPLATE),
-                "effect": {}, "boosts": [], "requirements": [],
+                "effect": {}, "boosts": [], "requirements": [], "min_reputation": None,
                 "only_playable_next_to": [],
                 "only_playable_on_terrains": [],
                 "bonuses_by_placing_next_to_building": [],
@@ -1745,7 +1800,10 @@ def on_add_card(data):
                 "placed_tile_adjacency_bonuses": [],
                 "adjacent_placement_fee": 0,
                 "adjacent_placement_fee_target_types": [],
-                "tiers": []}
+                "tiers": [],
+                "pollution_tag": "neutral",
+                "fee_for_green": None,
+                "court_threshold_modifier": None}
 
     new_card = _CATEGORY_TEMPLATES.get(card_type, dict(_DEFAULT))
     if "id" not in new_card or new_card["id"] == 0:
@@ -1976,7 +2034,11 @@ def on_get_params():
     if not _ensure_editor(request.sid):
         return
     params = dict(load_params() or {})
-    params.pop("money_per_users", None)  # legacy key removed
+    params.pop("money_per_users", None)    # legacy key removed
+    params.pop("reputation_max", None)     # derived from thresholds
+    params.pop("reputation_min", None)     # derived from thresholds
+    params.setdefault("reputation_modifier_resource_values", {})
+    params.setdefault("reputation_modifier_production_values", {})
     emit("params_data", params)
 
 @socketio.on("save_params")
@@ -1985,6 +2047,10 @@ def on_save_params(data):
         return
     data = dict(data or {})
     data.pop("money_per_users", None)  # legacy key removed
+    data.pop("reputation_max", None)   # derived from thresholds
+    data.pop("reputation_min", None)   # derived from thresholds
+    data["reputation_modifier_resource_values"] = dict(data.get("reputation_modifier_resource_values") or {})
+    data["reputation_modifier_production_values"] = dict(data.get("reputation_modifier_production_values") or {})
     with open(PARAMS_FILE, "w") as f:
         yaml.dump(data, f, default_flow_style=False, sort_keys=False)
     load_params()

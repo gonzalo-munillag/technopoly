@@ -41,6 +41,8 @@ class Card:
     # Format: [{"build_type": "<tile_type>|None", "immediate": {...}, "production": {...}}, ...]
     placed_tile_adjacency_bonuses: list[dict] = field(default_factory=list)
     requirements: list[str] = field(default_factory=list)  # card types player must have played
+    min_reputation: int | None = None  # minimum reputation needed to play this card
+    court_threshold_modifier: int | None = None  # reduces the die-roll threshold needed to win in court (e.g. -1 → need ≥3 instead of ≥4)
     # Optional tile-adjacency restriction for build cards:
     # card can place its tile only if at least one adjacent placed tile type matches.
     only_playable_next_to: list[str] = field(default_factory=list)
@@ -70,10 +72,20 @@ class Card:
     tiers: list[dict] = field(default_factory=list)
     # Which tier the card is currently at (0 = no tiers; 1 = base tier; 2/3 = upgraded)
     current_tier: int = 0
+    # Pollution classification: "neutral" (default), "polluting", or "green"
+    pollution_tag: str = "neutral"
+    # Optional extra cost a player can pay when playing to upgrade from polluting → green
+    fee_for_green: dict | None = None
     # Stable per-instance identifier — never shared between copies of the same card.
     # Uses uuid4 so it survives across moves (hand → played_cards) and is never reused
     # unlike id(card) whose memory address can be recycled after garbage collection.
     _instance_id: str = field(default_factory=lambda: str(uuid.uuid4()), repr=False, compare=False, hash=False)
+    # Runtime override: set to "green" when the player pays fee_for_green at play time
+    _effective_pollution_tag: str | None = field(default=None, repr=False, compare=False, hash=False)
+
+    @property
+    def effective_pollution_tag(self) -> str:
+        return self._effective_pollution_tag or self.pollution_tag
 
     @property
     def fee(self) -> int:
@@ -124,6 +136,8 @@ class Card:
             "starting_tiles": self.starting_tiles,
             "placed_tile_adjacency_bonuses": self.placed_tile_adjacency_bonuses or [],
             "requirements": self.requirements or [],
+            "min_reputation": self.min_reputation,
+            "court_threshold_modifier": self.court_threshold_modifier,
             "only_playable_next_to": self.only_playable_next_to or [],
             "only_playable_on_terrains": self.only_playable_on_terrains or [],
             "bonuses_by_placing_next_to_building": self.bonuses_by_placing_next_to_building or [],
@@ -134,6 +148,9 @@ class Card:
             "tiers": self.tiers or [],
             "current_tier": self.current_tier,
             "responsible_mining": self.responsible_mining or {},
+            "pollution_tag": self.pollution_tag,
+            "fee_for_green": self.fee_for_green,
+            "effective_pollution_tag": self.effective_pollution_tag,
             "instance_id": self._instance_id,
         }
         return d
@@ -206,6 +223,8 @@ class Card:
             starting_tiles=data.get("starting_tiles") or [],
             placed_tile_adjacency_bonuses=placed_tile_adjacency_bonuses,
             requirements=data.get("requirements") or [],
+            min_reputation=data.get("min_reputation") or None,
+            court_threshold_modifier=data.get("court_threshold_modifier") or None,
             only_playable_next_to=data.get("only_playable_next_to") or [],
             only_playable_on_terrains=data.get("only_playable_on_terrains") or [],
             bonuses_by_placing_next_to_building=bonuses_by_placing_next_to_building,
@@ -215,4 +234,6 @@ class Card:
             adjacent_placement_fee_target_types=data.get("adjacent_placement_fee_target_types") or [],
             tiers=data.get("tiers") or [],
             responsible_mining=data.get("responsible_mining") or {},
+            pollution_tag=data.get("pollution_tag") or "neutral",
+            fee_for_green=data.get("fee_for_green") or None,
         )

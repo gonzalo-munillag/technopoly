@@ -7,6 +7,20 @@ let isEditor = false;
 let lastGameState = null;
 let lastPrivateState = null;
 
+function refreshCardRuleDerivedUI() {
+  if (lastPrivateState && lastGameState) {
+    renderHand(lastPrivateState.hand || []);
+    const me = lastGameState.players?.[myPlayerId];
+    if (me) renderPlayedCards(me.played_cards || []);
+    if (!handModal.classList.contains("hidden")) renderHandModal();
+    if (!boardModal.classList.contains("hidden")) renderBuildRow();
+  }
+  // Editor card grid also shows rule-derived terrain info.
+  if (!editorModal.classList.contains("hidden") && !editingKey) {
+    renderEditorGrid();
+  }
+}
+
 // ── DOM refs ────────────────────────────────────────────────
 const loginScreen  = document.getElementById("login-screen");
 const lobbyScreen  = document.getElementById("lobby-screen");
@@ -141,6 +155,14 @@ function showConfirmDialog(message, onConfirm, opts = {}) {
   noBtn.addEventListener("click", () => dismiss());
 
   actions.appendChild(yesBtn);
+  // Optional extra buttons inserted between confirm and cancel
+  (opts.extraButtons || []).forEach(eb => {
+    const btn = document.createElement("button");
+    btn.className = eb.className || "btn btn-sm";
+    btn.textContent = eb.text;
+    btn.addEventListener("click", () => { overlay.remove(); eb.onClick(); });
+    actions.appendChild(btn);
+  });
   actions.appendChild(noBtn);
   box.appendChild(actions);
   overlay.appendChild(box);
@@ -468,12 +490,20 @@ socket.on("game_won", (data) => {
 
 function getRepMod(rep) {
   const thresh = lastGameState?.params?.reputation_thresholds || [
-    { min_rep: 10, modifier: 2 }, { min_rep: 5, modifier: 1 },
-    { max_rep: -10, modifier: -2 }, { max_rep: -5, modifier: -1 },
+    { value: 10, direction: "gte", modifier: 2 },
+    { value: 5,  direction: "gte", modifier: 1 },
+    { value: -5, direction: "lte", modifier: -1 },
+    { value: -10,direction: "lte", modifier: -2 },
   ];
   for (const t of thresh) {
-    if ("min_rep" in t && rep >= t.min_rep) return t.modifier;
-    if ("max_rep" in t && rep <= t.max_rep) return t.modifier;
+    // New format
+    if ("value" in t && "direction" in t) {
+      if (t.direction === "gte" && rep >= t.value) return t.modifier;
+      if (t.direction === "lte" && rep <= t.value) return t.modifier;
+    }
+    // Legacy backward compat
+    else if ("min_rep" in t && rep >= t.min_rep) return t.modifier;
+    else if ("max_rep" in t && rep <= t.max_rep) return t.modifier;
   }
   return 0;
 }
@@ -481,6 +511,7 @@ function getRepMod(rep) {
 // ── Render game state ───────────────────────────────────────
 function renderGameState(state) {
   lastGameState = state;
+  if (Array.isArray(state.board)) boardTiles = state.board;
   rebuildPlayerColors();
   rebuildCardIndex();
   yearBadge.textContent = `Year ${state.year}`;
@@ -565,6 +596,9 @@ function renderGameState(state) {
       companyPanel.innerHTML = `<span class="text-dim">None yet</span>`;
     }
   }
+
+  // Ensure card UI reflects latest board rules immediately.
+  refreshCardRuleDerivedUI();
 }
 
 // ── Company pick ────────────────────────────────────────────
@@ -859,14 +893,17 @@ socket.on("regulation_alert", (data) => {
       .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
     const courtText = Object.entries(data.court_penalty)
       .map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(", ");
-    const winPct = Math.round(((7 - data.court_threshold) / 6) * 100);
+    const effectiveThresh = data.effective_court_threshold ?? data.court_threshold;
+    const winPct = Math.round(((7 - effectiveThresh) / 6) * 100);
     const losePct = 100 - winPct;
     const targeted = (data.targeted_cards || []).map(c => c.name).join(", ");
     const isWorldEvent = data.card_type === "world_event";
     let html = `<p><strong>${isWorldEvent ? "🌍 This world event" : "⚖️ This regulation"} affects you!</strong></p>`;
     if (targeted) html += `<p>Targeted card(s): <strong>${targeted}</strong> — accepting means losing them.</p>`;
     html += `<p class="reg-compliance-text">Accept compliance: ${compText}</p>`;
-    html += `<p class="reg-court-text">Court loss penalty: ${courtText} — ${losePct}% chance of losing (<span class="court-threshold">&ge; ${data.court_threshold}</span> on a die roll to win)</p>`;
+    const modNote = (data.effective_court_threshold != null && data.effective_court_threshold !== data.court_threshold)
+      ? ` <em>(modified from ≥${data.court_threshold})</em>` : "";
+    html += `<p class="reg-court-text">Court loss penalty: ${courtText} — ${losePct}% chance of losing (<span class="court-threshold">&ge; ${effectiveThresh}</span>${modNote} on a die roll to win)</p>`;
     if (targeted) html += `<p class="reg-compliance-text">Win in court (${winPct}%): keep your card(s), no penalty.</p>`;
     regulationAlertBox.innerHTML = html;
     regulationAlertBox.classList.remove("hidden");
@@ -1727,8 +1764,11 @@ function updateReputationBar(val) {
   const bar = document.getElementById("reputation-bar");
   if (!marker) return;
   const v = Math.round(val);
-  const repMax = lastGameState?.params?.reputation_max ?? 10;
-  const repMin = lastGameState?.params?.reputation_min ?? -10;
+  const thresh = lastGameState?.params?.reputation_thresholds || [];
+  const lteVals = thresh.filter(t => t.direction === "lte" || "max_rep" in t).map(t => t.value ?? t.max_rep);
+  const gteVals = thresh.filter(t => t.direction === "gte" || "min_rep" in t).map(t => t.value ?? t.min_rep);
+  const repMin = lteVals.length ? Math.min(...lteVals) : -10;
+  const repMax = gteVals.length ? Math.max(...gteVals) : 10;
   const range = repMax - repMin;
   const clamped = Math.max(repMin, Math.min(repMax, v));
   const pct = ((clamped - repMin) / range) * 100;
@@ -1742,10 +1782,15 @@ function updateReputationBar(val) {
     else if (mod < 0) status = `⚠️ ${mod}M👥 per gain, ${mod}🔧👔 per hire`;
     else status = "No bonus or penalty";
     const thresh = lastGameState?.params?.reputation_thresholds || [];
-    const threshStr = thresh.map(t =>
-      "min_rep" in t ? `≥${t.min_rep}: ${t.modifier > 0 ? "+" : ""}${t.modifier}` :
-      `≤${t.max_rep}: ${t.modifier > 0 ? "+" : ""}${t.modifier}`
-    ).join(" | ");
+    const threshStr = thresh.map((t, i) => {
+      const sign = n => (n > 0 ? "+" : "") + n;
+      if ("value" in t && "direction" in t) {
+        const dir = t.direction === "gte" ? "≥" : "≤";
+        return `T${i+1}: rep${dir}${t.value} → ${sign(t.modifier)}`;
+      }
+      if ("min_rep" in t) return `T${i+1}: rep≥${t.min_rep} → ${sign(t.modifier)}`;
+      return `T${i+1}: rep≤${t.max_rep} → ${sign(t.modifier)}`;
+    }).join(" | ");
     bar.setAttribute("data-tip", `Rep ${v}: ${status}\n${threshStr}`);
   }
 }
@@ -1845,7 +1890,9 @@ function rebuildCardIndex() {
     for (const boost of (card.boosts || [])) {
       if (!boost.target_id) continue;
       const bonus = boost.bonus || {};
-      const hasBonus = Object.values(bonus).some(v => Number(v) !== 0);
+      const production = boost.production || {};
+      const hasBonus = Object.values(bonus).some(v => Number(v) !== 0)
+                    || Object.values(production).some(v => Number(v) !== 0);
       if (!hasBonus) continue;
       const ids = Array.isArray(boost.target_id) ? boost.target_id : [boost.target_id];
       for (const tid of ids) {
@@ -1868,7 +1915,7 @@ function rebuildCardIndex() {
   }
 }
 function cardNameById(id) {
-  return cardNamesById[id] || `#${id}`;
+  return cardNamesById[id] || "Unknown card";
 }
 
 // ── Card element builder ────────────────────────────────────
@@ -1890,6 +1937,7 @@ const CARD_SUBTYPE_EMOJIS = {
   "solar thermal":            "☀️",
   "geothermal power plant":   "🌡️",
   "data center":              "🗄️",
+  "distribution center":      "📦",
   "office":                   "🏢",
   "ad campaign":              "📢",
   "lobby":                    "🎓",
@@ -1944,7 +1992,7 @@ const TERRAIN_EMOJIS = {
   empty: "🌫️",
   city: "🏙️",
   lake: "🌊",
-  sea: "🌊",
+  sea: "🟦",
   offshore_wind: "💨",
   offshore_solar: "☀️",
   government: "🏛️",
@@ -1984,10 +2032,10 @@ function _buildableTerrainsFromBoardRules(card) {
   const buildTypes = _cardBuildTypes(card);
   if (!buildTypes.length) return [];
 
-  // Prefer concrete board data (authoritative; includes per-tile overrides).
-  const boardSource = (Array.isArray(boardTiles) && boardTiles.length)
-    ? boardTiles
-    : ((Array.isArray(editorBoardTiles) && editorBoardTiles.length) ? editorBoardTiles : []);
+  // Prefer editor board snapshot first (most up-to-date while editing), then game board.
+  const boardSource = (Array.isArray(editorBoardTiles) && editorBoardTiles.length)
+    ? editorBoardTiles
+    : ((Array.isArray(boardTiles) && boardTiles.length) ? boardTiles : []);
   if (boardSource.length) {
     const terrains = new Set();
     boardSource.forEach(tile => {
@@ -1998,8 +2046,23 @@ function _buildableTerrainsFromBoardRules(card) {
     return [...terrains];
   }
 
-  // No board snapshot available yet; avoid partial/inconsistent terrain lists.
-  return [];
+  // Fallback to terrain-type defaults when board snapshots are not available yet.
+  const terrains = new Set();
+  Object.entries(tileTypeConfig || {}).forEach(([terrain, cfg]) => {
+    const onlyBuild = cfg?.only_build;
+    if (onlyBuild == null || (Array.isArray(onlyBuild) && buildTypes.some(bt => onlyBuild.includes(bt)))) {
+      terrains.add(terrain);
+    }
+  });
+  return [...terrains];
+}
+
+function _hasBoardRuleSnapshot() {
+  return (
+    (Array.isArray(editorBoardTiles) && editorBoardTiles.length > 0) ||
+    (Array.isArray(boardTiles) && boardTiles.length > 0) ||
+    (tileTypeConfig && typeof tileTypeConfig === "object" && Object.keys(tileTypeConfig).length > 0)
+  );
 }
 
 function _mergeBonusInto(acc, immediate, production) {
@@ -2011,34 +2074,70 @@ function _mergeBonusInto(acc, immediate, production) {
   });
 }
 
+function _entryMatchesAnyBuildType(entry, buildTypes) {
+  if (!Array.isArray(buildTypes) || !buildTypes.length) return false;
+  return buildTypes.some(bt => _entryMatchesBuildType(entry, bt));
+}
+
 function _boardTerrainBonusesForCard(card, bonusKey) {
   const buildTypes = _cardBuildTypes(card);
   if (!buildTypes.length) return [];
 
   const byTerrain = new Map();
+  const seenPerTerrain = new Map();
   const addTerrainEntry = (terrain, entry) => {
     if (!terrain || !entry) return;
-    const bt = entry.build_type || null;
-    if (bt && !buildTypes.includes(bt)) return;
+    if (!_entryMatchesAnyBuildType(entry, buildTypes)) return;
+    const bucket = seenPerTerrain.get(terrain) || new Set();
+    const key = JSON.stringify({
+      bt: _parseBonusBuildTypeKeys(entry).sort(),
+      i: entry.immediate || {},
+      p: entry.production || {},
+    });
+    if (bucket.has(key)) return;
+    bucket.add(key);
+    seenPerTerrain.set(terrain, bucket);
     const cur = byTerrain.get(terrain) || { terrain_type: terrain, immediate: {}, production: {} };
     _mergeBonusInto(cur, entry.immediate || {}, entry.production || {});
     byTerrain.set(terrain, cur);
   };
 
-  if (tileTypeConfig && typeof tileTypeConfig === "object" && Object.keys(tileTypeConfig).length) {
-    Object.entries(tileTypeConfig).forEach(([terrain, cfg]) => {
-      _normBonusList(cfg?.[bonusKey]).forEach(entry => addTerrainEntry(terrain, entry));
+  // Prefer current board tiles so per-tile edits are reflected; fallback to terrain defaults.
+  const boardSource = (Array.isArray(editorBoardTiles) && editorBoardTiles.length)
+    ? editorBoardTiles
+    : ((Array.isArray(boardTiles) && boardTiles.length) ? boardTiles : []);
+  if (boardSource.length) {
+    boardSource.forEach(tile => {
+      if (bonusKey === "build_bonuses" && !buildTypes.some(bt => _tileAllowsBuildTypeByRule(tile, bt))) {
+        return;
+      }
+      _normBonusList(tile?.[bonusKey]).forEach(entry => addTerrainEntry(tile.terrain, entry));
     });
   } else {
-    const boardSource = (Array.isArray(boardTiles) && boardTiles.length)
-      ? boardTiles
-      : ((Array.isArray(editorBoardTiles) && editorBoardTiles.length) ? editorBoardTiles : []);
-    boardSource.forEach(tile => {
-      _normBonusList(tile?.[bonusKey]).forEach(entry => addTerrainEntry(tile.terrain, entry));
+    Object.entries(tileTypeConfig || {}).forEach(([terrain, cfg]) => {
+      _normBonusList(cfg?.[bonusKey]).forEach(entry => addTerrainEntry(terrain, entry));
     });
   }
 
   return [...byTerrain.values()].filter(
+    e => Object.keys(e.immediate || {}).length || Object.keys(e.production || {}).length
+  );
+}
+
+function _mergeTerrainBonusLists(a, b) {
+  const merged = new Map();
+  [..._normTerrainBonusList(a), ..._normTerrainBonusList(b)].forEach(entry => {
+    const keys = _parseBonusTerrainTypeKeys(entry).sort();
+    const key = keys.join("|") || "*";
+    const cur = merged.get(key) || (() => {
+      if (keys.length === 1) return { terrain_type: keys[0], immediate: {}, production: {} };
+      if (keys.length > 1) return { terrain_types: keys, immediate: {}, production: {} };
+      return { terrain_type: null, immediate: {}, production: {} };
+    })();
+    _mergeBonusInto(cur, entry.immediate || {}, entry.production || {});
+    merged.set(key, cur);
+  });
+  return [...merged.values()].filter(
     e => Object.keys(e.immediate || {}).length || Object.keys(e.production || {}).length
   );
 }
@@ -2101,8 +2200,13 @@ function createCardElement(card, options = {}) {
     boostsHtml = `<div class="card-boosts"><span class="card-section-label">Boosts</span><span class="card-effects-row">`;
     card.boosts.forEach((b, i) => {
       const bonusEntries = Object.entries(b.bonus || {}).filter(([, v]) => v);
-      const bonusStr = bonusEntries.length
-        ? bonusEntries.map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)}${emojiRes(k)}`).join(" ")
+      const prodEntries  = Object.entries(b.production || {}).filter(([, v]) => v);
+      const parts = [
+        ...bonusEntries.map(([k, v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)}${emojiRes(k)}`),
+        ...prodEntries.map(([k, v])  => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)}${emojiRes(k)}/yr`),
+      ];
+      const bonusStr = parts.length
+        ? parts.join(" ")
         : `<em style="opacity:.8">no bonus set</em>`;
       let targetStr = "";
       if (b.target_id) {
@@ -2182,9 +2286,38 @@ function createCardElement(card, options = {}) {
   // Requirements
   let reqHtml = "";
   const reqs = card.requirements || [];
+  const minRep = card.min_reputation != null ? Number(card.min_reputation) : null;
+  const reqParts = [];
   if (reqs.length) {
-    const reqStr = reqs.map(r => CARD_SUBTYPE_EMOJIS[r] ? `${CARD_SUBTYPE_EMOJIS[r]} ${r}` : r).join(", ");
-    reqHtml = `<div class="card-requirements"><span class="card-section-label">Requires</span><span class="card-req-list">${reqStr}</span></div>`;
+    reqParts.push(reqs.map(r => CARD_SUBTYPE_EMOJIS[r] ? `${CARD_SUBTYPE_EMOJIS[r]} ${r}` : r).join(", "));
+  }
+  if (minRep != null && !isNaN(minRep)) {
+    reqParts.push(`⭐ ≥${minRep} rep`);
+  }
+  if (reqParts.length) {
+    reqHtml = `<div class="card-requirements"><span class="card-section-label">Requires</span><span class="card-req-list">${reqParts.join(" · ")}</span></div>`;
+  }
+  const courtMod = card.court_threshold_modifier != null ? Number(card.court_threshold_modifier) : null;
+  if (courtMod != null && !isNaN(courtMod) && courtMod !== 0) {
+    const effectiveThresh = Math.max(2, 4 + courtMod);
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">Court</span><span class="card-req-list">⚖️ roll ≥${effectiveThresh} to win (${courtMod > 0 ? "+" : ""}${courtMod})</span></div>`;
+  }
+  const effTag = card.effective_pollution_tag || card.pollution_tag || "neutral";
+  if (effTag === "polluting") {
+    const feeForGreen = card.fee_for_green && Object.keys(card.fee_for_green).length ? card.fee_for_green : null;
+    let pollutionStr = "🏭 Polluting";
+    if (feeForGreen) {
+      const feeParts = Object.entries(feeForGreen).map(([k, v]) => {
+        if (k === "money") return `💰 +$${v}B`;
+        if (k === "engineers") return `🔧 +${v} Eng`;
+        if (k === "suits") return `👔 +${v} Suits`;
+        return `+${v} ${k}`;
+      });
+      pollutionStr += ` <span style="opacity:.75;font-size:.85em">(${feeParts.join(" ")} → 🌿)</span>`;
+    }
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">Pollution</span><span class="card-req-list">${pollutionStr}</span></div>`;
+  } else if (effTag === "green") {
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">Pollution</span><span class="card-req-list">🌿 Green</span></div>`;
   }
   const nextTo = card.only_playable_next_to || [];
   if (nextTo.length) {
@@ -2194,46 +2327,41 @@ function createCardElement(card, options = {}) {
     reqHtml += `<div class="card-requirements"><span class="card-section-label">Only playable next to</span><span class="card-req-list">${nextToStr}</span></div>`;
   }
   const isBuildCard = !!card.build;
-  const onlyTerrains = card.only_playable_on_terrains || [];
-  if (onlyTerrains.length) {
-    const terrainStr = onlyTerrains.map(_terrainLabel).filter(Boolean).join(" • ");
-    reqHtml += `<div class="card-requirements"><span class="card-section-label">Buildable terrains</span><span class="card-req-list">${terrainStr || "Any legal terrain"}</span></div>`;
-  } else if (isBuildCard) {
-    const boardTerrains = _buildableTerrainsFromBoardRules(card);
-    if (boardTerrains.length) {
-      const terrainStr = boardTerrains.map(_terrainLabel).filter(Boolean).join(" • ");
-      reqHtml += `<div class="card-requirements"><span class="card-section-label">Buildable terrains</span><span class="card-req-list">${terrainStr || "Any legal terrain"}</span></div>`;
-    } else {
-      reqHtml += `<div class="card-requirements"><span class="card-section-label">Buildable terrains</span><span class="card-req-list">Any legal terrain</span></div>`;
-    }
-  }
   const placeAdjBonuses = card.bonuses_by_placing_next_to_building || [];
   if (placeAdjBonuses.length) {
     const txt = _formatConditionalBonuses(placeAdjBonuses, "Next to");
     if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">On placement (adjacent)</span><span class="card-req-list">${txt}</span></div>`;
   }
   const terrainBonuses = card.bonuses_by_building_on_terrain_type || [];
-  if (terrainBonuses.length) {
-    const txt = _formatTerrainConditionalBonuses(terrainBonuses, "On terrain");
-    if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">On placement (terrain)</span><span class="card-req-list">${txt}</span></div>`;
-  }
   const adjacentTerrainBonuses = card.bonuses_by_building_adjacent_to_terrain_type || [];
-  if (adjacentTerrainBonuses.length) {
-    const txt = _formatTerrainConditionalBonuses(adjacentTerrainBonuses, "Next to terrain");
-    if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">On placement (adjacent terrain)</span><span class="card-req-list">${txt}</span></div>`;
+
+  const boardOnTopBonuses = isBuildCard ? _boardTerrainBonusesForCard(card, "build_bonuses") : [];
+  const boardAdjacentBonuses = isBuildCard ? _boardTerrainBonusesForCard(card, "adjacency_bonuses") : [];
+
+  // Unified terrain section: placement-terrain restriction + bonus lines (card + board).
+  const onTerrainRows = [];
+  // Show which terrains this card is restricted to, if specified.
+  const onlyOnTerrains = card.only_playable_on_terrains || [];
+  if (onlyOnTerrains.length) {
+    onTerrainRows.push(onlyOnTerrains.map(t => _terrainLabel(t) || t).join(" "));
   }
-  if (isBuildCard) {
-    const boardOnTopBonuses = _boardTerrainBonusesForCard(card, "build_bonuses");
-    if (boardOnTopBonuses.length) {
-      const txt = _formatTerrainConditionalBonuses(boardOnTopBonuses, "On terrain");
-      if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">Board bonus (on terrain)</span><span class="card-req-list">${txt}</span></div>`;
-    }
-    const boardAdjacentBonuses = _boardTerrainBonusesForCard(card, "adjacency_bonuses");
-    if (boardAdjacentBonuses.length) {
-      const txt = _formatTerrainConditionalBonuses(boardAdjacentBonuses, "Next to terrain");
-      if (txt) reqHtml += `<div class="card-requirements"><span class="card-section-label">Board bonus (adjacent terrain)</span><span class="card-req-list">${txt}</span></div>`;
-    }
+  const mergedOnTerrainBonuses = _mergeTerrainBonusLists(terrainBonuses, boardOnTopBonuses);
+  const onTerrainTxt = _formatTerrainConditionalBonuses(mergedOnTerrainBonuses, "On terrain");
+  if (onTerrainTxt) {
+    const deduped = [...new Set(onTerrainTxt.split("<br>").filter(Boolean))].join(" · ");
+    if (deduped) onTerrainRows.push(deduped);
   }
+  if (onTerrainRows.length) {
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">On terrain</span><span class="card-req-list">${onTerrainRows.join(" · ")}</span></div>`;
+  }
+
+  // Unified adjacent-terrain section: card + board bonuses together.
+  const mergedAdjacentTerrainBonuses = _mergeTerrainBonusLists(adjacentTerrainBonuses, boardAdjacentBonuses);
+  const adjacentTerrainTxt = _formatTerrainConditionalBonuses(mergedAdjacentTerrainBonuses, "Next to terrain");
+  if (adjacentTerrainTxt) {
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">Adjacent terrain</span><span class="card-req-list">${adjacentTerrainTxt.split("<br>").join(" · ")}</span></div>`;
+  }
+
   const placedAdjBonuses = card.placed_tile_adjacency_bonuses || [];
   if (placedAdjBonuses.length) {
     const txt = _formatConditionalBonuses(placedAdjBonuses, "When next to this");
@@ -2432,20 +2560,36 @@ const PARAM_LABELS = {
   buy_server_money: "Buy Server: Money ($M)",
   buy_ad_suits: "Buy Ad: Suits",
   buy_ad_money: "Buy Ad: Money ($M)",
-  reputation_max: "Reputation Max",
-  reputation_min: "Reputation Min",
 };
+
+const REP_RESOURCE_VALUE_KEYS = ["money", "engineers", "suits", "servers", "ads", "reputation", "users", "data"];
+const REP_PRODUCTION_VALUE_KEYS = ["HR", "data_centers", "ad_campaigns", "money"];
 
 let currentParams = {};
 
 function renderParamsForm(params) {
   currentParams = { ...params };
+  currentParams.reputation_modifier_resource_values = { ...(params.reputation_modifier_resource_values || {}) };
+  currentParams.reputation_modifier_production_values = { ...(params.reputation_modifier_production_values || {}) };
+  // Normalise thresholds to new format on load (backward compat)
+  currentParams.reputation_thresholds = (params.reputation_thresholds || []).map(t => {
+    if ("value" in t && "direction" in t) return { ...t };
+    if ("min_rep" in t) return { value: t.min_rep, direction: "gte", modifier: t.modifier };
+    if ("max_rep" in t) return { value: t.max_rep, direction: "lte", modifier: t.modifier };
+    return t;
+  });
+
   paramsBody.innerHTML = "";
   const form = document.createElement("div");
   form.className = "params-form";
 
+  const REP_SKIP = new Set([
+    "reputation_thresholds",
+    "reputation_modifier_resource_values", "reputation_modifier_production_values",
+  ]);
+
   for (const [key, value] of Object.entries(params)) {
-    if (key === "reputation_thresholds") continue;
+    if (REP_SKIP.has(key)) continue;
     const row = document.createElement("div");
     row.className = "param-row";
     const label = document.createElement("label");
@@ -2463,38 +2607,128 @@ function renderParamsForm(params) {
     form.appendChild(row);
   }
 
-  const threshTitle = document.createElement("h3");
-  threshTitle.textContent = "Reputation Thresholds";
-  threshTitle.style.cssText = "margin-top:1rem;font-size:.9rem;";
-  form.appendChild(threshTitle);
+  // ── Reputation section ──────────────────────────────────────
+  const repTitle = document.createElement("h3");
+  repTitle.textContent = "Reputation";
+  repTitle.style.cssText = "margin-top:1.4rem;font-size:.9rem;letter-spacing:.04em;";
+  form.appendChild(repTitle);
 
-  const thresholds = params.reputation_thresholds || [];
-  thresholds.forEach((t, i) => {
-    const row = document.createElement("div");
-    row.className = "param-row";
-    const isMin = "min_rep" in t;
-    const label = document.createElement("label");
-    label.textContent = isMin ? `Rep ≥ ${t.min_rep} → modifier` : `Rep ≤ ${t.max_rep} → modifier`;
-    const repInput = document.createElement("input");
-    repInput.type = "number";
-    repInput.className = "param-input param-input-sm";
-    repInput.value = isMin ? t.min_rep : t.max_rep;
-    repInput.addEventListener("change", () => {
-      if (isMin) currentParams.reputation_thresholds[i].min_rep = Number(repInput.value);
-      else currentParams.reputation_thresholds[i].max_rep = Number(repInput.value);
+  // Thresholds list — each row: "Threshold N  [value] [≥/≤] modifier [mod] [×]"
+  const threshListEl = document.createElement("div");
+  threshListEl.id = "rep-thresh-list";
+  form.appendChild(threshListEl);
+
+  function renderThresholdRows() {
+    threshListEl.innerHTML = "";
+    currentParams.reputation_thresholds.forEach((t, i) => {
+      const row = document.createElement("div");
+      row.className = "param-row";
+      row.style.cssText = "gap:.4rem;align-items:center;";
+
+      const lbl = document.createElement("label");
+      lbl.textContent = `Threshold ${i + 1}`;
+      lbl.style.minWidth = "90px";
+
+      const valInput = document.createElement("input");
+      valInput.type = "number";
+      valInput.className = "param-input param-input-sm";
+      valInput.value = t.value;
+      valInput.title = "Reputation value";
+      valInput.addEventListener("change", () => {
+        currentParams.reputation_thresholds[i].value = Number(valInput.value);
+      });
+
+      const dirSel = document.createElement("select");
+      dirSel.className = "param-input param-input-sm";
+      dirSel.style.width = "54px";
+      dirSel.title = "Direction";
+      [["gte", "≥"], ["lte", "≤"]].forEach(([val, lbl2]) => {
+        const o = document.createElement("option");
+        o.value = val; o.textContent = lbl2;
+        if (t.direction === val) o.selected = true;
+        dirSel.appendChild(o);
+      });
+      dirSel.addEventListener("change", () => {
+        currentParams.reputation_thresholds[i].direction = dirSel.value;
+      });
+
+      const modLbl = document.createElement("span");
+      modLbl.textContent = "→ mod";
+      modLbl.style.cssText = "font-size:.8rem;opacity:.7;white-space:nowrap;";
+
+      const modInput = document.createElement("input");
+      modInput.type = "number";
+      modInput.className = "param-input param-input-sm";
+      modInput.value = t.modifier;
+      modInput.title = "Modifier granted";
+      modInput.addEventListener("change", () => {
+        currentParams.reputation_thresholds[i].modifier = Number(modInput.value);
+      });
+
+      const rmBtn = document.createElement("button");
+      rmBtn.className = "btn btn-sm editor-remove-btn";
+      rmBtn.textContent = "×";
+      rmBtn.title = "Remove this threshold";
+      rmBtn.addEventListener("click", () => {
+        currentParams.reputation_thresholds.splice(i, 1);
+        renderThresholdRows();
+      });
+
+      row.appendChild(lbl);
+      row.appendChild(makeNumSpinner(valInput));
+      row.appendChild(dirSel);
+      row.appendChild(modLbl);
+      row.appendChild(makeNumSpinner(modInput));
+      row.appendChild(rmBtn);
+      threshListEl.appendChild(row);
     });
-    const modInput = document.createElement("input");
-    modInput.type = "number";
-    modInput.className = "param-input param-input-sm";
-    modInput.value = t.modifier;
-    modInput.addEventListener("change", () => {
-      currentParams.reputation_thresholds[i].modifier = Number(modInput.value);
-    });
-    row.appendChild(label);
-    row.appendChild(makeNumSpinner(repInput));
-    row.appendChild(makeNumSpinner(modInput));
-    form.appendChild(row);
+  }
+  renderThresholdRows();
+
+  const addThreshBtn = document.createElement("button");
+  addThreshBtn.className = "btn btn-sm";
+  addThreshBtn.textContent = "+ Add Threshold";
+  addThreshBtn.style.marginTop = ".3rem";
+  addThreshBtn.addEventListener("click", () => {
+    currentParams.reputation_thresholds.push({ value: 0, direction: "gte", modifier: 1 });
+    renderThresholdRows();
   });
+  form.appendChild(addThreshBtn);
+
+  // Reputation modifier multiplier base values
+  const repModNote = document.createElement("div");
+  repModNote.style.cssText = "margin-top:.8rem;font-size:.78rem;opacity:.7;line-height:1.4;";
+  repModNote.textContent = "Each year, the active threshold modifier is multiplied by the base values below and added to resources / production.";
+  form.appendChild(repModNote);
+
+  function addRepMultiplierSection(sectionLabel, paramKey, keys) {
+    const sub = document.createElement("div");
+    sub.style.cssText = "margin-top:.6rem;font-size:.82rem;opacity:.8;font-weight:600;";
+    sub.textContent = sectionLabel;
+    form.appendChild(sub);
+    keys.forEach((k) => {
+      const row = document.createElement("div");
+      row.className = "param-row";
+      const label = document.createElement("label");
+      label.textContent = k;
+      const input = document.createElement("input");
+      input.type = "number";
+      input.className = "param-input";
+      input.value = Number(currentParams[paramKey]?.[k] || 0);
+      input.addEventListener("change", () => {
+        if (!currentParams[paramKey] || typeof currentParams[paramKey] !== "object") {
+          currentParams[paramKey] = {};
+        }
+        currentParams[paramKey][k] = Number(input.value);
+      });
+      row.appendChild(label);
+      row.appendChild(makeNumSpinner(input));
+      form.appendChild(row);
+    });
+  }
+
+  addRepMultiplierSection("Resources (per modifier point)", "reputation_modifier_resource_values", REP_RESOURCE_VALUE_KEYS);
+  addRepMultiplierSection("Production (per modifier point)", "reputation_modifier_production_values", REP_PRODUCTION_VALUE_KEYS);
 
   const saveBtn = document.createElement("button");
   saveBtn.className = "btn btn-primary";
@@ -2957,7 +3191,7 @@ function makeLegend(slices, total) {
   return div;
 }
 
-let editorChartsCollapsed = false;
+let editorChartsCollapsed = localStorage.getItem("editorChartsCollapsed") !== "0";
 
 function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = {}, DECK_MAP, allCards = {} }) {
   const panel = editorStatsPanel;
@@ -2970,6 +3204,7 @@ function renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts = 
   toggleBtn.textContent = editorChartsCollapsed ? "▼ Charts" : "▲ Hide";
   toggleBtn.addEventListener("click", () => {
     editorChartsCollapsed = !editorChartsCollapsed;
+    localStorage.setItem("editorChartsCollapsed", editorChartsCollapsed ? "1" : "0");
     renderEditorCharts({ totalCards, typeCounts, deckCounts, extraCounts, DECK_MAP, allCards });
   });
   panel.appendChild(toggleBtn);
@@ -3362,6 +3597,16 @@ function renderEditorForm() {
       fields.appendChild(buildBoostsField(value || []));
     } else if (key === "requirements") {
       fields.appendChild(buildRequirementsField(value || []));
+    } else if (key === "min_reputation") {
+      fields.appendChild(buildMinReputationField(value));
+    } else if (key === "court_threshold_modifier") {
+      fields.appendChild(buildCourtThresholdModifierField(value));
+    } else if (key === "pollution_tag") {
+      fields.appendChild(buildPollutionTagField(value));
+    } else if (key === "fee_for_green") {
+      fields.appendChild(buildFeeForGreenField(value));
+    } else if (key === "effective_pollution_tag") {
+      // skip — derived from pollution_tag + runtime override
     } else if (key === "only_playable_next_to") {
       fields.appendChild(buildOnlyPlayableNextToField(value || []));
     } else if (key === "only_playable_on_terrains") {
@@ -3403,6 +3648,18 @@ function renderEditorForm() {
   }
   if (!("requirements" in card)) {
     fields.appendChild(buildRequirementsField([]));
+  }
+  if (!("min_reputation" in card)) {
+    fields.appendChild(buildMinReputationField(null));
+  }
+  if (!("court_threshold_modifier" in card)) {
+    fields.appendChild(buildCourtThresholdModifierField(null));
+  }
+  if (!("pollution_tag" in card)) {
+    fields.appendChild(buildPollutionTagField("neutral"));
+  }
+  if (!("fee_for_green" in card)) {
+    fields.appendChild(buildFeeForGreenField(null));
   }
   if (!("only_playable_next_to" in card)) {
     fields.appendChild(buildOnlyPlayableNextToField([]));
@@ -3472,7 +3729,7 @@ function renderEditorForm() {
 }
 
 const FIELD_OPTIONS = {
-  build: [null, "ad_campaign", "coal_power_plant", "data_center", "distribution_center", "factory", "geothermal_power_plant", "hydroelectric_power_plant", "launching_pad", "lobby_group", "natural_gas_power_plant", "nuclear_power_plant", "office", "pv_power_plant", "rare_metal_mine", "satellite_dc", "satellite_solar", "solar_thermal", "store", "wind_power_plant"],
+  build: [null, "ad_campaign", "coal_power_plant", "data_center", "distribution_center", "factory", "hydroelectric_power_plant", "launching_pad", "lobby_group", "natural_gas_power_plant", "nuclear_power_plant", "office", "pv_power_plant", "rare_metal_mine", "satellite_dc", "satellite_solar", "store", "wind_power_plant"],
 };
 
 const TYPE_OPTIONS = [
@@ -3480,8 +3737,8 @@ const TYPE_OPTIONS = [
   "software platform", "software engine",
   "online marketplace", "search service", "store",
   "nuclear power plant", "natural gas power plant", "coal power plant",
-  "pv power plant", "wind power plant", "solar thermal", "geothermal power plant",
-  "data center", "office", "ad campaign", "lobby", "rare metal mine",
+  "pv power plant", "wind power plant",
+  "data center", "distribution center", "office", "ad campaign", "lobby", "rare metal mine",
   "hydroelectric power plant", "satellite solar", "satellite data center",
   "cyber attack", "cyber defense",
 ];
@@ -3777,6 +4034,160 @@ function buildRequirementsField(requirements) {
   return container;
 }
 
+// ── Min-reputation requirement field ──────────────────────────
+function buildMinReputationField(value) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.minReputationKey = "min_reputation";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "min. reputation to play";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.className = "editor-field-hint";
+  hint.textContent = "Card cannot be played unless the player has at least this much reputation. Leave blank for no restriction.";
+  container.appendChild(hint);
+
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex;align-items:center;gap:.5rem;margin-top:.3rem;";
+
+  const inp = document.createElement("input");
+  inp.type = "number";
+  inp.className = "editor-min-reputation-input";
+  inp.placeholder = "e.g. 3";
+  inp.style.width = "90px";
+  inp.min = "0";
+  if (value != null && value !== "") inp.value = Number(value);
+
+  const clear = document.createElement("button");
+  clear.className = "btn btn-sm editor-remove-btn";
+  clear.textContent = "×";
+  clear.title = "Remove restriction";
+  clear.addEventListener("click", () => { inp.value = ""; });
+
+  row.appendChild(inp);
+  row.appendChild(clear);
+  container.appendChild(row);
+  return container;
+}
+
+// ── Court threshold modifier field ─────────────────────────────
+function buildCourtThresholdModifierField(value) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.courtThresholdModifierKey = "court_threshold_modifier";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "court roll modifier";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.className = "editor-field-hint";
+  hint.textContent = "Reduces the die-roll threshold to win in court while this card is played. E.g. -1 means winning on ≥3 instead of ≥4. Leave blank for no effect.";
+  container.appendChild(hint);
+
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex;align-items:center;gap:.5rem;margin-top:.3rem;";
+
+  const inp = document.createElement("input");
+  inp.type = "number";
+  inp.className = "editor-court-threshold-modifier-input";
+  inp.placeholder = "e.g. -1";
+  inp.style.width = "90px";
+  if (value != null && value !== "") inp.value = Number(value);
+
+  const clear = document.createElement("button");
+  clear.className = "btn btn-sm editor-remove-btn";
+  clear.textContent = "×";
+  clear.title = "Remove modifier";
+  clear.addEventListener("click", () => { inp.value = ""; });
+
+  row.appendChild(inp);
+  row.appendChild(clear);
+  container.appendChild(row);
+  return container;
+}
+
+// ── Pollution tag field builder ───────────────────────────────
+function buildPollutionTagField(value) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.pollutionTagKey = "pollution_tag";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "pollution tag";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.className = "editor-field-hint";
+  hint.textContent = "Marks this card as neutral (default), polluting 🏭, or green 🌿. Regulations can count these tags.";
+  container.appendChild(hint);
+
+  const radios = document.createElement("div");
+  radios.style.cssText = "display:flex;gap:1rem;margin-top:.3rem;align-items:center;";
+
+  const current = value || "neutral";
+  [["neutral", "⬜ Neutral"], ["polluting", "🏭 Polluting"], ["green", "🌿 Green"]].forEach(([val, label]) => {
+    const lbl = document.createElement("label");
+    lbl.style.cssText = "display:flex;align-items:center;gap:.3rem;cursor:pointer;";
+    const rb = document.createElement("input");
+    rb.type = "radio";
+    rb.name = `pollution_tag_${Math.random().toString(36).slice(2)}`;
+    rb.className = "editor-pollution-tag-radio";
+    rb.value = val;
+    rb.checked = current === val;
+    lbl.appendChild(rb);
+    lbl.appendChild(document.createTextNode(label));
+    radios.appendChild(lbl);
+  });
+
+  // Make all three radios share the same name
+  const groupName = `pollution_tag_group_${Date.now()}`;
+  radios.querySelectorAll("input[type=radio]").forEach(rb => rb.name = groupName);
+
+  container.appendChild(radios);
+  return container;
+}
+
+// ── Fee for green field builder ───────────────────────────────
+function buildFeeForGreenField(value) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.feeForGreenKey = "fee_for_green";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "fee for green upgrade";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.className = "editor-field-hint";
+  hint.textContent = "Extra cost a player can pay when playing this card to turn it green (overrides default tag). Leave empty for no upgrade option.";
+  container.appendChild(hint);
+
+  const RESOURCE_KEYS = ["money", "engineers", "suits", "servers", "ads", "reputation"];
+  const dictEl = document.createElement("div");
+  dictEl.className = "editor-dict-container fee-for-green-dict";
+  dictEl.style.marginTop = ".3rem";
+
+  const entries = Object.entries(value || {});
+  entries.forEach(([k, v]) => dictEl.appendChild(buildDictRow(k, v, RESOURCE_KEYS)));
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-sm editor-add-btn";
+  addBtn.textContent = "+ Add resource";
+  addBtn.style.marginTop = ".2rem";
+  addBtn.addEventListener("click", () => dictEl.insertBefore(buildDictRow(RESOURCE_KEYS[0], 0, RESOURCE_KEYS), addBtn));
+  dictEl.appendChild(addBtn);
+
+  container.appendChild(dictEl);
+  return container;
+}
+
 // ── Tile adjacency restriction field builder ──────────────────
 function buildOnlyPlayableNextToField(nextToList) {
   const container = document.createElement("div");
@@ -3984,12 +4395,39 @@ function buildBonusesByPlacingNextToBuildingField(savedRaw) {
 }
 
 // ── Card bonuses by building on terrain type ───────────────────
+function _makeQuickPickList(options, getValue, onPick) {
+  const wrap = document.createElement("div");
+  wrap.className = "editor-quick-pick-list";
+  const norm = (v) => (v == null ? "" : String(v));
+  const chips = [];
+  options.forEach(([val, lbl]) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-sm editor-quick-pick-btn";
+    btn.textContent = lbl;
+    btn.dataset.value = norm(val);
+    btn.addEventListener("click", () => {
+      onPick(val ?? "");
+      refresh();
+    });
+    chips.push(btn);
+    wrap.appendChild(btn);
+  });
+  function refresh() {
+    const cur = norm(getValue());
+    chips.forEach(btn => btn.classList.toggle("is-active", btn.dataset.value === cur));
+  }
+  refresh();
+  wrap._refresh = refresh;
+  return wrap;
+}
+
 const CARD_TERRAIN_BONUS_OPTIONS = [
   [null,            "(any terrain type — always applies)"],
   ["empty",         "🌫️ Empty"],
   ["city",          "🏙️ City"],
   ["lake",          "🌊 Lake"],
-  ["sea",           "🌊 Sea"],
+  ["sea",           "🟦 Sea"],
   ["offshore_wind", "💨 Offshore Wind"],
   ["offshore_solar","☀️ Offshore Solar"],
   ["government",    "🏛️ Government"],
@@ -3999,7 +4437,6 @@ const CARD_TERRAIN_BONUS_OPTIONS = [
   ["wind",          "💨 Wind"],
   ["gas_reserve",   "🔥 Gas Reserve"],
   ["coal",          "⛏️ Coal"],
-  ["geothermal",    "🌡️ Geothermal"],
   ["wall",          "🧱 Wall"],
   ["mountain",      "⛰️ Mountain"],
   ["rare_metal_mine","🔩 Rare Metal Mine"],
@@ -4018,16 +4455,33 @@ function _makeTerrainBonusConditionBlock(entry) {
   hLabel.textContent = "When building on terrain:";
   header.appendChild(hLabel);
 
-  const terrainSelect = document.createElement("select");
-  terrainSelect.className = "editor-dict-key";
-  CARD_TERRAIN_BONUS_OPTIONS.forEach(([val, lbl]) => {
-    const o = document.createElement("option");
-    o.value = val ?? "";
-    o.textContent = lbl;
-    if ((entry.terrain_type ?? null) === val) o.selected = true;
-    terrainSelect.appendChild(o);
+  const terrainChecksWrap = document.createElement("div");
+  terrainChecksWrap.className = "editor-multi-check-grid";
+  const selectedTerrains = new Set(_parseBonusTerrainTypeKeys(entry));
+  const terrainChecks = [];
+  const baseTerrainOptions = CARD_TERRAIN_BONUS_OPTIONS.filter(([val]) => !!val);
+  const knownTerrains = new Set(baseTerrainOptions.map(([val]) => String(val)));
+  const mergedTerrainOptions = [...baseTerrainOptions];
+  selectedTerrains.forEach(val => {
+    if (!knownTerrains.has(String(val))) {
+      mergedTerrainOptions.push([val, `${_terrainLabel(val) || val} (legacy)`]);
+    }
   });
-  header.appendChild(terrainSelect);
+  mergedTerrainOptions.forEach(([val, lbl]) => {
+    const lab = document.createElement("label");
+    lab.className = "editor-multi-check-item";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = val;
+    cb.checked = selectedTerrains.has(val);
+    terrainChecks.push(cb);
+    lab.appendChild(cb);
+    const t = document.createElement("span");
+    t.textContent = lbl;
+    lab.appendChild(t);
+    terrainChecksWrap.appendChild(lab);
+  });
+  block.appendChild(terrainChecksWrap);
 
   const removeBtn = document.createElement("button");
   removeBtn.className = "btn btn-sm btn-danger-sm";
@@ -4065,11 +4519,16 @@ function _makeTerrainBonusConditionBlock(entry) {
   prodContainer.appendChild(addProd);
   block.appendChild(prodContainer);
 
-  block._collect = () => ({
-    terrain_type: terrainSelect.value || null,
-    immediate: _collectResRows(immContainer),
-    production: _collectResRows(prodContainer),
-  });
+  block._collect = () => {
+    const selected = terrainChecks.map(cb => cb.value).filter((_, i) => terrainChecks[i].checked);
+    const out = {
+      immediate: _collectResRows(immContainer),
+      production: _collectResRows(prodContainer),
+    };
+    if (selected.length === 1) out.terrain_type = selected[0];
+    else if (selected.length > 1) out.terrain_types = selected;
+    return out;
+  };
   return block;
 }
 
@@ -4087,7 +4546,12 @@ function _makeTerrainConditionalBonusSection(sectionLabel, savedRaw) {
 
   const list = Array.isArray(savedRaw) ? savedRaw : [];
   list.forEach(entry => {
-    if (Object.keys(entry.immediate || {}).length || Object.keys(entry.production || {}).length || entry.terrain_type) {
+    if (
+      Object.keys(entry.immediate || {}).length ||
+      Object.keys(entry.production || {}).length ||
+      entry.terrain_type ||
+      (entry.terrain_types || []).length
+    ) {
       blocksContainer.appendChild(_makeTerrainBonusConditionBlock(entry));
     }
   });
@@ -4283,8 +4747,8 @@ const BOOST_TYPE_OPTIONS = [
   "software platform", "software engine",
   "online marketplace", "search service", "store",
   "nuclear power plant", "natural gas power plant", "coal power plant",
-  "pv power plant", "wind power plant", "solar thermal", "geothermal power plant",
-  "data center", "office", "ad campaign", "lobby", "rare metal mine",
+  "pv power plant", "wind power plant",
+  "data center", "distribution center", "office", "ad campaign", "lobby", "rare metal mine",
   "hydroelectric power plant", "satellite solar", "satellite data center",
   "cyber attack", "cyber defense",
 ];
@@ -4369,24 +4833,46 @@ function buildBoostEntry(boost) {
   tidInput.addEventListener("input", syncTypeCountState);
   syncTypeCountState(); // apply on initial render
 
-  // ── bonus ──
-  const bonusLabel = document.createElement("span");
-  bonusLabel.className = "editor-boost-label";
-  bonusLabel.textContent = "bonus:";
-  entry.appendChild(bonusLabel);
+  // ── bonus: split into resources and production ──
+  const BOOST_RESOURCE_KEYS = ["money", "engineers", "suits", "servers", "ads", "reputation", "users", "data"];
+  const BOOST_PRODUCTION_KEYS = ["HR", "data_centers", "ad_campaigns", "money"];
 
   const bonusContainer = document.createElement("div");
   bonusContainer.className = "boost-bonus-rows";
-  Object.entries(boost.bonus || {}).forEach(([k, v]) => {
-    bonusContainer.appendChild(buildDictRow(k, v, RESOURCE_OPTIONS));
-  });
-  const addBonusBtn = document.createElement("button");
-  addBonusBtn.className = "btn btn-sm editor-add-btn";
-  addBonusBtn.textContent = "+ Add bonus field";
-  addBonusBtn.addEventListener("click", () => {
-    bonusContainer.insertBefore(buildDictRow("", 0, RESOURCE_OPTIONS), addBonusBtn);
-  });
-  bonusContainer.appendChild(addBonusBtn);
+
+  function addBonusSubSection(label, keys, existingEntries, isProduction) {
+    const sub = document.createElement("div");
+    sub.style.cssText = "margin-top:.3rem;";
+    if (isProduction) sub.dataset.boostSection = "production";
+    const subLbl = document.createElement("span");
+    subLbl.className = "editor-boost-label";
+    subLbl.textContent = label;
+    sub.appendChild(subLbl);
+    existingEntries.forEach(([k, v]) => sub.appendChild(buildDictRow(k, v, keys)));
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn btn-sm editor-add-btn";
+    addBtn.textContent = `+ Add ${label.replace(":", "")} field`;
+    addBtn.style.marginTop = ".2rem";
+    addBtn.addEventListener("click", () => sub.insertBefore(buildDictRow(keys[0], 0, keys), addBtn));
+    sub.appendChild(addBtn);
+    bonusContainer.appendChild(sub);
+  }
+
+  // Resources: everything stored in boost.bonus (keyed by the resource name)
+  const resEntries = Object.entries(boost.bonus || {});
+
+  // Production: everything stored in boost.production.
+  // Legacy fallback: if boost.production is absent, migrate unambiguous production-only keys
+  // (HR, data_centers, ad_campaigns) from boost.bonus — but NOT money, which is ambiguous.
+  const LEGACY_PROD_ONLY_KEYS = ["HR", "data_centers", "ad_campaigns"];
+  const hasProdDict = Object.keys(boost.production || {}).length > 0;
+  const prodEntries = hasProdDict
+    ? Object.entries(boost.production)
+    : Object.entries(boost.bonus || {}).filter(([k]) => LEGACY_PROD_ONLY_KEYS.includes(k));
+
+  addBonusSubSection("resources:",  BOOST_RESOURCE_KEYS,  resEntries,  false);
+  addBonusSubSection("production:", BOOST_PRODUCTION_KEYS, prodEntries, true);
+
   entry.appendChild(bonusContainer);
 
   return entry;
@@ -4442,6 +4928,37 @@ function collectFormData(fieldsEl, originalCard) {
       .map(sel => sel.value)
       .filter(v => v && v !== "undefined" && v !== "null");
     data.requirements = reqs.length > 0 ? reqs : null;
+  }
+
+  const minRepContainer = fieldsEl.querySelector("[data-min-reputation-key='min_reputation']");
+  if (minRepContainer) {
+    const inp = minRepContainer.querySelector(".editor-min-reputation-input");
+    const raw = inp ? inp.value.trim() : "";
+    data.min_reputation = raw !== "" ? parseInt(raw, 10) : null;
+  }
+
+  const courtModContainer = fieldsEl.querySelector("[data-court-threshold-modifier-key='court_threshold_modifier']");
+  if (courtModContainer) {
+    const inp = courtModContainer.querySelector(".editor-court-threshold-modifier-input");
+    const raw = inp ? inp.value.trim() : "";
+    data.court_threshold_modifier = raw !== "" ? parseInt(raw, 10) : null;
+  }
+
+  const pollutionContainer = fieldsEl.querySelector("[data-pollution-tag-key='pollution_tag']");
+  if (pollutionContainer) {
+    const checked = pollutionContainer.querySelector(".editor-pollution-tag-radio:checked");
+    data.pollution_tag = checked ? checked.value : "neutral";
+  }
+
+  const feeForGreenContainer = fieldsEl.querySelector("[data-fee-for-green-key='fee_for_green']");
+  if (feeForGreenContainer) {
+    const feeObj = {};
+    feeForGreenContainer.querySelectorAll(".fee-for-green-dict .editor-dict-row").forEach(row => {
+      const k = row.querySelector(".editor-dict-key")?.value.trim();
+      const v = Number(row.querySelector(".editor-dict-val")?.value) || 0;
+      if (k) feeObj[k] = v;
+    });
+    data.fee_for_green = Object.keys(feeObj).length ? feeObj : null;
   }
 
   const nextToContainer = fieldsEl.querySelector("[data-only-playable-next-to-key='only_playable_next_to']");
@@ -4513,13 +5030,20 @@ function collectFormData(fieldsEl, originalCard) {
         : checkedTypes;
       const targetCount = (!tid && targetType) ? (Number(entry.querySelector(".boost-target-count")?.value) || 0) : 0;
       const bonus = {};
-      entry.querySelectorAll(".boost-bonus-rows .editor-dict-row").forEach(row => {
+      const production = {};
+      entry.querySelectorAll(".boost-bonus-rows [data-boost-section='production'] .editor-dict-row").forEach(row => {
+        const k = row.querySelector(".editor-dict-key").value.trim();
+        const v = Number(row.querySelector(".editor-dict-val").value) || 0;
+        if (k) production[k] = v;
+      });
+      entry.querySelectorAll(".boost-bonus-rows div:not([data-boost-section]) .editor-dict-row").forEach(row => {
         const k = row.querySelector(".editor-dict-key").value.trim();
         const v = Number(row.querySelector(".editor-dict-val").value) || 0;
         if (k) bonus[k] = v;
       });
       if (tid || targetType) {
         const b = { target_id: tid || null, target_type: targetType, bonus };
+        if (Object.keys(production).length) b.production = production;
         if (targetType && targetCount) b.target_count = targetCount;
         boosts.push(b);
       }
@@ -4692,7 +5216,11 @@ function renderTreesView() {
 
       const bonusTag = document.createElement("div");
       bonusTag.className = "tree-bonus-tag";
-      const bonusStr = Object.entries(b.bonus).map(([k,v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`).join(" ") || "none";
+      const bonusParts = [
+        ...Object.entries(b.bonus || {}).map(([k,v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`),
+        ...Object.entries(b.production || {}).map(([k,v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}/yr`),
+      ];
+      const bonusStr = bonusParts.join(" ") || "none";
       const countStr = b.target_count ? ` (×${b.target_count} max)` : "";
       bonusTag.textContent = `Boost: ${bonusStr}${countStr}`;
 
@@ -5117,6 +5645,9 @@ function _normBonusList(raw) {
     return raw.map(entry => ({
       ...entry,
       build_type: _isUnsetLike(entry?.build_type) ? null : entry.build_type,
+      build_types: Array.isArray(entry?.build_types)
+        ? entry.build_types.filter(v => !_isUnsetLike(v) && v)
+        : [],
     }));
   }
   if (raw && typeof raw === "object") {
@@ -5129,7 +5660,15 @@ function _normBonusList(raw) {
 }
 
 function _normTerrainBonusList(raw) {
-  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw)) {
+    return raw.map(entry => ({
+      ...entry,
+      terrain_type: _isUnsetLike(entry?.terrain_type) ? null : entry.terrain_type,
+      terrain_types: Array.isArray(entry?.terrain_types)
+        ? entry.terrain_types.filter(v => !_isUnsetLike(v) && v)
+        : [],
+    }));
+  }
   if (raw && typeof raw === "object") {
     if ("immediate" in raw || "production" in raw)
       return [{ terrain_type: null, immediate: raw.immediate || {}, production: raw.production || {} }];
@@ -5146,7 +5685,7 @@ function previewPlacementBonuses(tile, tileType) {
 
   // Build bonuses — only apply entries matching this build type (or any)
   for (const entry of _normBonusList(tile.build_bonuses)) {
-    if (!entry.build_type || entry.build_type === tileType) {
+    if (_entryMatchesBuildType(entry, tileType)) {
       for (const [res, amt] of Object.entries(entry.immediate || {}))
         immediate[res] = (immediate[res] || 0) + amt;
       for (const [res, amt] of Object.entries(entry.production || {}))
@@ -5156,7 +5695,7 @@ function previewPlacementBonuses(tile, tileType) {
 
   // Card-level bonus: placed on matching terrain type
   for (const entry of _normTerrainBonusList(lastPrivateState?.pending_tile_meta?.bonuses_by_building_on_terrain_type)) {
-    if (!entry.terrain_type || entry.terrain_type === tile.terrain) {
+    if (_entryMatchesTerrainType(entry, tile.terrain)) {
       for (const [res, amt] of Object.entries(entry.immediate || {}))
         immediate[res] = (immediate[res] || 0) + amt;
       for (const [res, amt] of Object.entries(entry.production || {}))
@@ -5173,7 +5712,7 @@ function previewPlacementBonuses(tile, tileType) {
     const nb = tilesByKey[`${tile.row+dr},${tile.col+dc}`];
     if (!nb) continue;
     for (const entry of _normTerrainBonusList(lastPrivateState?.pending_tile_meta?.bonuses_by_building_adjacent_to_terrain_type)) {
-      if (!entry.terrain_type || entry.terrain_type === nb.terrain) {
+      if (_entryMatchesTerrainType(entry, nb.terrain)) {
         for (const [res, amt] of Object.entries(entry.immediate || {}))
           immediate[res] = (immediate[res] || 0) + amt;
         for (const [res, amt] of Object.entries(entry.production || {}))
@@ -5182,7 +5721,9 @@ function previewPlacementBonuses(tile, tileType) {
     }
     // Adjacency bonuses — conditional on what type is being placed
     for (const entry of _normBonusList(nb.adjacency_bonuses)) {
-      if (!entry.build_type || entry.build_type === tileType) {
+      const targetKeys = _parseTargetCoordKeys(entry);
+      const targetOk = !targetKeys.length || targetKeys.includes(`${tile.row},${tile.col}`);
+      if (_entryMatchesBuildType(entry, tileType) && targetOk) {
         for (const [res, amt] of Object.entries(entry.immediate || {}))
           immediate[res] = (immediate[res] || 0) + amt;
         for (const [res, amt] of Object.entries(entry.production || {}))
@@ -5192,7 +5733,7 @@ function previewPlacementBonuses(tile, tileType) {
     const pt = nb.placed_tile;
     if (pt) {
       for (const entry of _normBonusList(pt.placed_tile_adjacency_bonuses)) {
-        if (!entry.build_type || entry.build_type === tileType) {
+        if (_entryMatchesBuildType(entry, tileType)) {
           for (const [res, amt] of Object.entries(entry.immediate || {}))
             immediate[res] = (immediate[res] || 0) + amt;
           for (const [res, amt] of Object.entries(entry.production || {}))
@@ -5219,12 +5760,14 @@ boardModal.addEventListener("click", (e) => {
 
 socket.on("board_state", (tiles) => {
   boardTiles = tiles;
+  refreshCardRuleDerivedUI();
   renderBoard();
   boardModal.classList.remove("hidden");
 });
 
 socket.on("board_update", (tiles) => {
   boardTiles = tiles;
+  refreshCardRuleDerivedUI();
   if (!boardModal.classList.contains("hidden")) {
     renderBoard();
   }
@@ -5287,7 +5830,8 @@ function renderBoard() {
     maxY = Math.max(maxY, y + HEX_SIZE);
   });
 
-  const pad = 4;
+  // Extra canvas padding so extreme tiles (e.g. Alaska edge) are fully reachable.
+  const pad = 28;
   const svgW = maxX - minX + pad * 2;
   const svgH = maxY - minY + pad * 2;
   const offX = -minX + pad;
@@ -5431,7 +5975,7 @@ function renderBoard() {
       let info = `<strong>(${tile.row},${tile.col})</strong>`;
       if (tile.terrain === "city") info += ` — ${tile.name || "City"} (City)`;
       else if (tile.terrain === "lake") info += ` — 🌊 ${tile.name || "Lake"}`;
-      else if (tile.terrain === "sea")           info += ` — ${tile.name || "Sea"}`;
+      else if (tile.terrain === "sea")           info += ` — 🟦 ${tile.name || "Sea"}`;
       else if (tile.terrain === "offshore_wind")  info += ` — 💨 ${tile.name || "Offshore Wind"}`;
       else if (tile.terrain === "offshore_solar") info += ` — ☀️ ${tile.name || "Offshore Solar"}`;
       else if (tile.terrain === "space")          info += ` — ✨ ${tile.name || "Space"}`;
@@ -5595,10 +6139,34 @@ function renderBuildRow() {
         if (costs.engineers) parts.push(`🔧 ${costs.engineers} Eng`);
         if (costs.suits) parts.push(`👔 ${costs.suits} Suits`);
         const costStr = parts.length ? parts.join(", ") : "free";
+
+        const feeForGreen = card.fee_for_green && Object.keys(card.fee_for_green).length ? card.fee_for_green : null;
+        const extraButtons = [];
+        if (feeForGreen) {
+          const feeParts = Object.entries(feeForGreen).map(([k, v]) => {
+            if (k === "money") return `💰 +$${v}B`;
+            if (k === "engineers") return `🔧 +${v} Eng`;
+            if (k === "suits") return `👔 +${v} Suits`;
+            return `+${v} ${k}`;
+          });
+          extraButtons.push({
+            text: `🌿 Go Green (${feeParts.join(", ")})`,
+            className: "btn btn-sm btn-success",
+            onClick: () => socket.emit("play_build_card", { row_index: rowIdx, green_upgrade: true }),
+          });
+        }
+
+        const pollTag = card.pollution_tag || "neutral";
+        const pollNote = pollTag === "polluting" ? " · 🏭 Polluting" : pollTag === "green" ? " · 🌿 Green" : "";
         showConfirmDialog(
           `Play "${card.name}" from the Build Market?`,
-          () => socket.emit("play_build_card", { row_index: rowIdx }),
-          { detail: `Cost: ${costStr}`, confirmText: "Build", cancelText: "Cancel" }
+          () => socket.emit("play_build_card", { row_index: rowIdx, green_upgrade: false }),
+          {
+            detail: `Cost: ${costStr}${pollNote}`,
+            confirmText: feeForGreen ? "🏭 Play (polluting)" : "Build",
+            cancelText: "Cancel",
+            extraButtons,
+          }
         );
       });
     }
@@ -5624,6 +6192,7 @@ let editorBoardTiles = [];
 let selectedEditorTile = null;
 let _boardEditorOpenIntent = false;  // true only when user explicitly clicked "Edit Board"
 let _boardEditorView = "map"; // "map" | "tile" | "terrain"
+let _boardEditorStatsHidden = localStorage.getItem("boardEditorStatsHidden") !== "0";
 
 editBoardBtn.addEventListener("click", () => {
   _boardEditorOpenIntent = true;
@@ -5652,10 +6221,12 @@ boardEditorModal.addEventListener("click", (e) => {
 
 socket.on("tile_type_config", (cfg) => {
   tileTypeConfig = cfg || {};
+  refreshCardRuleDerivedUI();
 });
 
 socket.on("board_editor_data", (tiles) => {
   editorBoardTiles = tiles;
+  refreshCardRuleDerivedUI();
   if (_boardEditorOpenIntent) {
     // User explicitly clicked "Edit Board" — open the modal
     _boardEditorOpenIntent = false;
@@ -5691,12 +6262,78 @@ function renderBoardEditorView() {
   renderBoardEditorMap();
 }
 
+function _terrainTypeStatsRows(tiles) {
+  const total = tiles.length || 0;
+  const counts = {};
+  tiles.forEach(t => {
+    const k = t?.terrain || "empty";
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  return Object.entries(counts)
+    .sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return String(a[0]).localeCompare(String(b[0]));
+    })
+    .map(([terrain, count]) => ({
+      terrain,
+      count,
+      pct: total ? (count * 100) / total : 0,
+    }));
+}
+
+function _prettyTerrainTypeLabel(terrain) {
+  const emoji = TERRAIN_EMOJIS[terrain] || "❔";
+  const name = String(terrain || "empty").replaceAll("_", " ");
+  return `${emoji} ${name}`;
+}
+
+function _buildBoardEditorStatsPanel() {
+  const panel = document.createElement("div");
+  panel.className = "board-editor-stats";
+
+  const total = editorBoardTiles.length;
+  const head = document.createElement("div");
+  head.className = "board-editor-stats-head";
+
+  const totalEl = document.createElement("div");
+  totalEl.className = "board-editor-stats-total";
+  totalEl.textContent = `Total tiles: ${total}`;
+  head.appendChild(totalEl);
+
+  const toggleBtn = document.createElement("button");
+  toggleBtn.type = "button";
+  toggleBtn.className = "btn btn-sm";
+  toggleBtn.textContent = _boardEditorStatsHidden ? "Show stats" : "Hide stats";
+  toggleBtn.addEventListener("click", () => {
+    _boardEditorStatsHidden = !_boardEditorStatsHidden;
+    localStorage.setItem("boardEditorStatsHidden", _boardEditorStatsHidden ? "1" : "0");
+    renderBoardEditorView();
+  });
+  head.appendChild(toggleBtn);
+  panel.appendChild(head);
+
+  const grid = document.createElement("div");
+  grid.className = "board-editor-stats-grid";
+  if (_boardEditorStatsHidden) grid.classList.add("hidden");
+  _terrainTypeStatsRows(editorBoardTiles).forEach(row => {
+    const item = document.createElement("div");
+    item.className = "board-editor-stats-item";
+    item.innerHTML = `<span>${_prettyTerrainTypeLabel(row.terrain)}</span><strong>${row.count} (${row.pct.toFixed(1)}%)</strong>`;
+    grid.appendChild(item);
+  });
+  panel.appendChild(grid);
+
+  return panel;
+}
+
 function renderBoardEditorMap() {
   boardEditorContainer.innerHTML = "";
   boardEditorContainer.classList.remove("board-editor-form-view");
+  boardEditorContainer.classList.add("board-editor-map-view");
   boardEditorTitle.textContent = "Board Editor";
 
   if (!editorBoardTiles.length) return;
+  boardEditorContainer.appendChild(_buildBoardEditorStatsPanel());
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   editorBoardTiles.forEach(t => {
@@ -5968,8 +6605,6 @@ const TILE_TYPE_BONUS_OPTIONS = [
   ["coal_power_plant",          "⛏️ Coal Power Plant"],
   ["pv_power_plant",            "☀️ PV Solar Plant"],
   ["wind_power_plant",          "💨 Wind Power Plant"],
-  ["geothermal_power_plant",    "🌡️ Geothermal Power Plant"],
-  ["solar_thermal",             "☀️ Solar Thermal Plant"],
   ["data_center",               "🖥️ Data Center"],
   ["store",                     "🏪 Store"],
   ["ad_campaign",               "📢 Ad Campaign"],
@@ -5984,27 +6619,140 @@ const TILE_TYPE_BONUS_OPTIONS = [
   ["launching_pad",             "🚀 Launching Pad"],
 ];
 
-function _makeBonusConditionBlock(entry) {
+function _adjacentCoordOptionsForTile(tile) {
+  if (!tile) return [];
+  const dirs = tile.row & 1
+    ? [[-1, 1], [-1, 0], [0, -1], [1, 0], [1, 1], [0, 1]]
+    : [[-1, 0], [-1, -1], [0, -1], [1, -1], [1, 0], [0, 1]];
+  return dirs.map(([dr, dc]) => {
+    const r = tile.row + dr;
+    const c = tile.col + dc;
+    return { key: `${r},${c}`, label: `(${r}, ${c})` };
+  });
+}
+
+function _parseTargetCoordKeys(entry) {
+  const keys = [];
+  const list = entry?.target_coords;
+  if (Array.isArray(list)) {
+    list.forEach(item => {
+      if (Array.isArray(item) && item.length >= 2) {
+        keys.push(`${Number(item[0])},${Number(item[1])}`);
+      } else if (item && typeof item === "object" && "row" in item && "col" in item) {
+        keys.push(`${Number(item.row)},${Number(item.col)}`);
+      }
+    });
+  }
+  if (!keys.length && Number.isFinite(Number(entry?.target_row)) && Number.isFinite(Number(entry?.target_col))) {
+    keys.push(`${Number(entry.target_row)},${Number(entry.target_col)}`);
+  }
+  return [...new Set(keys)];
+}
+
+function _parseBonusBuildTypeKeys(entry) {
+  const keys = [];
+  const list = entry?.build_types;
+  if (Array.isArray(list)) {
+    list.forEach(v => {
+      if (!_isUnsetLike(v) && v) keys.push(String(v));
+    });
+  }
+  if (!keys.length && !_isUnsetLike(entry?.build_type) && entry?.build_type) {
+    keys.push(String(entry.build_type));
+  }
+  return [...new Set(keys)];
+}
+
+function _parseBonusTerrainTypeKeys(entry) {
+  const keys = [];
+  const list = entry?.terrain_types;
+  if (Array.isArray(list)) {
+    list.forEach(v => {
+      if (!_isUnsetLike(v) && v) keys.push(String(v));
+    });
+  }
+  if (!keys.length && !_isUnsetLike(entry?.terrain_type) && entry?.terrain_type) {
+    keys.push(String(entry.terrain_type));
+  }
+  return [...new Set(keys)];
+}
+
+function _entryMatchesBuildType(entry, tileType) {
+  const keys = _parseBonusBuildTypeKeys(entry);
+  return !keys.length || keys.includes(tileType);
+}
+
+function _entryMatchesTerrainType(entry, terrainType) {
+  const keys = _parseBonusTerrainTypeKeys(entry);
+  return !keys.length || keys.includes(terrainType);
+}
+
+function _makeBonusConditionBlock(entry, opts = {}) {
+  const includeAdjTarget = !!opts.includeAdjTarget;
+  const adjTargets = includeAdjTarget ? _adjacentCoordOptionsForTile(opts.sourceTile) : [];
   const block = document.createElement("div");
   block.className = "board-bonus-condition-block";
 
-  // Header: "When building: [dropdown] [× Remove]"
+  // Header: "When building: [multi-select types] [× Remove]"
   const header = document.createElement("div");
   header.className = "board-bonus-condition-header";
   const hLabel = document.createElement("span");
   hLabel.textContent = "When building:";
   header.appendChild(hLabel);
 
-  const typeSelect = document.createElement("select");
-  typeSelect.className = "editor-dict-key";
-  TILE_TYPE_BONUS_OPTIONS.forEach(([val, lbl]) => {
-    const o = document.createElement("option");
-    o.value = val ?? "";
-    o.textContent = lbl;
-    if ((entry.build_type ?? null) === val) o.selected = true;
-    typeSelect.appendChild(o);
+  const typeChecksWrap = document.createElement("div");
+  typeChecksWrap.className = "editor-multi-check-grid";
+  const selectedTypes = new Set(_parseBonusBuildTypeKeys(entry));
+  const typeChecks = [];
+  const baseTypeOptions = TILE_TYPE_BONUS_OPTIONS.filter(([val]) => !!val);
+  const knownTypes = new Set(baseTypeOptions.map(([val]) => String(val)));
+  const mergedTypeOptions = [...baseTypeOptions];
+  selectedTypes.forEach(val => {
+    if (!knownTypes.has(String(val))) {
+      mergedTypeOptions.push([val, `${TILE_LABELS[val] || val} (legacy)`]);
+    }
   });
-  header.appendChild(typeSelect);
+  mergedTypeOptions.forEach(([val, lbl]) => {
+    const lab = document.createElement("label");
+    lab.className = "editor-multi-check-item";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = val;
+    cb.checked = selectedTypes.has(val);
+    typeChecks.push(cb);
+    lab.appendChild(cb);
+    const t = document.createElement("span");
+    t.textContent = lbl;
+    lab.appendChild(t);
+    typeChecksWrap.appendChild(lab);
+  });
+  block.appendChild(typeChecksWrap);
+
+  let coordChecks = [];
+  if (includeAdjTarget) {
+    const coordLabel = document.createElement("span");
+    coordLabel.textContent = "Target hexes:";
+    header.appendChild(coordLabel);
+
+    const checksWrap = document.createElement("div");
+    checksWrap.className = "editor-multi-check-grid";
+    const selectedKeys = new Set(_parseTargetCoordKeys(entry));
+    adjTargets.forEach(({ key, label }) => {
+      const lbl = document.createElement("label");
+      lbl.className = "editor-multi-check-item";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = key;
+      cb.checked = selectedKeys.has(key);
+      coordChecks.push(cb);
+      lbl.appendChild(cb);
+      const t = document.createElement("span");
+      t.textContent = label;
+      lbl.appendChild(t);
+      checksWrap.appendChild(lbl);
+    });
+    header.appendChild(checksWrap);
+  }
 
   const removeBtn = document.createElement("button");
   removeBtn.className = "btn btn-sm btn-danger-sm";
@@ -6044,15 +6792,29 @@ function _makeBonusConditionBlock(entry) {
   prodContainer.appendChild(addProd);
   block.appendChild(prodContainer);
 
-  block._collect = () => ({
-    build_type: typeSelect.value || null,
-    immediate:  _collectResRows(immContainer),
-    production: _collectResRows(prodContainer),
-  });
+  block._collect = () => {
+    const selectedBuildTypes = typeChecks.map(cb => cb.value).filter((_, i) => typeChecks[i].checked);
+    const out = {
+      immediate:  _collectResRows(immContainer),
+      production: _collectResRows(prodContainer),
+    };
+    if (selectedBuildTypes.length === 1) out.build_type = selectedBuildTypes[0];
+    else if (selectedBuildTypes.length > 1) out.build_types = selectedBuildTypes;
+    if (includeAdjTarget) {
+      const checked = coordChecks.map(cb => cb.value).filter((_, i) => coordChecks[i].checked);
+      if (checked.length) {
+        out.target_coords = checked.map(v => {
+          const [r, c] = v.split(",");
+          return [Number(r), Number(c)];
+        });
+      }
+    }
+    return out;
+  };
   return block;
 }
 
-function _makeConditionalBonusSection(sectionLabel, savedRaw) {
+function _makeConditionalBonusSection(sectionLabel, savedRaw, opts = {}) {
   const section = document.createElement("div");
   section.className = "editor-field board-bonus-section";
 
@@ -6066,8 +6828,13 @@ function _makeConditionalBonusSection(sectionLabel, savedRaw) {
 
   // Load existing data
   _normBonusList(savedRaw).forEach(entry => {
-    if (Object.keys(entry.immediate || {}).length || Object.keys(entry.production || {}).length || entry.build_type) {
-      blocksContainer.appendChild(_makeBonusConditionBlock(entry));
+    if (
+      Object.keys(entry.immediate || {}).length ||
+      Object.keys(entry.production || {}).length ||
+      entry.build_type ||
+      (entry.build_types || []).length
+    ) {
+      blocksContainer.appendChild(_makeBonusConditionBlock(entry, opts));
     }
   });
 
@@ -6075,7 +6842,7 @@ function _makeConditionalBonusSection(sectionLabel, savedRaw) {
   addBtn.className = "btn btn-sm";
   addBtn.textContent = "+ Add condition";
   addBtn.addEventListener("click", () =>
-    blocksContainer.appendChild(_makeBonusConditionBlock({})));
+    blocksContainer.appendChild(_makeBonusConditionBlock({}, opts)));
   section.appendChild(addBtn);
 
   section._collectList = () => {
@@ -6106,10 +6873,15 @@ function _formatConditionalBonuses(raw, prefix) {
       if (v !== 0) parts.push(`${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${k}/yr`);
     });
     if (!parts.length) return "";
-    const btLabel = entry.build_type
-      ? (TILE_LABELS[entry.build_type] || entry.build_type)
+    const bts = _parseBonusBuildTypeKeys(entry);
+    const btLabel = bts.length
+      ? bts.map(bt => TILE_LABELS[bt] || bt).join("/")
       : "any";
-    return `${prefix} <em>(${btLabel})</em>: ${parts.join(", ")}`;
+    const targetKeys = _parseTargetCoordKeys(entry);
+    const tgt = targetKeys.length
+      ? ` @${targetKeys.map(k => `(${k})`).join("")}`
+      : "";
+    return `${prefix} <em>(${btLabel}${tgt})</em>: ${parts.join(", ")}`;
   }).filter(Boolean).join("<br>");
 }
 
@@ -6125,16 +6897,20 @@ function _formatTerrainConditionalBonuses(raw, prefix) {
       if (v !== 0) parts.push(`${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}/yr`);
     });
     if (!parts.length) return "";
-    const tt = entry.terrain_type;
-    const terrainLabel = tt ? (_terrainLabel(tt) || "🌐") : "🌐";
+    const tts = _parseBonusTerrainTypeKeys(entry);
+    const terrainLabel = tts.length
+      ? tts.map(tt => _terrainLabel(tt)).filter(Boolean).join("/")
+      : "🌐";
     return `${terrainLabel}: ${parts.join(", ")}`;
   }).filter(Boolean).join("<br>");
 }
 
 function renderBoardTileForm(tile) {
+  boardEditorContainer.classList.remove("board-editor-map-view");
   boardEditorContainer.classList.add("board-editor-form-view");
   boardEditorContainer.innerHTML = "";
   boardEditorTitle.textContent = `Editing tile (${tile.row}, ${tile.col})`;
+  boardEditorContainer.appendChild(_buildBoardEditorStatsPanel());
 
   const formWrap = document.createElement("div");
   formWrap.className = "board-tile-form";
@@ -6156,9 +6932,11 @@ function renderBoardTileForm(tile) {
   const terrainSelect = document.createElement("select");
   terrainSelect.className = "editor-dict-key";
   terrainSelect.style.width = "100%";
-  ["empty", "city", "lake", "sea", "offshore_wind", "offshore_solar", "government",
-   "commercial", "industrial", "sun", "wind", "gas_reserve", "coal", "geothermal", "wall", "mountain",
-   "rare_metal_mine", "natural_park", "space", "launching_pad"].forEach(t => {
+  const terrainOptions = [...TERRAIN_OPTIONS];
+  if (tile.terrain && !terrainOptions.includes(tile.terrain)) {
+    terrainOptions.push(tile.terrain); // preserve/edit legacy terrains if present on this tile
+  }
+  terrainOptions.forEach(t => {
     const o = document.createElement("option");
     o.value = t;
     o.textContent = t.charAt(0).toUpperCase() + t.slice(1);
@@ -6188,7 +6966,8 @@ function renderBoardTileForm(tile) {
   // --- Adjacency bonuses (conditional on build type) ---
   const adjSection = _makeConditionalBonusSection(
     "Adjacency bonuses — given to players building next to this tile (per build type)",
-    tile.adjacency_bonuses
+    tile.adjacency_bonuses,
+    { includeAdjTarget: true, sourceTile: tile }
   );
   form.appendChild(adjSection);
 
@@ -6222,8 +7001,15 @@ function renderBoardTileForm(tile) {
   // null/undefined = all allowed (show all checked); [] = none allowed; [...] = whitelist
   const savedOnlyBuild = tile.only_build;
   const allAllowed = savedOnlyBuild == null;
+  const buildableOptions = [...BUILDABLE_TILE_TYPE_OPTIONS];
+  const knownBuildTypes = new Set(buildableOptions.map(([val]) => String(val)));
+  (Array.isArray(savedOnlyBuild) ? savedOnlyBuild : []).forEach(v => {
+    if (v && !knownBuildTypes.has(String(v))) {
+      buildableOptions.push([v, `${TILE_LABELS[v] || v} (legacy)`]);
+    }
+  });
   // Use the shared BUILDABLE_TILE_TYPE_OPTIONS (no hardcoded descriptions)
-  BUILDABLE_TILE_TYPE_OPTIONS.forEach(([val, lbl]) => {
+  buildableOptions.forEach(([val, lbl]) => {
     const cbLabel = document.createElement("label");
     cbLabel.className = "only-build-cb-label";
     const cb = document.createElement("input");
@@ -6245,7 +7031,7 @@ function renderBoardTileForm(tile) {
   hint.style.fontSize = ".75rem";
   hint.style.color = "var(--text-dim)";
   hint.style.margin = ".5rem 0";
-  hint.innerHTML = "<strong>Store/Lobby/Office</strong> → commercial only | <strong>Power/DC/Factory/etc.</strong> → open terrains | <strong>🔩Mine</strong> → rare_metal_mine | <strong>💧Hydro</strong> → 🌊lake | <strong>💨Offshore Wind</strong> → wind power plant | <strong>☀️Offshore Solar</strong> → PV power plant | <strong>🌊Sea</strong> → data_center | <strong>✨Space</strong> → satellite solar or satellite DC | <strong>Gov/City/Wall</strong> → no build";
+  hint.innerHTML = "<strong>Store/Lobby/Office</strong> → commercial only | <strong>Power/DC/Factory/etc.</strong> → open terrains | <strong>🔩Mine</strong> → rare_metal_mine | <strong>💧Hydro</strong> → 🌊lake | <strong>💨Offshore Wind</strong> → wind power plant | <strong>☀️Offshore Solar</strong> → PV power plant | <strong>🟦Sea</strong> → data_center | <strong>✨Space</strong> → satellite solar or satellite DC | <strong>Gov/City/Wall</strong> → no build";
   form.appendChild(hint);
 
   formWrap.appendChild(form);
@@ -6319,7 +7105,7 @@ function renderBoardTileForm(tile) {
     const checkedTypes = Array.from(onlyBuildGrid.querySelectorAll("input[type=checkbox]:checked"))
       .map(cb => cb.value);
     // All checked = all allowed → null; none checked = block all → []; partial = whitelist
-    const only_build = checkedTypes.length === BUILDABLE_TILE_TYPE_OPTIONS.length ? null : checkedTypes;
+    const only_build = checkedTypes.length === buildableOptions.length ? null : checkedTypes;
     socket.emit("edit_board_tile", {
       row: tile.row,
       col: tile.col,
@@ -6382,7 +7168,7 @@ function renderBoardTileForm(tile) {
 const TERRAIN_OPTIONS = [
   "empty", "city", "lake", "sea", "offshore_wind", "offshore_solar",
   "government", "commercial", "industrial", "sun", "wind", "gas_reserve", "coal",
-  "geothermal", "wall", "mountain", "rare_metal_mine", "natural_park", "space", "launching_pad",
+  "wall", "mountain", "rare_metal_mine", "natural_park", "space", "launching_pad",
 ];
 
 // Used by both renderBoardTileForm and renderTerrainTypeForm
@@ -6392,8 +7178,6 @@ const BUILDABLE_TILE_TYPE_OPTIONS = [
   ["coal_power_plant",          "⛏️ Coal Power Plant"],
   ["pv_power_plant",            "☀️ PV Solar Plant"],
   ["wind_power_plant",          "💨 Wind Power Plant"],
-  ["geothermal_power_plant",    "🌡️ Geothermal Power Plant"],
-  ["solar_thermal",             "☀️ Solar Thermal Plant"],
   ["data_center",               "🖥️ Data Center"],
   ["store",                     "🏪 Store"],
   ["ad_campaign",               "📢 Ad Campaign"],
@@ -6412,9 +7196,11 @@ const BUILDABLE_TILE_TYPE_OPTIONS = [
 let tileTypeConfig = {};
 
 function renderTerrainTypeForm() {
+  boardEditorContainer.classList.remove("board-editor-map-view");
   boardEditorContainer.classList.add("board-editor-form-view");
   boardEditorContainer.innerHTML = "";
   boardEditorTitle.textContent = "Edit by Terrain Type";
+  boardEditorContainer.appendChild(_buildBoardEditorStatsPanel());
 
   const formWrap = document.createElement("div");
   formWrap.className = "board-tile-form";

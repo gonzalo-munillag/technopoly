@@ -13,18 +13,38 @@ city:
 offshore_wind:
   only_build:
   - wind_power_plant
-  build_bonuses: []
+  build_bonuses:
+  - build_type: wind_power_plant
+    immediate:
+      money: 100
+    production: {}
   adjacency_bonuses: []
 lake:
   only_build:
   - data_center
   - hydroelectric_power_plant
-  build_bonuses: []
-  adjacency_bonuses: []
+  build_bonuses:
+  - immediate:
+      money: -100
+    production: {}
+    build_type: data_center
+  adjacency_bonuses:
+  - immediate:
+      money: 200
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - data_center
 sea:
   only_build:
   - data_center
-  build_bonuses: []
+  build_bonuses:
+  - immediate:
+      money: -200
+    production: {}
+    build_type: data_center
   adjacency_bonuses: []
 empty:
   only_build:
@@ -33,15 +53,12 @@ empty:
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
   build_bonuses: []
   adjacency_bonuses: []
@@ -54,17 +71,27 @@ government:
   only_build: []
   build_bonuses: []
   adjacency_bonuses:
-  - build_type: lobby_group
-    immediate:
-      reputation: 2
+  - immediate:
+      reputation: 1
     production: {}
+    build_type: lobby_group
 commercial:
   only_build:
   - store
   - ad_campaign
   - office
   - lobby_group
-  build_bonuses: []
+  build_bonuses:
+  - immediate:
+      users: 10
+    production: {}
+    build_types:
+    - store
+    - ad_campaign
+  - immediate:
+      HR: 1
+    production: {}
+    build_type: office
   adjacency_bonuses: []
 industrial:
   only_build:
@@ -73,33 +100,82 @@ industrial:
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
-  build_bonuses: []
+  build_bonuses:
+  - immediate: {}
+    production:
+      money: 1
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - pv_power_plant
+    - wind_power_plant
+    - data_center
+    - distribution_center
+    - factory
   adjacency_bonuses: []
 sun:
   only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
   - pv_power_plant
-  - solar_thermal
-  build_bonuses: []
+  - wind_power_plant
+  - data_center
+  - distribution_center
+  - factory
+  build_bonuses:
+  - immediate:
+      money: 100
+    production: {}
+    build_type: pv_power_plant
   adjacency_bonuses: []
 wind:
   only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
   - wind_power_plant
-  build_bonuses: []
+  - data_center
+  - distribution_center
+  - factory
+  build_bonuses:
+  - immediate:
+      money: 200
+    production: {}
+    build_type: wind_power_plant
   adjacency_bonuses: []
 gas_reserve:
   only_build:
+  - nuclear_power_plant
   - natural_gas_power_plant
-  build_bonuses: []
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  build_bonuses:
+  - immediate:
+      money: 100
+    production: {}
+    build_type: natural_gas_power_plant
   adjacency_bonuses: []
 coal:
   only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
   - coal_power_plant
-  build_bonuses: []
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  build_bonuses:
+  - immediate:
+      money: 100
+    production: {}
+    build_type: coal_power_plant
   adjacency_bonuses: []
 geothermal:
   only_build:
@@ -108,16 +184,33 @@ geothermal:
   adjacency_bonuses: []
 rare_metal_mine:
   only_build:
+  - data_center
   - rare_metal_mine
   build_bonuses: []
   adjacency_bonuses: []
 natural_park:
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
-  build_bonuses: []
+  build_bonuses:
+  - immediate:
+      reputation: -1
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - pv_power_plant
+    - wind_power_plant
+    - data_center
+    - distribution_center
+    - factory
   adjacency_bonuses: []
 space:
   only_build:

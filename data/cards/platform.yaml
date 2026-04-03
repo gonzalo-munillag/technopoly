@@ -131,9 +131,8 @@
   description: null
   type: software platform
   number: 3
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   effect:
     users: 20
   costs:
@@ -149,7 +148,20 @@
     users: 0
     fee: 0
     fee_card_id: null
+  production: null
+  build: null
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 50
     money: 0
@@ -162,8 +174,8 @@
     target_type: null
     bonus:
       users: 30
-      money: 500
-  disabled: true
+    production:
+      money: 1
 - name: Web Browser Engine
   id: 17
   description: null
@@ -250,9 +262,8 @@
   description: null
   type: software service
   number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
     engineers: 4
     suits: 4
@@ -268,7 +279,20 @@
     fee_card_id: 17
   effect:
     users: 30
+  production: null
+  build: null
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 10
     money: 0
@@ -287,7 +311,6 @@
     bonus:
       users: 20
     target_count: 3
-  disabled: true
 - name: Online Search Engine
   id: 20
   description: null
@@ -378,8 +401,8 @@
   description: null
   type: software service
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
     engineers: 10
     suits: 10
@@ -400,8 +423,17 @@
     ad_campaigns: 4
   build: ad_campaign
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 0
     money: 1
@@ -421,15 +453,12 @@
     bonus:
       money: 300
     target_count: 3
-  disabled: true
 - name: Video Game Console OEM
   id: 23
   description: null
   type: hardware manufacturer
   number: 1
-  build: factory
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 200
   costs:
     engineers: 10
     suits: 3
@@ -447,7 +476,22 @@
     fee_company_type: null
   effect:
     users: 30
+  production: null
+  build: factory
   requirements: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 10
     money: 1
@@ -459,9 +503,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  build: factory
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 200
   costs:
     engineers: 10
     suits: 4
@@ -479,7 +521,22 @@
     fee_company_type: null
   effect:
     users: 50
+  production: null
+  build: factory
   requirements: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 10
     money: 1
@@ -525,8 +582,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 200
   costs:
     engineers: 10
     suits: 5
@@ -549,10 +605,19 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - hydroelectric_power_plant
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 20
     money: 0
@@ -564,8 +629,8 @@
   description: null
   type: hardware manufacturer
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 200
+  disabled: 'true'
   costs:
     engineers: 8
     suits: 5
@@ -587,16 +652,29 @@
     money: 3
   build: factory
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - hydroelectric_power_plant
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 0
     money: 2
@@ -604,17 +682,15 @@
   boosts:
   - target_id: 26
     target_type: null
-    bonus:
-      money: 500
-  disabled: true
+    bonus: {}
+    production:
+      money: 2
 - name: Wearable OEM
   id: 28
   description: null
   type: hardware manufacturer
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
-  disabled: 'true'
+  adjacent_placement_fee: 200
   costs:
     engineers: 6
     suits: 4
@@ -641,10 +717,19 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - hydroelectric_power_plant
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 10
     money: 1
@@ -654,6 +739,7 @@
     target_type: null
     bonus:
       users: 10
+  disabled: true
 - name: Video Game Studio
   id: 29
   description: null
@@ -775,10 +861,8 @@
   description: null
   type: software service
   number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
   disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
     engineers: 0
     suits: 0
@@ -797,7 +881,19 @@
   effect:
     users: 20
   production: null
+  build: null
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 10
     money: 0
@@ -857,9 +953,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
-  disabled: 'true'
+  adjacent_placement_fee: 200
   costs:
     engineers: 8
     suits: 4
@@ -886,10 +980,19 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - hydroelectric_power_plant
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 10
     money: 0
@@ -899,15 +1002,14 @@
     target_type: null
     bonus:
       users: 20
+  disabled: true
 - name: Quantum Computer OEM
   id: 35
   description: null
   type: hardware manufacturer
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 200
   disabled: 'true'
-  adjacent_placement_fee: null
   costs:
     engineers: 15
     suits: 0
@@ -927,18 +1029,29 @@
     money: 5
   build: factory
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - hydroelectric_power_plant
   only_playable_on_terrains: null
-  adjacent_placement_fee_target_types: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 0
     money: 3
@@ -954,68 +1067,19 @@
     target_count: 3
   - target_id: null
     target_type: data center
-    bonus:
+    bonus: {}
+    production:
       data_centers: 1
     target_count: 5
-- name: Machine Learning Service
-  id: 36
-  description: null
-  type: software service
-  number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
-  disabled: 'true'
-  costs:
-    engineers: 5
-    suits: 0
-    ads: 3
-    money: 400
-    servers: 5
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-  effect:
-    users: 10
-  production:
-    money: 1
-  requirements: null
-  tiers:
-  - users: 10
-    money: 0
-    data_cost: 200
-  - users: 20
-    money: 0
-    data_cost: 400
-  - users: 30
-    money: 0
-    data_cost: 600
-  boosts:
-  - target_id: null
-    target_type:
-    - social platform
-    - hardware manufacturer
-    - chip enterprise
-    - software service
-    - software platform
-    - online marketplace
-    - search service
-    bonus:
-      users: 5
-    target_count: 5
 - name: Mainframe Computer OEM
-  id: 37
+  id: 36
   description: 'Designed for reliability and massive transaction processing.
 
     Handles millions of operations and is extremely stable and secure.'
   type: hardware manufacturer
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 200
+  disabled: 'true'
   costs:
     engineers: 8
     suits: 0
@@ -1034,16 +1098,29 @@
     money: 3
   build: factory
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - hydroelectric_power_plant
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 0
     money: 1
@@ -1059,17 +1136,17 @@
     target_count: 2
   - target_id: null
     target_type: data center
-    bonus:
+    bonus: {}
+    production:
       data_centers: 1
     target_count: 3
-  disabled: true
 - name: Supercomputer OEM
-  id: 38
+  id: 37
   description: null
   type: hardware manufacturer
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 200
+  disabled: 'true'
   costs:
     engineers: 8
     suits: 0
@@ -1088,16 +1165,29 @@
     money: 4
   build: factory
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - hydroelectric_power_plant
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 0
     money: 2
@@ -1112,17 +1202,17 @@
       money: 150
   - target_id: null
     target_type: data center
-    bonus:
+    bonus: {}
+    production:
       data_centers: 1
     target_count: 3
-  disabled: true
 - name: Content Delivery Network
-  id: 39
+  id: 38
   description: null
   type: software service
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
     engineers: 5
     suits: 0
@@ -1142,8 +1232,17 @@
     money: 1
   build: data_center
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 10
     money: 1
@@ -1154,9 +1253,72 @@
   boosts:
   - target_id: null
     target_type: data center
-    bonus:
+    bonus: {}
+    production:
       data_centers: 1
     target_count: 2
+- name: AI Core Service
+  id: 39
+  description: null
+  type: software service
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 10
+    suits: 0
+    ads: 3
+    money: 1000
+    servers: 10
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    users: 10
+  production:
+    money: 3
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - users: 10
+    money: 0
+    data_cost: 200
+  - users: 20
+    money: 0
+    data_cost: 400
+  - users: 30
+    money: 0
+    data_cost: 600
+  - users: 40
+    money: 0
+    data_cost: 800
+  boosts:
+  - target_id: null
+    target_type:
+    - social platform
+    - hardware manufacturer
+    - chip enterprise
+    - software service
+    - software platform
+    - online marketplace
+    - search service
+    bonus:
+      users: 10
+    target_count: 5
   disabled: true
 - name: Semiconductor Equipment OEM
   id: 40
@@ -1169,8 +1331,7 @@
     Example: ASML'
   type: hardware manufacturer
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 200
   disabled: 'true'
   costs:
     engineers: 12
@@ -1190,16 +1351,29 @@
     money: 4
   build: factory
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - hydroelectric_power_plant
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 0
     money: 2
@@ -1212,14 +1386,123 @@
     bonus:
       money: 200
     target_count: 2
-- name: Satellite OEM
+- name: System on a Chip OEM
   id: 41
+  description: SoC is an integrated circuit that combines CPU, RAM, input/output,
+    and often GPU, connectivity (Wifi, cellular, USB, Bluetooth), and neural, media,
+    crypto accelerators—onto a single chip.
+  type: hardware manufacturer
+  number: 1
+  adjacent_placement_fee: 200
+  disabled: 'true'
+  costs:
+    engineers: 7
+    suits: 0
+    ads: 0
+    money: 500
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production:
+    money: 2
+  build: factory
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - users: 0
+    money: 1
+    data_cost: 200
+  boosts:
+  - target_id: null
+    target_type: hardware manufacturer
+    bonus:
+      money: 200
+    target_count: 3
+- name: E-Commerce Marketplace
+  id: 42
+  description: Amazon
+  type: online marketplace
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 4
+    suits: 8
+    ads: 0
+    money: 1000
+    servers: 6
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 200
+    fee_card_type: distribution center
+  effect:
+    users: 40
+  production:
+    money: 3
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - users: 10
+    money: 1
+    data_cost: 200
+  - users: 10
+    money: 2
+    data_cost: 400
+  - users: 10
+    money: 3
+    data_cost: 600
+  boosts: null
+  disabled: true
+- name: Satellite OEM
+  id: 43
   description: 'internal comment: you can produce satellites with this card, one per
     generation'
   type: hardware manufacturer
   number: 3
-  disabled: 'true'
-  adjacent_placement_fee: 0
+  adjacent_placement_fee: 200
   costs:
     engineers: 13
     suits: 0
@@ -1247,12 +1530,18 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - hydroelectric_power_plant
   only_playable_on_terrains: null
-  adjacent_placement_fee_target_types: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers:
   - users: 10
@@ -1260,15 +1549,12 @@
     data_cost: 200
   boosts: null
 - name: Rocket OEM
-  id: 42
+  id: 44
   description: Design and manufacture orbital launch vehicles. Build a launching pad
     to reach space.
   type: hardware manufacturer
   number: 2
-  factory_refund: 0
-  dc_production_bonus: 0
-  disabled: 'true'
-  adjacent_placement_fee: null
+  adjacent_placement_fee: 200
   costs:
     engineers: 9
     suits: 1
@@ -1290,62 +1576,22 @@
     money: 4
   build: launching_pad
   requirements: null
-  only_playable_next_to: null
-  only_playable_on_terrains: null
-  adjacent_placement_fee_target_types: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  only_playable_on_terrains:
+  - launching_pad
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
   bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
   - users: 0
     money: 2
     data_cost: 200
   boosts: null
-- name: System on a Chip OEM
-  id: 43
-  description: SoC is an integrated circuit that combines CPU, RAM, input/output,
-    and often GPU, connectivity (Wifi, cellular, USB, Bluetooth), and neural, media,
-    crypto accelerators—onto a single chip.
-  type: chip enterprise
-  number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
-  disabled: 'true'
-  costs:
-    engineers: 7
-    suits: 0
-    ads: 0
-    money: 500
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
-    fee_card_type: null
-    fee_company_type: null
-  effect: null
-  production:
-    money: 2
-  build: factory
-  requirements: null
-  only_playable_next_to:
-  - nuclear_power_plant
-  - natural_gas_power_plant
-  - coal_power_plant
-  - pv_power_plant
-  - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
-  - hydroelectric_power_plant
-  bonuses_by_placing_next_to_building: null
-  tiers:
-  - users: 0
-    money: 1
-    data_cost: 200
-  boosts:
-  - target_id: null
-    target_type: hardware manufacturer
-    bonus:
-      money: 200
-    target_count: 3

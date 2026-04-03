@@ -144,6 +144,48 @@ def _normalize_adjacency_bonuses(ab) -> list:
         return [{"build_type": None, "immediate": dict(ab), "production": {}}]
     return []
 
+def _matches_target_coords(entry: dict, row: int, col: int) -> bool:
+    coords = entry.get("target_coords")
+    if isinstance(coords, list) and coords:
+        for it in coords:
+            try:
+                if isinstance(it, (list, tuple)) and len(it) >= 2:
+                    if int(it[0]) == row and int(it[1]) == col:
+                        return True
+                elif isinstance(it, dict):
+                    if int(it.get("row")) == row and int(it.get("col")) == col:
+                        return True
+            except Exception:
+                continue
+        return False
+    tr = entry.get("target_row")
+    tc = entry.get("target_col")
+    if tr is None or tc is None:
+        return True
+    try:
+        return int(tr) == row and int(tc) == col
+    except Exception:
+        return False
+
+def _matches_build_type(entry: dict, tile_type: str) -> bool:
+    bts = entry.get("build_types")
+    if isinstance(bts, list) and bts:
+        normalized = {
+            _normalize_tile_type(x)
+            for x in bts
+            if _normalize_tile_type(x)
+        }
+        return tile_type in normalized
+    bt = _normalize_tile_type(entry.get("build_type"))
+    return bt is None or bt == tile_type
+
+def _matches_terrain_type(entry: dict, terrain: str) -> bool:
+    tts = entry.get("terrain_types")
+    if isinstance(tts, list) and tts:
+        return terrain in {str(x) for x in tts if x}
+    tt = entry.get("terrain_type")
+    return tt is None or tt == terrain
+
 def _normalize_terrain_bonuses(tb) -> list:
     if isinstance(tb, list):
         return tb
@@ -174,6 +216,8 @@ def _make_tile(row: int, col: int, terrain: str = "empty",
 
 def _normalize_tile_type(tile_type: str | None) -> str | None:
     """Backward compatibility: map retired tile keys to their replacements."""
+    if isinstance(tile_type, str):
+        tile_type = tile_type.strip().replace(" ", "_")
     if tile_type == "power_plant":
         return "nuclear_power_plant"  # default legacy fallback
     return tile_type
@@ -477,8 +521,7 @@ class Board:
 
         # Build bonuses — conditional on what type of tile is placed here
         for entry in _normalize_build_bonuses(tile.get("build_bonuses", {})):
-            bt = entry.get("build_type")
-            if bt is None or bt == tile_type:
+            if _matches_build_type(entry, tile_type):
                 for res, amt in (entry.get("immediate") or {}).items():
                     immediate[res] = immediate.get(res, 0) + amt
                 for res, amt in (entry.get("production") or {}).items():
@@ -487,16 +530,15 @@ class Board:
         # Adjacency bonuses from neighbours — conditional on what type is being placed
         for nb in self.get_neighbors(row, col):
             for entry in _normalize_adjacency_bonuses(nb.get("adjacency_bonuses", {})):
-                bt = entry.get("build_type")
-                if bt is None or bt == tile_type:
+                target_ok = _matches_target_coords(entry, row, col)
+                if _matches_build_type(entry, tile_type) and target_ok:
                     for res, amt in (entry.get("immediate") or {}).items():
                         immediate[res] = immediate.get(res, 0) + amt
                     for res, amt in (entry.get("production") or {}).items():
                         production[res] = production.get(res, 0) + amt
             pt = nb.get("placed_tile") or {}
             for entry in _normalize_adjacency_bonuses(pt.get("placed_tile_adjacency_bonuses", {})):
-                bt = entry.get("build_type")
-                if bt is None or bt == tile_type:
+                if _matches_build_type(entry, tile_type):
                     for res, amt in (entry.get("immediate") or {}).items():
                         immediate[res] = immediate.get(res, 0) + amt
                     for res, amt in (entry.get("production") or {}).items():
@@ -511,8 +553,7 @@ class Board:
                     continue
                 adjacent_type = _normalize_tile_type(pt.get("type"))
                 for entry in _normalize_adjacency_bonuses(bonuses_by_placing_next_to_building):
-                    bt = _normalize_tile_type(entry.get("build_type"))
-                    if bt is None or bt == adjacent_type:
+                    if _matches_build_type(entry, adjacent_type):
                         for res, amt in (entry.get("immediate") or {}).items():
                             immediate[res] = immediate.get(res, 0) + amt
                         for res, amt in (entry.get("production") or {}).items():
@@ -523,21 +564,20 @@ class Board:
         if bonuses_by_building_on_terrain_type:
             terrain = tile.get("terrain")
             for entry in _normalize_terrain_bonuses(bonuses_by_building_on_terrain_type):
-                tt = entry.get("terrain_type")
-                if tt is None or tt == terrain:
+                if _matches_terrain_type(entry, terrain):
                     for res, amt in (entry.get("immediate") or {}).items():
                         immediate[res] = immediate.get(res, 0) + amt
                     for res, amt in (entry.get("production") or {}).items():
                         production[res] = production.get(res, 0) + amt
 
         # Card-level "bonuses by building adjacent to terrain type":
-        # if this tile is placed adjacent to matching terrain, apply bonus.
+        # Fires once per unique adjacent terrain type (not once per adjacent tile),
+        # so being next to 2 commercial tiles still only grants the bonus once.
         if bonuses_by_building_adjacent_to_terrain_type:
-            for nb in self.get_neighbors(row, col):
-                nb_terrain = nb.get("terrain")
+            adjacent_terrains = {nb.get("terrain") for nb in self.get_neighbors(row, col) if nb.get("terrain")}
+            for nb_terrain in adjacent_terrains:
                 for entry in _normalize_terrain_bonuses(bonuses_by_building_adjacent_to_terrain_type):
-                    tt = entry.get("terrain_type")
-                    if tt is None or tt == nb_terrain:
+                    if _matches_terrain_type(entry, nb_terrain):
                         for res, amt in (entry.get("immediate") or {}).items():
                             immediate[res] = immediate.get(res, 0) + amt
                         for res, amt in (entry.get("production") or {}).items():

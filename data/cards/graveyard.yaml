@@ -146,3 +146,138 @@
       ad_campaigns: 0
     boosts: []
     disabled: true
+- card_type: build
+  card_data:
+    name: Geothermal Power Plant
+    id: 65
+    description: Harnesses heat from deep underground to generate electricity. Can
+      be built on any open terrain. Boosts adjacent data centers.
+    type: geothermal power plant
+    number: 1
+    build: geothermal_power_plant
+    factory_refund: 0
+    dc_production_bonus: 1
+    disabled: 'false'
+    costs:
+      engineers: 1
+      suits: 0
+      ads: 0
+      money: 5
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect:
+      money: 2
+      reputation: 1
+      data_centers: 0
+      ad_campaigns: 0
+    requirements: null
+    tiers: null
+    boosts: null
+- card_type: build
+  card_data:
+    name: Solar Thermal Power Plant
+    id: 68
+    description: Concentrates sunlight to generate heat and electricity. Best deployed
+      on sun terrain. Boosts adjacent data centers.
+    type: solar thermal
+    number: 2
+    build: solar_thermal
+    factory_refund: 0
+    dc_production_bonus: 1
+    image: null
+    costs:
+      engineers: 1
+      suits: 0
+      money: 6
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect:
+      money: 2
+      reputation: 1
+    requirements: null
+    tiers: null
+    boosts: null
+    disabled: true
+- card_type: build
+  card_data:
+    name: New Card
+    id: 77
+    image: null
+    description: ''
+    type: ''
+    number: 1
+    build: null
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect: {}
+    boosts: []
+    requirements: []
+    only_playable_next_to: []
+    only_playable_on_terrains: []
+    bonuses_by_placing_next_to_building: []
+    bonuses_by_building_on_terrain_type: []
+    bonuses_by_building_adjacent_to_terrain_type: []
+    placed_tile_adjacency_bonuses: []
+    adjacent_placement_fee: 0
+    adjacent_placement_fee_target_types: []
+    tiers: []
+- card_type: build
+  card_data:
+    name: Corporate Lobbying
+    id: 74
+    description: companies influencing regulation
+    type: lobby
+    number: 1
+    adjacent_placement_fee: 0
+    costs:
+      engineers: 0
+      suits: 6
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect: null
+    production: null
+    build: lobby_group
+    requirements: null
+    min_reputation: null
+    only_playable_next_to: null
+    only_playable_on_terrains: null
+    adjacent_placement_fee_target_types: null
+    bonuses_by_placing_next_to_building: null
+    bonuses_by_building_on_terrain_type: null
+    bonuses_by_building_adjacent_to_terrain_type: null
+    placed_tile_adjacency_bonuses: null
+    tiers: null
+    boosts: null

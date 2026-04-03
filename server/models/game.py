@@ -367,13 +367,27 @@ class Game:
         player.court_start_ready = False
         return {"penalty": penalty, "lost_cards": lost_cards}
 
+    def effective_court_threshold(self, player_id: str) -> int:
+        """Return the die-roll threshold for this player, reduced by any court_threshold_modifier
+        on their played cards. Never goes below 2 (always some chance of losing)."""
+        player = self.players.get(player_id)
+        reg = self.current_regulation
+        if not player or not reg:
+            return 4
+        base = reg.court_threshold
+        mod = sum(
+            getattr(c, "court_threshold_modifier", None) or 0
+            for c in player.played_cards if c is not None
+        )
+        return max(2, base + mod)
+
     def resolve_regulation_court(self, player_id: str) -> dict:
         player = self.players.get(player_id)
         if not player or not self.current_regulation:
             return {}
         reg = self.current_regulation
         roll = random.randint(1, 6)
-        threshold = reg.court_threshold
+        threshold = self.effective_court_threshold(player_id)
         won = roll >= threshold
         lost_cards = []
         if won:
@@ -458,6 +472,8 @@ class Game:
                 P("money_users_trigger", 10),
                 P("data_per_users", 200),
                 P("data_users_trigger", 10),
+                P("reputation_modifier_resource_values", {}) or {},
+                P("reputation_modifier_production_values", {}) or {},
             )
             player.reset_turn()
             player.year_done = False
@@ -543,11 +559,11 @@ class Game:
                      self.discard_pile, self.draft_discard,
                      self.build_deck, self.shared_build_row):
             for c in deck:
-                if c.id:
+                if c is not None and getattr(c, "id", None):
                     m[c.id] = c.name
         for p in self.players.values():
             for c in p.hand + p.played_cards + p.draft_pool:
-                if c.id:
+                if c is not None and getattr(c, "id", None):
                     m[c.id] = c.name
             if p.company and p.company.id:
                 m[p.company.id] = p.company.name

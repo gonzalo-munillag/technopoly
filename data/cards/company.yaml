@@ -43,8 +43,8 @@
   id: 3
   type: null
   description: Social media disruptor. Engagement is their drug, attention their currency.
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   starting_resources:
     engineers: 200
     suits: 100
@@ -57,10 +57,18 @@
     HR: 1
     data_centers: 1
     ad_campaigns: 2
+  production: null
   requirements: null
+  min_reputation: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-  disabled: true
 - name: OpenMind Industries
   id: 4
   type: null
@@ -137,8 +145,7 @@
 
 
     Examples: NVIDIA, Qualcomm. Fabless'
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 0
   starting_resources:
     engineers: 100
     suits: 100
@@ -152,7 +159,15 @@
     HR: 1
     data_centers: 1
     ad_campaigns: 1
+  production: null
   requirements: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
 - name: Chip Manufacturer

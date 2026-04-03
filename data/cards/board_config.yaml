@@ -1,9 +1,29 @@
 - row: 0
   col: 3
-  terrain: rare_metal_mine
+  terrain: natural_park
   name: ''
+  build_bonuses: &id001
+  - immediate:
+      reputation: -1
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - pv_power_plant
+    - wind_power_plant
+    - data_center
+    - distribution_center
+    - factory
   only_build:
-  - rare_metal_mine
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - distribution_center
+  - factory
 - row: 0
   col: 4
   terrain: empty
@@ -14,15 +34,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 0
   col: 5
@@ -34,15 +51,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 0
   col: 6
@@ -54,15 +68,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 0
   col: 7
@@ -74,15 +85,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 0
   col: 8
@@ -94,15 +102,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 0
   col: 9
@@ -114,22 +119,24 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 0
   col: 10
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -137,6 +144,20 @@
   col: 11
   terrain: lake
   name: ''
+  build_bonuses: &id003
+  - immediate:
+      money: -100
+    production: {}
+    build_type: data_center
+  adjacency_bonuses: &id004
+  - immediate:
+      money: 200
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - data_center
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -144,26 +165,37 @@
   col: 12
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
 - row: 1
   col: 2
-  terrain: natural_park
-  name: ''
-  only_build:
-  - nuclear_power_plant
-  - data_center
-  - distribution_center
-  - factory
-- row: 1
-  col: 3
   terrain: rare_metal_mine
   name: ''
   only_build:
+  - data_center
   - rare_metal_mine
+- row: 1
+  col: 3
+  terrain: natural_park
+  name: ''
+  build_bonuses: *id001
+  only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - distribution_center
+  - factory
 - row: 1
   col: 4
   terrain: empty
@@ -174,28 +206,36 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 1
   col: 5
   terrain: industrial
   name: ''
+  build_bonuses: &id002
+  - immediate: {}
+    production:
+      money: 1
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - pv_power_plant
+    - wind_power_plant
+    - data_center
+    - distribution_center
+    - factory
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -203,14 +243,13 @@
   col: 6
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -218,14 +257,13 @@
   col: 7
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -239,22 +277,24 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 1
   col: 9
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -262,6 +302,8 @@
   col: 10
   terrain: lake
   name: ''
+  build_bonuses: *id003
+  adjacency_bonuses: *id004
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -269,14 +311,13 @@
   col: 11
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -284,6 +325,8 @@
   col: 12
   terrain: lake
   name: ''
+  build_bonuses: *id003
+  adjacency_bonuses: *id004
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -296,8 +339,13 @@
   col: 1
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -305,14 +353,30 @@
   col: 2
   terrain: coal
   name: ''
+  build_bonuses: &id005
+  - immediate:
+      money: 100
+    production: {}
+    build_type: coal_power_plant
   only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
   - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 2
   col: 3
   terrain: coal
   name: ''
+  build_bonuses: *id005
   only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
   - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 2
   col: 4
   terrain: empty
@@ -323,15 +387,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 2
   col: 5
@@ -343,28 +404,24 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 2
   col: 6
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -372,14 +429,13 @@
   col: 7
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -393,15 +449,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 2
   col: 9
@@ -413,15 +466,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 2
   col: 10
@@ -438,19 +488,16 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 2
   col: 12
-  terrain: industrial
+  terrain: empty
   name: ''
   only_build:
   - nuclear_power_plant
@@ -458,9 +505,11 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
   - distribution_center
   - factory
 - row: 2
@@ -472,6 +521,17 @@
   col: 14
   terrain: commercial
   name: ''
+  build_bonuses: &id006
+  - immediate:
+      users: 10
+    production: {}
+    build_types:
+    - store
+    - ad_campaign
+  - immediate:
+      HR: 1
+    production: {}
+    build_type: office
   only_build:
   - store
   - ad_campaign
@@ -486,8 +546,13 @@
   col: 1
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -495,12 +560,20 @@
   col: 2
   terrain: coal
   name: ''
+  build_bonuses: *id005
   only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
   - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 3
   col: 3
   terrain: lake
   name: ''
+  build_bonuses: *id003
+  adjacency_bonuses: *id004
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -514,28 +587,24 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 3
   col: 5
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -543,14 +612,13 @@
   col: 6
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -558,14 +626,13 @@
   col: 7
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -579,20 +646,18 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 3
   col: 9
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -602,6 +667,7 @@
   col: 10
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -617,15 +683,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 3
   col: 12
@@ -636,6 +699,7 @@
   col: 13
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -646,10 +710,10 @@
   terrain: government
   name: ''
   adjacency_bonuses:
-  - build_type: lobby_group
-    immediate:
-      reputation: 2
+  - immediate:
+      reputation: 1
     production: {}
+    build_type: lobby_group
   only_build: []
 - row: 4
   col: 0
@@ -660,6 +724,8 @@
   col: 1
   terrain: lake
   name: ''
+  build_bonuses: *id003
+  adjacency_bonuses: *id004
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -667,8 +733,13 @@
   col: 2
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -676,8 +747,13 @@
   col: 3
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -696,15 +772,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 4
   col: 6
@@ -716,15 +789,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 4
   col: 7
@@ -736,15 +806,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 4
   col: 8
@@ -756,15 +823,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 4
   col: 9
@@ -776,15 +840,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 4
   col: 10
@@ -796,15 +857,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 4
   col: 11
@@ -816,15 +874,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 4
   col: 12
@@ -840,8 +895,13 @@
   col: 1
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -849,8 +909,13 @@
   col: 2
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -864,15 +929,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 5
   col: 4
@@ -884,15 +946,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 5
   col: 5
@@ -904,22 +963,24 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 5
   col: 6
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -927,6 +988,8 @@
   col: 7
   terrain: lake
   name: ''
+  build_bonuses: *id003
+  adjacency_bonuses: *id004
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -934,8 +997,13 @@
   col: 8
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -949,15 +1017,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 5
   col: 10
@@ -969,15 +1034,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 5
   col: 11
@@ -993,6 +1055,7 @@
   col: 13
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1002,6 +1065,8 @@
   col: 2
   terrain: lake
   name: ''
+  build_bonuses: *id003
+  adjacency_bonuses: *id004
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -1009,8 +1074,13 @@
   col: 3
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -1024,15 +1094,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 6
   col: 5
@@ -1044,15 +1111,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 6
   col: 6
@@ -1064,22 +1128,24 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 6
   col: 7
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -1087,8 +1153,13 @@
   col: 8
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -1102,15 +1173,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 6
   col: 10
@@ -1122,15 +1190,12 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 6
   col: 11
@@ -1146,46 +1211,59 @@
   col: 3
   terrain: wind
   name: ''
-  only_build:
-  - wind_power_plant
-- row: 7
-  col: 4
-  terrain: wind
-  name: ''
-  only_build:
-  - wind_power_plant
-- row: 7
-  col: 5
-  terrain: empty
-  name: ''
+  build_bonuses: &id007
+  - immediate:
+      money: 200
+    production: {}
+    build_type: wind_power_plant
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
-  - store
-  - ad_campaign
-  - office
-  - lobby_group
   - distribution_center
-  - rare_metal_mine
+  - factory
+- row: 7
+  col: 4
+  terrain: wind
+  name: ''
+  build_bonuses: *id007
+  only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - distribution_center
+  - factory
+- row: 7
+  col: 5
+  terrain: wind
+  name: ''
+  build_bonuses: *id007
+  only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - distribution_center
   - factory
 - row: 7
   col: 6
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -1193,14 +1271,13 @@
   col: 7
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -1208,20 +1285,19 @@
   col: 8
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
 - row: 7
   col: 9
-  terrain: industrial
+  terrain: empty
   name: ''
   only_build:
   - nuclear_power_plant
@@ -1229,15 +1305,28 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
   - distribution_center
   - factory
 - row: 7
   col: 10
   terrain: commercial
   name: ''
+  build_bonuses:
+  - immediate:
+      users: 10
+    production: {}
+    build_types:
+    - store
+    - ad_campaign
+  - immediate:
+      HR: 1
+    production: {}
+    build_type: office
   only_build:
   - store
   - ad_campaign
@@ -1247,6 +1336,7 @@
   col: 5
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1262,28 +1352,24 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 8
   col: 7
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -1296,6 +1382,8 @@
   col: 13
   terrain: lake
   name: ''
+  build_bonuses: *id003
+  adjacency_bonuses: *id004
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -1308,8 +1396,13 @@
   col: 2
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -1317,6 +1410,7 @@
   col: 15
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1324,23 +1418,34 @@
   - lobby_group
 - row: 4
   col: 14
-  terrain: commercial
+  terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
-  - store
-  - ad_campaign
-  - office
-  - lobby_group
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - distribution_center
+  - factory
 - row: 4
   col: 15
   terrain: sea
   name: ''
+  build_bonuses: &id008
+  - immediate:
+      money: -200
+    production: {}
+    build_type: data_center
   only_build:
   - data_center
 - row: 5
   col: 14
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 6
@@ -1352,6 +1457,7 @@
   col: 11
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1367,20 +1473,18 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 4
   col: -2
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1390,8 +1494,13 @@
   col: 1
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -1399,6 +1508,8 @@
   col: 0
   terrain: lake
   name: ''
+  build_bonuses: *id003
+  adjacency_bonuses: *id004
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -1406,8 +1517,13 @@
   col: 1
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -1425,6 +1541,7 @@
   col: -2
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1449,6 +1566,7 @@
   col: -3
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1468,14 +1586,13 @@
   col: -1
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -1488,14 +1605,13 @@
   col: -2
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -1503,6 +1619,7 @@
   col: -3
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 3
@@ -1514,6 +1631,7 @@
   col: -3
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1523,6 +1641,7 @@
   col: -2
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1535,17 +1654,23 @@
   only_build: []
 - row: 6
   col: -2
-  terrain: commercial
+  terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
-  - store
-  - ad_campaign
-  - office
-  - lobby_group
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - distribution_center
+  - factory
 - row: 7
   col: -2
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1558,23 +1683,17 @@
   only_build: []
 - row: 7
   col: -1
-  terrain: empty
+  terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
-  - store
-  - ad_campaign
-  - office
-  - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 6
   col: -1
@@ -1585,8 +1704,13 @@
   col: -1
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -1609,8 +1733,13 @@
   col: 1
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -1618,8 +1747,13 @@
   col: 2
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -1633,26 +1767,34 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 8
   col: 3
   terrain: gas_reserve
   name: ''
+  build_bonuses: &id009
+  - immediate:
+      money: 100
+    production: {}
+    build_type: natural_gas_power_plant
   only_build:
+  - nuclear_power_plant
   - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 8
   col: 4
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1662,6 +1804,7 @@
   col: 3
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1676,6 +1819,7 @@
   col: 14
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1685,6 +1829,17 @@
   col: 13
   terrain: commercial
   name: ''
+  build_bonuses:
+  - immediate:
+      users: 10
+    production: {}
+    build_types:
+    - store
+    - ad_campaign
+  - immediate:
+      HR: 1
+    production: {}
+    build_type: office
   only_build:
   - store
   - ad_campaign
@@ -1699,6 +1854,7 @@
   col: 12
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1706,17 +1862,23 @@
   - lobby_group
 - row: 8
   col: 12
-  terrain: commercial
+  terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
-  - store
-  - ad_campaign
-  - office
-  - lobby_group
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - distribution_center
+  - factory
 - row: 8
   col: 13
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 9
@@ -1729,6 +1891,7 @@
   col: 5
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1738,12 +1901,19 @@
   col: 2
   terrain: gas_reserve
   name: ''
+  build_bonuses: *id009
   only_build:
+  - nuclear_power_plant
   - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 10
   col: 4
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1759,6 +1929,7 @@
   col: 5
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1768,6 +1939,7 @@
   col: 13
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1777,20 +1949,20 @@
   col: 11
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 8
   col: 8
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -1798,20 +1970,19 @@
   col: 9
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
 - row: 8
   col: 10
-  terrain: industrial
+  terrain: empty
   name: ''
   only_build:
   - nuclear_power_plant
@@ -1819,23 +1990,24 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
+  - store
+  - ad_campaign
+  - office
+  - lobby_group
   - distribution_center
   - factory
 - row: 8
   col: 1
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -1849,28 +2021,24 @@
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - store
   - ad_campaign
   - office
   - lobby_group
   - distribution_center
-  - rare_metal_mine
   - factory
 - row: 8
   col: 0
   terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
   - data_center
   - distribution_center
   - factory
@@ -1878,16 +2046,34 @@
   col: 0
   terrain: sun
   name: ''
+  build_bonuses: &id010
+  - immediate:
+      money: 100
+    production: {}
+    build_type: pv_power_plant
   only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
   - pv_power_plant
-  - solar_thermal
+  - wind_power_plant
+  - data_center
+  - distribution_center
+  - factory
 - row: 9
   col: 1
   terrain: sun
   name: ''
+  build_bonuses: *id010
   only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
   - pv_power_plant
-  - solar_thermal
+  - wind_power_plant
+  - data_center
+  - distribution_center
+  - factory
 - row: 7
   col: -3
   terrain: city
@@ -1897,6 +2083,7 @@
   col: -2
   terrain: commercial
   name: ''
+  build_bonuses: *id006
   only_build:
   - store
   - ad_campaign
@@ -1910,22 +2097,29 @@
   - launching_pad
 - row: 9
   col: -1
-  terrain: geothermal
+  terrain: sun
   name: ''
-  only_build:
-  - geothermal_power_plant
-- row: 10
-  col: 3
-  terrain: industrial
-  name: ''
+  build_bonuses: *id010
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
   - coal_power_plant
   - pv_power_plant
   - wind_power_plant
-  - geothermal_power_plant
-  - solar_thermal
+  - data_center
+  - distribution_center
+  - factory
+- row: 10
+  col: 3
+  terrain: industrial
+  name: ''
+  build_bonuses: *id002
+  only_build:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -1933,179 +2127,288 @@
   col: 6
   terrain: sea
   name: ''
+  build_bonuses:
+  - immediate:
+      money: -200
+    production: {}
+    build_type: data_center
+  adjacency_bonuses:
+  - immediate:
+      money: 100
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - data_center
+    - distribution_center
+    target_coords:
+    - - 8
+      - 7
+    - - 8
+      - 6
   only_build:
   - data_center
 - row: 0
   col: -4
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 1
   col: -4
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 3
   col: -4
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 4
   col: -4
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 5
   col: -4
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 6
   col: -4
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 7
   col: -4
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 8
   col: -3
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 11
   col: 5
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 10
   col: 6
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 9
   col: 7
   terrain: sea
   name: ''
+  build_bonuses:
+  - immediate:
+      money: -200
+    production: {}
+    build_type: data_center
+  adjacency_bonuses:
+  - immediate:
+      money: 100
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - data_center
+    - distribution_center
+    target_coords:
+    - - 8
+      - 8
+    - - 8
+      - 7
   only_build:
   - data_center
 - row: 9
   col: 8
   terrain: sea
   name: ''
+  build_bonuses:
+  - immediate:
+      money: -200
+    production: {}
+    build_type: data_center
+  adjacency_bonuses:
+  - immediate:
+      money: 100
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - data_center
+    - distribution_center
+    target_coords:
+    - - 8
+      - 9
+    - - 8
+      - 8
   only_build:
   - data_center
 - row: 9
   col: 9
   terrain: sea
   name: ''
+  build_bonuses:
+  - immediate:
+      money: -200
+    production: {}
+    build_type: data_center
+  adjacency_bonuses:
+  - immediate:
+      money: 100
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - data_center
+    - distribution_center
+    target_coords:
+    - - 8
+      - 10
+    - - 8
+      - 9
   only_build:
   - data_center
 - row: 9
   col: 10
   terrain: sea
   name: ''
-  only_build:
-  - data_center
-- row: 10
-  col: 11
-  terrain: sea
-  name: ''
+  build_bonuses:
+  - immediate:
+      money: -200
+    production: {}
+    build_type: data_center
+  adjacency_bonuses:
+  - immediate:
+      money: 100
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - data_center
+    - distribution_center
+    target_coords:
+    - - 8
+      - 11
   only_build:
   - data_center
 - row: 10
   col: 12
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 9
   col: 13
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 8
   col: 14
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 7
   col: 14
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 6
   col: 15
   terrain: sea
   name: ''
-  only_build:
-  - data_center
-- row: 5
-  col: 15
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
-- row: 4
-  col: 16
-  terrain: sea
-  name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 3
   col: 15
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 2
   col: 15
-  terrain: commercial
+  terrain: industrial
   name: ''
+  build_bonuses: *id002
   only_build:
-  - store
-  - ad_campaign
-  - office
-  - lobby_group
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
+  - distribution_center
+  - factory
 - row: 2
   col: 16
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 1
   col: 15
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 0
   col: 16
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 10
   col: 2
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -2113,8 +2416,14 @@
   col: 3
   terrain: gas_reserve
   name: ''
+  build_bonuses: *id009
   only_build:
+  - nuclear_power_plant
   - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - data_center
 - row: 9
   col: -2
   terrain: wall
@@ -2160,100 +2469,11 @@
   terrain: wall
   name: ''
   only_build: []
-- row: 10
-  col: 7
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
-- row: 10
-  col: 8
-  terrain: offshore_wind
-  name: ''
-  only_build:
-  - wind_power_plant
-- row: 10
-  col: 9
-  terrain: offshore_wind
-  name: ''
-  only_build:
-  - wind_power_plant
-- row: 10
-  col: 10
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
-- row: 11
-  col: 6
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
-- row: 11
-  col: 7
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
-- row: 11
-  col: 8
-  terrain: offshore_solar
-  name: ''
-  only_build:
-  - pv_power_plant
-- row: 11
-  col: 9
-  terrain: offshore_solar
-  name: ''
-  only_build:
-  - pv_power_plant
-- row: 11
-  col: 10
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
-- row: 11
-  col: 11
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
 - row: 12
   col: 6
   terrain: sea
   name: ''
-  only_build:
-  - data_center
-- row: 12
-  col: 7
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
-- row: 12
-  col: 8
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
-- row: 12
-  col: 9
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
-- row: 12
-  col: 10
-  terrain: sea
-  name: ''
-  only_build:
-  - data_center
-- row: 12
-  col: 11
-  terrain: sea
-  name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: -3
@@ -2505,8 +2725,13 @@
   col: -7
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
@@ -2515,37 +2740,49 @@
   terrain: rare_metal_mine
   name: ''
   only_build:
+  - data_center
   - rare_metal_mine
 - row: -3
   col: -6
   terrain: natural_park
   name: ''
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
   - data_center
   - distribution_center
   - factory
 - row: -3
   col: -7
-  terrain: gas_reserve
+  terrain: lake
   name: ''
+  build_bonuses: *id003
+  adjacency_bonuses: *id004
   only_build:
-  - natural_gas_power_plant
+  - data_center
+  - hydroelectric_power_plant
 - row: 11
   col: 12
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 11
   col: 13
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center
 - row: 10
   col: 14
   terrain: sea
   name: ''
+  build_bonuses: *id008
   only_build:
   - data_center

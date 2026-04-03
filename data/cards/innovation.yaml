@@ -1,5 +1,5 @@
 - name: Cloud Migration
-  id: 49
+  id: 50
   image: ''
   description: Move to the cloud for scalable server capacity.
   type: infrastructure
@@ -22,10 +22,10 @@
     data_centers: 0
     ad_campaigns: 0
   boosts:
-  - target_id: 37
+  - target_id: 36
     bonus:
       users: 3
-  - target_id: 39
+  - target_id: 38
     bonus:
       users: 2
   disabled: true
