@@ -1,10 +1,10 @@
-- name: Me-Too Movement
+- name: '#MeToo Movement'
   id: 80
-  description: A data breach exposes user information. Reputation takes a hit.
+  description: Some employees have become unwieldy. You must purge the harassers from
+    your company to look good.
   type: null
   number: 1
-  factory_refund: 0
-  dc_production_bonus: 0
+  adjacent_placement_fee: 0
   costs:
     engineers: 0
     suits: 0
@@ -20,17 +20,34 @@
     fee_card_id: null
   effect:
     reputation: -3
-    data_centers: 0
-    ad_campaigns: 0
+    HR: -1
+    engineers: -2
+    suits: -2
+  production: null
+  build: null
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
   boosts: null
   disabled: true
-- name: fuck up 3
+- name: Corrupt CEO
   id: 81
-  image: ''
-  description: Server outage causes widespread service disruption.
-  type: scandal
+  description: 'You wanted a sharky crook to ruthlessly lay waste to your competitors.
+    Well, he also laid waste to your treasury. '
+  type: null
   number: 1
+  adjacent_placement_fee: 0
   costs:
     engineers: 0
     suits: 0
@@ -44,10 +61,668 @@
     users: 0
     fee: 0
     fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
   effect:
-    servers: -2
-    users: -3
+    money: -5
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Request for Information
+  id: 82
+  description: Your size is drawing attention. The Government starts to become nosy
+    and would  like to get to know you more. You'll need to spend some money on lawyers
+    though, a relationship with the government is high maintenance.
+  type: null
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
     data_centers: 0
     ad_campaigns: 0
-  boosts: []
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    money: -1
+    suits: -2
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds:
+  - key: users
+    min: 1000
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+- name: Crypto Currency Side Hustle
+  id: 83
+  description: One of your CEOs was an undercover crypto bro and launched a shit coin.
+    Many who invested became homeless. He's now in jail.
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    reputation: -2
+    users: -10
+    money: -2
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
   disabled: true
+- name: Whistleblower
+  id: 84
+  description: You did naughty things and your dirty laundry is out. Deal with it.
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    reputation: -2
+    users: -10
+  production: null
+  build: null
+  requirements:
+  - leverage
+  required_card_ids: null
+  play_thresholds: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Sex Scandal
+  id: 85
+  description: You regret having let one of your CEOs watch The Wolf of Wall Street.
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    reputation: -1
+    HR: -1
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Pivot
+  id: 86
+  description: One of your shortsighted CEOs decided to pivot and focus on the next
+    shiny thing. You lose the software platform that brings the least number of users.
+    Tough luck buddy.
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule:
+    mode: least_users
+    target_types:
+    - software platform
+    - social platform
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Market investigation
+  id: 87
+  description: 'You think you''re a pretty smart strategist. The Government thinks
+    so too! What a validation :) Since you are so good, the Government has kindly
+    asked you to show them how. '
+  type: null
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    reputation: 0
+    money: -4
+    suits: -3
+  production: null
+  conditional_effects: null
+  build: null
+  requirements:
+  - leverage
+  required_card_ids: null
+  play_thresholds:
+  - key: money
+    min: 15
+    kind: production
+  lose_card_rule: null
+  steal_card: false
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+- name: Lost Investor
+  id: 88
+  description: For faking it until you make it you actually need to make it.
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    money: -5
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: AI Layoffs
+  id: 89
+  description: It sucks to lay off people, but makes you feel powerful. And hey, you
+    can always say it's because of AI.
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    engineers: -4
+    HR: -1
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Layoffs
+  id: 90
+  description: 'You company has become bloated with a bunch of useless, presentation-wielding
+    business buffoons. '
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    suits: -4
+    HR: -1
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Conflict of Interest Scandal
+  id: 91
+  description: 'One of your CEOs was performing pretty well. It turns out he was bribing
+    soulless Government officials.  '
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    suits: -1
+    reputation: -1
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: 'Hostile Takeover '
+  id: 92
+  description: 'An almighty Asset Manager is forcing you to sell one of your platforms.
+    Take a pick and say goodbye. '
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule:
+    mode: player_choice
+    target_types:
+    - platform
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Technical Debt
+  id: 93
+  description: null
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    data_centers: -1
+    servers: -3
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Dawn Raid
+  id: 94
+  description: The Government is so impressed by your godly business acumen that the
+    they came all the way to your office to have breakfast with you. Invite your lawyers
+    to the breakfast, they'll love it.
+  type: null
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    suits: -5
+    money: -200
+  production: null
+  conditional_effects: null
+  build: null
+  requirements:
+  - leverage
+  required_card_ids: null
+  play_thresholds:
+  - key: money
+    min: 25
+  lose_card_rule: null
+  steal_card: false
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+- name: Intellectual Property Theft
+  id: 95
+  description: 'You watched The Godfather and you felt smug when applying the wisdom
+    "Keep your friends close, but your enemies closer". What now? '
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  conditional_effects: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: true
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null

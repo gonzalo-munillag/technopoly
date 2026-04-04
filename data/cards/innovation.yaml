@@ -1,5 +1,5 @@
 - name: In-App Browser
-  id: 84
+  id: 100
   description: null
   type: software service
   number: 1
@@ -51,7 +51,7 @@
       users: 20
     target_count: 3
 - name: Recommender System
-  id: 85
+  id: 101
   description: null
   type: null
   number: 1
@@ -95,3 +95,4 @@
   - data_cost: 600
     users: 20
   boosts: null
+  disabled: true

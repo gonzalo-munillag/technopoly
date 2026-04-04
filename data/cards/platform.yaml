@@ -532,7 +532,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   disabled: 'true'
   costs:
     engineers: 10
@@ -545,7 +545,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 12
+    fee: 4
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -588,7 +588,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   costs:
     engineers: 6
     suits: 3
@@ -600,7 +600,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -679,7 +679,7 @@
   type: hardware manufacturer
   number: 1
   disabled: 'true'
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   costs:
     engineers: 10
     suits: 3
@@ -734,7 +734,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   costs:
     engineers: 10
     suits: 5
@@ -742,7 +742,7 @@
     money: 30
     servers: 4
     reputation: 0
-    fee: 6
+    fee: 4
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -781,7 +781,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   disabled: 'true'
   costs:
     engineers: 8
@@ -842,7 +842,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   costs:
     engineers: 6
     suits: 4
@@ -854,7 +854,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -1021,7 +1021,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -1193,7 +1193,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   costs:
     engineers: 8
     suits: 4
@@ -1205,7 +1205,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -1248,7 +1248,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   disabled: 'true'
   costs:
     engineers: 15
@@ -1318,7 +1318,7 @@
     Handles millions of operations and is extremely stable and secure.'
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   disabled: 'true'
   costs:
     engineers: 8
@@ -1442,12 +1442,13 @@
     bonus: {}
     production:
       money: 1
+  disabled: true
 - name: Supercomputer OEM
   id: 40
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   disabled: 'true'
   costs:
     engineers: 8
@@ -1643,7 +1644,7 @@
     Example: ASML'
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   disabled: 'true'
   costs:
     engineers: 12
@@ -1705,7 +1706,7 @@
     crypto accelerators—onto a single chip.
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   disabled: 'true'
   costs:
     engineers: 7
@@ -1765,7 +1766,7 @@
   description: null
   type: hardware manufacturer
   number: 3
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   disabled: 'true'
   costs:
     engineers: 13
@@ -1897,7 +1898,7 @@
   type: hardware manufacturer
   number: 1
   undefined: empty
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   disabled: 'true'
   costs:
     engineers: 10
@@ -2195,7 +2196,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -2244,7 +2245,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -2292,7 +2293,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -2327,7 +2328,7 @@
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   costs:
     engineers: 6
     suits: 2
@@ -2386,7 +2387,7 @@
   type: hardware manufacturer
   number: 1
   disabled: 'true'
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   costs:
     engineers: 7
     suits: 3
@@ -2398,7 +2399,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -2453,7 +2454,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -2491,7 +2492,7 @@
   type: hardware manufacturer
   number: 1
   disabled: 'true'
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   costs:
     engineers: 10
     suits: 3
@@ -2503,7 +2504,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -2548,7 +2549,7 @@
   type: hardware manufacturer
   number: 1
   disabled: 'true'
-  adjacent_placement_fee: 6
+  adjacent_placement_fee: 4
   costs:
     engineers: 8
     suits: 3
@@ -2560,7 +2561,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -2615,7 +2616,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -2669,7 +2670,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -2854,7 +2855,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -2949,7 +2950,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -3004,7 +3005,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -3059,7 +3060,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -3090,7 +3091,6 @@
     users: 30
     money: 1
   boosts: null
-  disabled: true
 - name: Payment Service
   id: 70
   description: null
@@ -3146,7 +3146,6 @@
     but not too true, otherwise they will not come back to the platform.
   type: social platform
   number: 1
-  disabled: 'true'
   adjacent_placement_fee: 0
   costs:
     engineers: 5
@@ -3159,7 +3158,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -3209,7 +3208,7 @@
     reputation: 3
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -3303,7 +3302,7 @@
     reputation: 0
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -3387,6 +3386,7 @@
     - online marketplace
     bonus: {}
     target_count: 3
+  disabled: true
 - name: FinTech Platform
   id: 76
   description: null

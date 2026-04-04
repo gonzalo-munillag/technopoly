@@ -931,6 +931,22 @@ body::after {
   letter-spacing: 1px;
 }
 
+.draft-fuckup-dodged {
+  background: #0a1a0a !important;
+  border-color: #27ae60 !important;
+  border-left: 3px solid #27ae60 !important;
+  font-size: .85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.game-card.fuckup-dodged {
+  opacity: .85;
+  border-color: #27ae60 !important;
+  background: linear-gradient(135deg, #0a1a0a 60%, #0d2b0d) !important;
+  border-left: 3px solid #27ae60 !important;
+}
+
 .draft-fuckup-separator {
   border: none;
   border-top: 1px dashed var(--danger);
@@ -1107,6 +1123,24 @@ body::after {
   margin-bottom: 1rem;
   font-size: .85rem;
   color: #e57373;
+}
+
+.card-loss-alert {
+  padding: .7rem 1rem;
+  background: rgba(183,28,28,.12);
+  border: 2px solid #e67e22;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  font-size: .85rem;
+  color: #f0a060;
+}
+.card-loss-alert .hand-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+.card-loss-alert .game-card:hover {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 8px rgba(231,76,60,.4);
 }
 
 /* ── Floating error ──────────────────────────────────────── */

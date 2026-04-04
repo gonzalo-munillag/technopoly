@@ -26,6 +26,9 @@ class Card:
     compliance: dict[str, int] = field(default_factory=dict)
     court_penalty: dict[str, int] = field(default_factory=dict)
     court_threshold: int = 4            # roll >= this to win in court
+    # World-event: extra effects applied only when a player meets the card's
+    # play_thresholds / requirements / required_card_ids conditions.
+    conditional_effects: dict[str, int] = field(default_factory=dict)
     # Card connections: list of {"target_id": int|list, "bonus": {resource: amount}}
     boosts: list[dict] = field(default_factory=list)
     tile_type: str | None = None        # legacy, use build instead
@@ -40,8 +43,12 @@ class Card:
     # Bonus entries carried by the placed tile itself.
     # Format: [{"build_type": "<tile_type>|None", "immediate": {...}, "production": {...}}, ...]
     placed_tile_adjacency_bonuses: list[dict] = field(default_factory=list)
-    requirements: list[str] = field(default_factory=list)  # card types player must have played
-    min_reputation: int | None = None  # minimum reputation needed to play this card
+    requirements: list[str] = field(default_factory=list)  # card_color_type or card_type strings the player must have played
+    required_card_ids: list[int] = field(default_factory=list)  # specific card IDs the player must have played
+    # Generic resource/production thresholds needed to play (or trigger a fuck-up).
+    # Format: [{"key": "users", "min": 20}, {"key": "money", "min": 5, "kind": "production"}]
+    # "kind" defaults to "resource" when omitted.
+    play_thresholds: list[dict] = field(default_factory=list)
     court_threshold_modifier: int | None = None  # reduces the die-roll threshold needed to win in court (e.g. -1 → need ≥3 instead of ≥4)
     # Optional tile-adjacency restriction for build cards:
     # card can place its tile only if at least one adjacent placed tile type matches.
@@ -80,6 +87,14 @@ class Card:
     pollution_tag: str = "neutral"
     # Optional extra cost a player can pay when playing to upgrade from polluting → green
     fee_for_green: dict | None = None
+    # Fuck-up: force the player to lose a played card.
+    # Format: {"mode": "least_users"|"player_choice", "target_types": ["social platform", ...]}
+    lose_card_rule: dict | None = None
+    # Fuck-up: next player in turn order steals a card from this player's hand.
+    steal_card: bool = False
+    # Fuck-up: next player can poach employees from this player.
+    # Format: {"max": int, "price": int}  (max employees total, price per employee)
+    poach_employees: dict | None = None
     # Stable per-instance identifier — never shared between copies of the same card.
     # Uses uuid4 so it survives across moves (hand → played_cards) and is never reused
     # unlike id(card) whose memory address can be recycled after garbage collection.
@@ -89,6 +104,7 @@ class Card:
     # Tracks which producible indices have been used this year (reset at year start)
     _producibles_used: set[int] = field(default_factory=set, repr=False, compare=False, hash=False)
     _tier_upgraded_this_year: bool = field(default=False, repr=False, compare=False, hash=False)
+    _dodged: bool = field(default=False, repr=False, compare=False, hash=False)
 
     @property
     def effective_pollution_tag(self) -> str:
@@ -132,6 +148,7 @@ class Card:
             "compliance": self.compliance,
             "court_penalty": self.court_penalty,
             "court_threshold": self.court_threshold,
+            "conditional_effects": self.conditional_effects or {},
             "boosts": self.boosts,
             "tile_type": self.tile_type,
             "build": self.build,
@@ -143,7 +160,8 @@ class Card:
             "starting_tiles": self.starting_tiles,
             "placed_tile_adjacency_bonuses": self.placed_tile_adjacency_bonuses or [],
             "requirements": self.requirements or [],
-            "min_reputation": self.min_reputation,
+            "required_card_ids": self.required_card_ids or [],
+            "play_thresholds": self.play_thresholds or [],
             "court_threshold_modifier": self.court_threshold_modifier,
             "only_playable_next_to": self.only_playable_next_to or [],
             "only_playable_on_terrains": self.only_playable_on_terrains or [],
@@ -158,9 +176,13 @@ class Card:
             "producibles": self.producibles or [],
             "pollution_tag": self.pollution_tag,
             "fee_for_green": self.fee_for_green,
+            "lose_card_rule": self.lose_card_rule,
+            "steal_card": self.steal_card,
+            "poach_employees": self.poach_employees,
             "effective_pollution_tag": self.effective_pollution_tag,
             "producibles_used": list(self._producibles_used),
             "tier_upgraded_this_year": self._tier_upgraded_this_year,
+            "dodged": self._dodged,
             "instance_id": self._instance_id,
         }
         return d
@@ -222,6 +244,7 @@ class Card:
             compliance=data.get("compliance") or data.get("penalty") or {},
             court_penalty=data.get("court_penalty") or {},
             court_threshold=data.get("court_threshold", 4),
+            conditional_effects=data.get("conditional_effects") or {},
             boosts=data.get("boosts") or [],
             tile_type=data.get("tile_type") or first_build,
             build=build_raw,
@@ -233,7 +256,8 @@ class Card:
             starting_tiles=data.get("starting_tiles") or [],
             placed_tile_adjacency_bonuses=placed_tile_adjacency_bonuses,
             requirements=data.get("requirements") or [],
-            min_reputation=data.get("min_reputation") or None,
+            required_card_ids=[int(x) for x in (data.get("required_card_ids") or []) if x is not None],
+            play_thresholds=cls._parse_play_thresholds(data),
             court_threshold_modifier=data.get("court_threshold_modifier") or None,
             only_playable_next_to=data.get("only_playable_next_to") or [],
             only_playable_on_terrains=data.get("only_playable_on_terrains") or [],
@@ -247,4 +271,18 @@ class Card:
             producibles=data.get("producibles") or [],
             pollution_tag=data.get("pollution_tag") or "neutral",
             fee_for_green=data.get("fee_for_green") or None,
+            lose_card_rule=data.get("lose_card_rule") or None,
+            steal_card=bool(data.get("steal_card", False)),
+            poach_employees=data.get("poach_employees") or None,
         )
+
+    @classmethod
+    def _parse_play_thresholds(cls, data: dict) -> list[dict]:
+        """Parse play_thresholds from YAML data, with backward compat for min_reputation."""
+        thresholds = data.get("play_thresholds") or []
+        if thresholds:
+            return thresholds
+        min_rep = data.get("min_reputation")
+        if min_rep is not None and min_rep != 0:
+            return [{"key": "reputation", "min": int(min_rep)}]
+        return []

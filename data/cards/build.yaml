@@ -1,5 +1,5 @@
 - name: Headquarters
-  id: 86
+  id: 102
   description: null
   type: office
   number: 3
@@ -26,7 +26,7 @@
   boosts: null
   disabled: true
 - name: Home Office Gear
-  id: 87
+  id: 103
   description: null
   type: office
   number: 2
@@ -62,7 +62,7 @@
   boosts: null
   disabled: true
 - name: Coworking Rental
-  id: 88
+  id: 104
   description: null
   type: office
   number: 1
@@ -97,7 +97,7 @@
   boosts: null
   disabled: true
 - name: Office Building
-  id: 89
+  id: 105
   description: null
   type: office
   number: 2
@@ -125,7 +125,7 @@
   boosts: null
   disabled: true
 - name: Office Building Rental
-  id: 90
+  id: 106
   description: null
   type: office
   number: 1
@@ -150,7 +150,7 @@
   boosts: null
   disabled: true
 - name: Brand-Owned Store
-  id: 91
+  id: 107
   description: Sell only one brand’s products. Apple Store
   type: store
   number: 3
@@ -184,7 +184,7 @@
   boosts: null
   disabled: true
 - name: Electronics Retailer
-  id: 92
+  id: 108
   description: 'Large stores selling many brands and categories
 
     TVs, laptops, phones, appliances
@@ -224,7 +224,7 @@
   boosts: null
   disabled: true
 - name: Authorized Reseller
-  id: 93
+  id: 109
   description: 'Official partners of brands
 
     Sell genuine products with warranty support
@@ -264,7 +264,7 @@
   boosts: null
   disabled: true
 - name: Hyperscale Data Center
-  id: 94
+  id: 110
   description: "INT NOTE: fee to HW someone who has a HW focused company. choose to\
     \ pay  \nMassive facilities built for huge-scale operations."
   type: data center
@@ -299,7 +299,7 @@
   boosts: null
   disabled: true
 - name: Data Center
-  id: 95
+  id: 111
   description: Third-party facilities where multiple businesses rent space.
   type: data center
   number: 3
@@ -337,7 +337,7 @@
   tiers: null
   boosts: null
 - name: On-Premise Data Center
-  id: 96
+  id: 112
   description: "INT NOTE: fee to HW vendor. \nOwned and operated by a single company\
     \ for its own internal use."
   type: data center
@@ -381,7 +381,7 @@
   tiers: null
   boosts: null
 - name: Edge Data Center
-  id: 97
+  id: 113
   description: "INT NOTE: fee to HW vendor. \nSmaller distributed data center closer\
     \ to users. "
   type: data center
@@ -422,7 +422,7 @@
   tiers: null
   boosts: null
 - name: Nuclear Power Plant
-  id: 98
+  id: 114
   description: High-output zero-emission power. Essential for data centers. Requires
     significant investment but delivers clean energy at scale.
   type: nuclear power plant
@@ -462,7 +462,7 @@
   boosts: null
   disabled: true
 - name: Natural Gas Power Plant
-  id: 99
+  id: 115
   description: Fast to build and flexible. A reliable bridge fuel for powering your
     data centers, though it carries a reputation cost.
   type: natural gas power plant
@@ -506,7 +506,7 @@
   boosts: null
   disabled: true
 - name: PV Power Plant
-  id: 100
+  id: 116
   description: Photovoltaic solar array. Ideal on sun or offshore solar terrain. Boosts
     adjacent data centers.
   type: pv power plant
@@ -552,7 +552,7 @@
   boosts: null
   disabled: true
 - name: Wind Farm
-  id: 101
+  id: 117
   description: Onshore or offshore wind turbines. Best on wind or offshore wind terrain.
     Boosts adjacent data centers.
   type: wind power plant
@@ -598,7 +598,7 @@
   tiers: null
   boosts: null
 - name: Coal Power Plant
-  id: 102
+  id: 118
   description: Cheap and abundant but highly polluting. Cheap energy that hurts your
     reputation.
   type: coal power plant
@@ -644,7 +644,7 @@
   tiers: null
   boosts: null
 - name: Hydroelectric Power Plant
-  id: 103
+  id: 119
   description: 'Build a hydroelectric dam on a lake tile. Generates clean power, boosting
     data center production.
 
@@ -677,7 +677,7 @@
   tiers: null
   boosts: null
 - name: Digital Banner Ads
-  id: 104
+  id: 120
   description: Targeted advertising infrastructure reaching billions of eyeballs.
   type: ad campaign
   number: 3
@@ -712,7 +712,7 @@
   boosts: null
   disabled: true
 - name: Video Ads
-  id: 105
+  id: 121
   description: null
   type: ad campaign
   number: 3
@@ -749,7 +749,7 @@
   boosts: null
   disabled: true
 - name: Influencer Advertising
-  id: 106
+  id: 122
   description: Pay a soulless influencer to advertise your ads.
   type: ad campaign
   number: 1
@@ -786,7 +786,7 @@
   boosts: null
   disabled: true
 - name: Billboard Blitz
-  id: 107
+  id: 123
   description: Plaster your brand across every surface. Old school, still works.
   type: ad campaign
   number: 1
@@ -818,7 +818,7 @@
   boosts: null
   disabled: true
 - name: Lobbying Group
-  id: 108
+  id: 124
   description: Get together with your Big Tech buddies and finance a group to say
     the things you cannot afford to say yourself in public.
   type: lobby
@@ -853,10 +853,11 @@
   boosts: null
   disabled: true
 - name: Grassroots Lobbying
-  id: 109
+  id: 125
   description: mobilize public to pressure officials
   type: lobby
   number: 1
+  disabled: 'true'
   adjacent_placement_fee: 0
   costs:
     engineers: 0
@@ -879,6 +880,10 @@
   build: lobby_group
   requirements: null
   min_reputation: 7
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
   adjacent_placement_fee_target_types: null
@@ -888,9 +893,8 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-  disabled: true
 - name: Law Firm
-  id: 110
+  id: 126
   description: null
   type: lobby
   number: 2
@@ -927,7 +931,7 @@
   boosts: null
   disabled: true
 - name: Consolidation Center
-  id: 111
+  id: 127
   description: Gather smaller shipments from multiple suppliers into one larger shipment
     to maximize shipping efficiency.
   type: distribution center
@@ -974,7 +978,7 @@
       money: 2
   disabled: true
 - name: E-Commerce Center
-  id: 112
+  id: 128
   description: Focus on processing individual, smaller orders at high speed for end
     consumers.
   type: distribution center
@@ -1017,7 +1021,7 @@
       money: 1
   disabled: true
 - name: Cross-Docking Center
-  id: 113
+  id: 129
   description: Goods arrive and are directly transferred to outbound vehicles, minimizing
     inventory holding costs and time.
   type: distribution center
@@ -1064,7 +1068,7 @@
       money: 1
   disabled: true
 - name: Airborne Distribution Network
-  id: 114
+  id: 130
   description: null
   type: distribution center
   number: 1
@@ -1115,7 +1119,7 @@
       money: 1
   disabled: true
 - name: Rare Metal Mine
-  id: 115
+  id: 131
   description: null
   type: rare metal mine
   number: 2

@@ -499,3 +499,117 @@
     placed_tile_adjacency_bonuses: null
     tiers: null
     boosts: null
+- card_type: fuck_up
+  card_data:
+    name: fuck up 3
+    id: 81
+    image: ''
+    description: Server outage causes widespread service disruption.
+    type: scandal
+    number: 1
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+    effect:
+      servers: -2
+      users: -3
+      data_centers: 0
+      ad_campaigns: 0
+    boosts: []
+    disabled: true
+- card_type: fuck_up
+  card_data:
+    name: Enshitification
+    id: 82
+    description: The reek of your enshitified platforms is casting customers away.
+      But don't be hard on yourself, it's part of the lifecycle of digital products.
+      Just become a monopoly, and all will be fine.
+    type: null
+    number: 1
+    adjacent_placement_fee: 0
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect:
+      users: -20
+    production: null
+    build: null
+    requirements: null
+    min_reputation: null
+    court_threshold_modifier: null
+    producibles: []
+    pollution_tag: neutral
+    fee_for_green: null
+    only_playable_next_to: null
+    only_playable_on_terrains: null
+    adjacent_placement_fee_target_types: null
+    bonuses_by_placing_next_to_building: null
+    bonuses_by_building_on_terrain_type: null
+    bonuses_by_building_adjacent_to_terrain_type: null
+    placed_tile_adjacency_bonuses: null
+    tiers: null
+    boosts: null
+- card_type: leverage
+  card_data:
+    name: Leverage Card 2
+    id: 94
+    description: null
+    type: null
+    number: 1
+    adjacent_placement_fee: 0
+    costs:
+      engineers: 0
+      suits: 0
+      ads: 0
+      money: 0
+      servers: 0
+      data_centers: 0
+      ad_campaigns: 0
+      reputation: 0
+      HR: 0
+      users: 0
+      fee: 0
+      fee_card_id: null
+      fee_card_type: null
+      fee_company_type: null
+    effect: null
+    production: null
+    build: null
+    requirements: null
+    min_reputation: null
+    court_threshold_modifier: null
+    producibles: []
+    pollution_tag: neutral
+    fee_for_green: null
+    only_playable_next_to: null
+    only_playable_on_terrains: null
+    adjacent_placement_fee_target_types: null
+    bonuses_by_placing_next_to_building: null
+    bonuses_by_building_on_terrain_type: null
+    bonuses_by_building_adjacent_to_terrain_type: null
+    placed_tile_adjacency_bonuses: null
+    tiers: null
+    boosts: null
+    disabled: true

@@ -27,6 +27,16 @@ class Player:
     pending_tile: str | None = None
     pending_tile_meta: dict = field(default_factory=dict)
     pending_tile_queue: list[str] = field(default_factory=list, repr=False)
+    # Pending card-loss from a fuck-up: player must choose which card to lose.
+    # Format: {"eligible_instance_ids": [...], "fuckup_name": "..."}
+    pending_card_loss: dict | None = None
+    # Pending card-steal: next player steals a card from this player's hand.
+    # Format: {"stealer_id": str, "fuckup_name": str, "eligible_instance_ids": [...]}
+    pending_card_steal: dict | None = None
+    # Pending poach: next player can poach employees.
+    # Format: {"poacher_id": str, "fuckup_name": str, "max": int, "price": int,
+    #          "available_engineers": int, "available_suits": int}
+    pending_poach: dict | None = None
     color: str = "#c9a227"
     users: int = 0
     _remaining_starting_tiles: list = field(default_factory=list, repr=False)
@@ -465,16 +475,54 @@ class Player:
         for req_type in reqs:
             if not req_type:
                 continue
-            has_played = any(getattr(c, "card_color_type", None) == req_type for c in self.played_cards if c is not None)
-            has_company = bool(self.company and self.company.card_color_type == req_type)
+            has_played = any(
+                getattr(c, "card_color_type", None) == req_type
+                or getattr(c, "card_type", None) == req_type
+                for c in self.played_cards if c is not None
+            )
+            has_company = bool(
+                self.company
+                and (self.company.card_color_type == req_type
+                     or self.company.card_type == req_type)
+            )
             if not has_played and not has_company:
                 return f"Requirement not met: play a '{req_type}' card first."
-        min_rep = getattr(card, "min_reputation", None)
-        if min_rep is not None:
-            current_rep = self.resources.get("reputation", 0)
-            if current_rep < min_rep:
-                return f"Requires at least {min_rep} reputation (you have {current_rep})."
+        for req_id in getattr(card, "required_card_ids", None) or []:
+            has_played = any(c.id == req_id for c in self.played_cards if c is not None)
+            has_company = bool(self.company and self.company.id == req_id)
+            if not has_played and not has_company:
+                return f"Requirement not met: play card #{req_id} first."
+        err = self._check_play_thresholds(card)
+        if err:
+            return err
+        lcr = getattr(card, "lose_card_rule", None)
+        if lcr and lcr.get("mode"):
+            target_types = lcr.get("target_types") or []
+            if not self.get_eligible_cards_to_lose(target_types):
+                types_str = ", ".join(target_types) if target_types else "any type"
+                return f"No eligible cards to lose ({types_str})."
         return None
+
+    def _check_play_thresholds(self, card: "Card") -> str | None:
+        """Check all play_thresholds on a card. Returns error string or None."""
+        for t in getattr(card, "play_thresholds", None) or []:
+            key = t.get("key", "")
+            min_val = t.get("min", 0)
+            kind = t.get("kind", "resource")
+            if kind == "production":
+                current = self.production.get(key, 0)
+            elif key == "users":
+                current = self.users
+            else:
+                current = self.resources.get(key, 0)
+            if current < min_val:
+                label = f"{key} production" if kind == "production" else key
+                return f"Requires at least {min_val} {label} (you have {current})."
+        return None
+
+    def meets_all_requirements(self, card: "Card") -> bool:
+        """True if the player meets all requirements, card-id reqs, and play_thresholds."""
+        return self.check_requirements(card) is None
 
     def can_afford_costs(self, card: Card, use_optional: dict | None = None) -> str | None:
         costs = card.costs
@@ -551,6 +599,40 @@ class Player:
     def get_fuckup_cards(self) -> list[Card]:
         return [c for c in self.hand if c.card_type == "fuck_up"]
 
+    # ── Lose-card-rule helpers ───────────────────────────────────
+
+    def get_eligible_cards_to_lose(self, target_types: list[str]) -> list[Card]:
+        """Return played cards matching any of the target types (card_color_type or card_type).
+        If target_types is empty, all played cards are eligible."""
+        eligible = []
+        for c in self.played_cards:
+            if c is None:
+                continue
+            if not target_types:
+                eligible.append(c)
+            elif (getattr(c, "card_color_type", "") in target_types
+                  or getattr(c, "card_type", "") in target_types):
+                eligible.append(c)
+        return eligible
+
+    def find_least_users_card(self, target_types: list[str]) -> Card | None:
+        """Return the eligible card whose raw effect.users is the smallest."""
+        eligible = self.get_eligible_cards_to_lose(target_types)
+        if not eligible:
+            return None
+        def _raw_users(c: Card) -> int:
+            eff = getattr(c, "effect", None) or {}
+            return eff.get("users", 0) if isinstance(eff, dict) else 0
+        return min(eligible, key=_raw_users)
+
+    def lose_played_card(self, card: Card, game=None):
+        """Remove a card from played_cards and revert its ongoing production."""
+        self.played_cards = [c for c in self.played_cards if c is not card]
+        for res, amt in (card.production or {}).items():
+            if amt:
+                self.production[res] = self.production.get(res, 0) - amt
+        return card
+
     def is_affected_by_regulation(self, regulation: Card) -> bool:
         if regulation is None:
             return False
@@ -620,5 +702,8 @@ class Player:
             "year_done": self.year_done,
             "hiring_done": self.hiring_done,
             "pending_tile": self.pending_tile,
+            "pending_card_loss": self.pending_card_loss,
+            "pending_card_steal": self.pending_card_steal,
+            "pending_poach": self.pending_poach,
             "color": self.color,
         }

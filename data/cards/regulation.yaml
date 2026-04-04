@@ -1,37 +1,71 @@
 - name: Anti-Monopoly Ruling
-  id: 116
+  id: 132
   description: Large companies are fined for anti-competitive practices.
-  tag: antitrust
-  targets_all: 1
+  adjacent_placement_fee: 0
+  court_threshold: 4
   target_id: null
   target_type: null
-  court_threshold: 4
-  factory_refund: 0
-  dc_production_bonus: 0
+  tag: antitrust
+  targets_all: 1
+  production: null
   compliance:
     money: -0.09
   court_penalty:
     money: -0.24
     reputation: -3
+  build: null
   requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
 - name: Anti-Monopoly Ruling 2
-  id: 117
+  id: 133
   description: Large companies are fined for anti-competitive practices.
-  tag: antitrust
-  targets_all: 1
+  adjacent_placement_fee: 0
+  court_threshold: 4
   target_id: null
   target_type: null
-  court_threshold: 4
+  tag: antitrust
+  targets_all: 1
+  production: null
   compliance:
     money: -0.09
   court_penalty:
     money: -0.24
     reputation: -3
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
   boosts: null
 - name: Cybersecurity Mandate
-  id: 118
+  id: 134
   description: All companies must meet minimum cybersecurity standards.
   tag: security
   image: null
@@ -46,7 +80,7 @@
     reputation: -4
   court_threshold: 5
 - name: Platform Licensing Act
-  id: 119
+  id: 135
   description: Search engines must acquire a government license or shut down.
   tag: licensing
   image: null
@@ -60,7 +94,7 @@
     reputation: -2
   court_threshold: 4
 - name: 'Climate Change: Rising see level'
-  id: 120
+  id: 136
   tag: null
   description: 'int note: you need to pay extra to build dikes around power plants
     next to the see'
@@ -75,7 +109,7 @@
   requirements: null
   boosts: null
 - name: Green Deal
-  id: 121
+  id: 137
   tag: null
   description: 'int comment: you pay X for every fossil fuel power plant'
   targets_all: 1

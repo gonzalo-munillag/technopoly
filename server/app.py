@@ -622,6 +622,19 @@ def _send_regulation_alerts():
     if not game.current_regulation:
         return
     reg = game.current_regulation
+
+    if reg.card_type == "world_event":
+        results = game.resolve_world_event()
+        for sid, player_id in connected_players.items():
+            r = results.get(player_id, {})
+            socketio.emit("world_event_resolved", {
+                "event": reg.to_dict(),
+                "global_applied": r.get("global_applied", {}),
+                "conditional_met": r.get("conditional_met", False),
+                "conditional_applied": r.get("conditional_applied", {}),
+            }, room=sid)
+        return
+
     anyone_affected = game.any_player_affected()
     for sid, player_id in connected_players.items():
         player = game.players.get(player_id)
@@ -633,7 +646,7 @@ def _send_regulation_alerts():
             "affected": affected,
             "any_affected": anyone_affected,
             "regulation": reg.to_dict(),
-            "card_type": reg.card_type,  # "regulation" or "world_event"
+            "card_type": reg.card_type,
             "compliance": reg.compliance if affected else {},
             "court_penalty": reg.court_penalty if affected else {},
             "court_threshold": reg.court_threshold,
@@ -668,6 +681,16 @@ def on_play_card(data):
         emit("error", {"message": f"Card '{card_name}' not in your hand."})
         return
 
+    if player.pending_card_loss:
+        emit("error", {"message": "You must choose a card to lose first."})
+        return
+    if player.pending_card_steal:
+        emit("error", {"message": "You must complete your IP theft first."})
+        return
+    if player.pending_poach:
+        emit("error", {"message": "You must complete employee poaching first."})
+        return
+
     if player.has_pending_fuckups():
         if card.card_type != "fuck_up":
             emit("error", {"message": "You have fuck-up cards — they are the ONLY thing you can play this turn."})
@@ -676,14 +699,12 @@ def on_play_card(data):
         if removed:
             player.apply_card_effects(removed, game)
             game.discard_pile.append(removed)
+            _handle_lose_card_rule(player, removed)
 
-        if player.has_pending_fuckups():
+        if player.pending_card_loss or player.has_pending_fuckups():
             socketio.emit("game_state", game.to_dict(), room="game")
             _send_private_states()
         else:
-            # Fuck-up played — end this turn so next player goes, but don't
-            # force year_done (player may still want to use the build market
-            # or enhance cards on a future turn this year).
             _advance_to_next_or_end_year()
         _check_win_condition()
         return
@@ -791,7 +812,13 @@ def on_play_card(data):
         _check_win_condition()
         return
 
-    if not _maybe_auto_end_turn(player):
+    _handle_steal_card(player, played)
+    _handle_poach_employees(player, played)
+
+    if player.pending_card_steal or player.pending_poach:
+        socketio.emit("game_state", game.to_dict(), room="game")
+        _send_private_states()
+    elif not _maybe_auto_end_turn(player):
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
     _check_win_condition()
@@ -812,6 +839,15 @@ def on_play_build_card(data):
         return
     if player.pending_tile:
         emit("error", {"message": "You must place your tile on the board first."})
+        return
+    if player.pending_card_loss:
+        emit("error", {"message": "You must choose a card to lose first."})
+        return
+    if player.pending_card_steal:
+        emit("error", {"message": "You must complete your IP theft first."})
+        return
+    if player.pending_poach:
+        emit("error", {"message": "You must complete employee poaching first."})
         return
 
     cpt = P("cards_per_turn", 2)
@@ -959,6 +995,15 @@ def on_produce_item(data):
         return
     if player.pending_tile:
         emit("error", {"message": "Place your pending tile on the board first."})
+        return
+    if player.pending_card_loss:
+        emit("error", {"message": "You must choose a card to lose first."})
+        return
+    if player.pending_card_steal:
+        emit("error", {"message": "You must complete your IP theft first."})
+        return
+    if player.pending_poach:
+        emit("error", {"message": "You must complete employee poaching first."})
         return
 
     instance_id = data.get("instance_id")
@@ -1142,6 +1187,15 @@ def on_upgrade_card_tier(data):
     player = game.players.get(player_id)
     if not player:
         return
+    if player.pending_card_loss:
+        emit("error", {"message": "You must choose a card to lose first."})
+        return
+    if player.pending_card_steal:
+        emit("error", {"message": "You must complete your IP theft first."})
+        return
+    if player.pending_poach:
+        emit("error", {"message": "You must complete employee poaching first."})
+        return
     instance_id = data.get("instance_id", "")
     result = player.upgrade_card_tier(instance_id, game)
     if result["ok"]:
@@ -1154,12 +1208,220 @@ def on_upgrade_card_tier(data):
         emit("error", {"message": result["error"]})
 
 
+def _handle_lose_card_rule(player, fuckup_card):
+    """Process the lose_card_rule on a played fuck-up card."""
+    rule = getattr(fuckup_card, "lose_card_rule", None)
+    if not rule:
+        return
+    mode = rule.get("mode", "least_users")
+    target_types = rule.get("target_types") or []
+    eligible = player.get_eligible_cards_to_lose(target_types)
+    if not eligible:
+        return
+    if mode == "least_users":
+        victim = player.find_least_users_card(target_types)
+        if victim:
+            player.lose_played_card(victim, game)
+            game.discard_pile.append(victim)
+    elif mode == "player_choice":
+        player.pending_card_loss = {
+            "eligible_instance_ids": [c._instance_id for c in eligible],
+            "fuckup_name": fuckup_card.name,
+        }
+
+
+@socketio.on("choose_card_to_lose")
+def on_choose_card_to_lose(data):
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.PLAYER_TURNS:
+        return
+    player = game.players.get(player_id)
+    if not player or not player.pending_card_loss:
+        emit("error", {"message": "You don't have a pending card loss."})
+        return
+    instance_id = data.get("instance_id", "")
+    allowed = player.pending_card_loss.get("eligible_instance_ids", [])
+    if instance_id not in allowed:
+        emit("error", {"message": "That card is not eligible to be lost."})
+        return
+    victim = next((c for c in player.played_cards if c._instance_id == instance_id), None)
+    if not victim:
+        emit("error", {"message": "Card not found."})
+        return
+    player.lose_played_card(victim, game)
+    game.discard_pile.append(victim)
+    player.pending_card_loss = None
+
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+
+    if not player.has_pending_fuckups():
+        _advance_to_next_or_end_year()
+
+
+def _handle_steal_card(player, card):
+    """Leverage: player steals a card from an opponent's hand."""
+    if not getattr(card, "steal_card", False):
+        return
+    opponents = []
+    for pid, p in game.players.items():
+        if pid == player.player_id:
+            continue
+        hand = [c for c in p.hand if c.card_type != "fuck_up"]
+        if hand:
+            opponents.append({"id": pid, "name": p.name, "cards": [c.to_dict() for c in hand]})
+    if not opponents:
+        return
+    player.pending_card_steal = {"card_name": card.name}
+    player_sid = next((s for s, pid in connected_players.items() if pid == player.player_id), None)
+    if player_sid:
+        socketio.emit("steal_card_prompt", {
+            "card_name": card.name,
+            "opponents": opponents,
+        }, room=player_sid)
+
+
+@socketio.on("choose_card_to_steal")
+def on_choose_card_to_steal(data):
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.PLAYER_TURNS:
+        return
+    player = game.players.get(player_id)
+    if not player or not player.pending_card_steal:
+        emit("error", {"message": "No pending steal."})
+        return
+    victim_id = data.get("victim_id", "")
+    instance_id = data.get("instance_id", "")
+    victim = game.players.get(victim_id)
+    if not victim or victim_id == player_id:
+        emit("error", {"message": "Invalid target."})
+        return
+    stolen = next((c for c in victim.hand if c._instance_id == instance_id and c.card_type != "fuck_up"), None)
+    if not stolen:
+        emit("error", {"message": "Card not found in target's hand."})
+        return
+    victim.hand = [c for c in victim.hand if c._instance_id != instance_id]
+    player.hand.append(stolen)
+    player.pending_card_steal = None
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+    if not player.pending_poach:
+        _maybe_auto_end_turn(player)
+
+
+@socketio.on("skip_steal")
+def on_skip_steal():
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id:
+        return
+    player = game.players.get(player_id)
+    if not player or not player.pending_card_steal:
+        return
+    player.pending_card_steal = None
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+    if not player.pending_poach:
+        _maybe_auto_end_turn(player)
+
+
+def _handle_poach_employees(player, card):
+    """Leverage: player poaches employees from an opponent."""
+    pe = getattr(card, "poach_employees", None)
+    if not pe or not pe.get("max"):
+        return
+    opponents = []
+    for pid, p in game.players.items():
+        if pid == player.player_id:
+            continue
+        eng = p.resources.get("engineers", 0)
+        suits = p.resources.get("suits", 0)
+        if eng + suits > 0:
+            opponents.append({"id": pid, "name": p.name, "engineers": eng, "suits": suits})
+    if not opponents:
+        return
+    player.pending_poach = {"card_name": card.name, "max": pe["max"], "price": pe.get("price", 0)}
+    player_sid = next((s for s, pid in connected_players.items() if pid == player.player_id), None)
+    if player_sid:
+        socketio.emit("poach_prompt", {
+            "card_name": card.name,
+            "max": pe["max"],
+            "price": pe.get("price", 0),
+            "opponents": opponents,
+        }, room=player_sid)
+
+
+@socketio.on("confirm_poach")
+def on_confirm_poach(data):
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.PLAYER_TURNS:
+        return
+    player = game.players.get(player_id)
+    if not player or not player.pending_poach:
+        emit("error", {"message": "No pending poach."})
+        return
+    victim_id = data.get("victim_id", "")
+    victim = game.players.get(victim_id)
+    if not victim or victim_id == player_id:
+        emit("error", {"message": "Invalid target."})
+        return
+    max_total = player.pending_poach["max"]
+    price = player.pending_poach.get("price", 0)
+    eng_take = max(0, int(data.get("engineers", 0)))
+    suits_take = max(0, int(data.get("suits", 0)))
+    if eng_take + suits_take > max_total:
+        emit("error", {"message": f"You can poach at most {max_total} employees."})
+        return
+    if eng_take + suits_take == 0:
+        emit("error", {"message": "Select at least one employee to poach."})
+        return
+    eng_take = min(eng_take, victim.resources.get("engineers", 0))
+    suits_take = min(suits_take, victim.resources.get("suits", 0))
+    total_cost = (eng_take + suits_take) * price
+    if price > 0 and player.resources.get("money", 0) < total_cost:
+        emit("error", {"message": f"Not enough money. Need ${total_cost}B."})
+        return
+    victim.resources["engineers"] = victim.resources.get("engineers", 0) - eng_take
+    victim.resources["suits"] = victim.resources.get("suits", 0) - suits_take
+    player.resources["engineers"] = player.resources.get("engineers", 0) + eng_take
+    player.resources["suits"] = player.resources.get("suits", 0) + suits_take
+    if total_cost > 0:
+        player.resources["money"] = player.resources.get("money", 0) - total_cost
+    player.pending_poach = None
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+    if not player.pending_card_steal:
+        _maybe_auto_end_turn(player)
+
+
+@socketio.on("skip_poach")
+def on_skip_poach():
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id:
+        return
+    player = game.players.get(player_id)
+    if not player or not player.pending_poach:
+        return
+    player.pending_poach = None
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+    if not player.pending_card_steal:
+        _maybe_auto_end_turn(player)
+
+
 def _maybe_auto_end_turn(player):
     """Auto-advance after playing if the card limit is reached and no tile is pending."""
     cpt = P("cards_per_turn", 2)
     if (player.cards_played_this_turn >= cpt
             and not player.pending_tile
-            and not player.has_pending_fuckups()):
+            and not player.has_pending_fuckups()
+            and not player.pending_card_loss
+            and not player.pending_card_steal
+            and not player.pending_poach):
         _advance_to_next_or_end_year()
         return True
     return False
@@ -1181,6 +1443,15 @@ def on_end_turn():
         return
     if player and player.has_pending_fuckups():
         emit("error", {"message": "You must play all fuck-up cards before ending your turn."})
+        return
+    if player and player.pending_card_loss:
+        emit("error", {"message": "You must choose a card to lose first."})
+        return
+    if player and player.pending_card_steal:
+        emit("error", {"message": "You must complete your IP theft first."})
+        return
+    if player and player.pending_poach:
+        emit("error", {"message": "You must complete employee poaching first."})
         return
 
     _advance_to_next_or_end_year()
@@ -1204,6 +1475,15 @@ def on_end_year():
         return
     if player.has_pending_fuckups():
         emit("error", {"message": "You must play all fuck-up cards first."})
+        return
+    if player.pending_card_loss:
+        emit("error", {"message": "You must choose a card to lose first."})
+        return
+    if player.pending_card_steal:
+        emit("error", {"message": "You must complete your IP theft first."})
+        return
+    if player.pending_poach:
+        emit("error", {"message": "You must complete employee poaching first."})
         return
     player.year_done = True
     _advance_to_next_or_end_year()
@@ -1579,6 +1859,9 @@ def _send_private_states():
                 "year_done": player.year_done,
                 "pending_tile": player.pending_tile,
                 "pending_tile_meta": player.pending_tile_meta,
+                "pending_card_loss": player.pending_card_loss,
+                "pending_card_steal": player.pending_card_steal,
+                "pending_poach": player.pending_poach,
             }, room=sid)
 
 
@@ -1615,6 +1898,13 @@ def _read_all_cards_yaml() -> dict[str, list[dict]]:
 
         c.pop("factory_refund", None)
         c.pop("dc_production_bonus", None)
+        if "play_thresholds" not in c:
+            min_rep = c.pop("min_reputation", None)
+            if min_rep is not None and min_rep != 0:
+                c["play_thresholds"] = [{"key": "reputation", "min": int(min_rep)}]
+            else:
+                c["play_thresholds"] = []
+        c.setdefault("conditional_effects", {})
         return c
 
     result = {}
@@ -1985,11 +2275,13 @@ def on_add_card(data):
                         "target_type": None, "compliance": {}, "court_penalty": {}, "court_threshold": 4},
         "world_event": {"name": "New World Event", "id": _next_card_id(), "tag": "",
                         "description": "", "image": None, "targets_all": 1, "target_id": None,
-                        "target_type": None, "compliance": {}, "court_penalty": {}, "court_threshold": 4},
+                        "target_type": None, "compliance": {}, "court_penalty": {}, "court_threshold": 4,
+                        "effect": {}, "conditional_effects": {},
+                        "requirements": [], "required_card_ids": [], "play_thresholds": []},
     }
     _DEFAULT = {"name": "New Card", "id": _next_card_id(), "image": None, "description": "",
                 "type": "", "number": 1, "build": None, "costs": dict(_COSTS_TEMPLATE),
-                "effect": {}, "boosts": [], "requirements": [], "min_reputation": None,
+                "effect": {}, "boosts": [], "requirements": [], "required_card_ids": [], "play_thresholds": [],
                 "only_playable_next_to": [],
                 "only_playable_on_terrains": [],
                 "bonuses_by_placing_next_to_building": [],
@@ -2002,6 +2294,7 @@ def on_add_card(data):
                 "producibles": [],
                 "pollution_tag": "neutral",
                 "fee_for_green": None,
+                "lose_card_rule": None,
                 "court_threshold_modifier": None}
 
     new_card = _CATEGORY_TEMPLATES.get(card_type, dict(_DEFAULT))

@@ -253,7 +253,10 @@ class Game:
             fuckups = []
             for card in drawn:
                 if card.card_type == "fuck_up":
-                    player.add_to_hand(card)
+                    if player.meets_all_requirements(card):
+                        player.add_to_hand(card)
+                    else:
+                        card._dodged = True
                     fuckups.append(card)
                 else:
                     player.draft_pool.append(card)
@@ -407,6 +410,30 @@ class Game:
         player.went_to_court = True
         player.court_start_ready = False
         return {"roll": roll, "threshold": threshold, "won": won, "penalty": penalty, "lost_cards": lost_cards}
+
+    def resolve_world_event(self) -> dict[str, dict]:
+        """Apply world event: global effects to all, conditional effects to qualifying players.
+        Effects are applied immediately but regulation_resolved stays False so players
+        must still click Proceed to acknowledge.
+        Returns {player_id: {"global_applied": dict, "conditional_met": bool, "conditional_applied": dict}}."""
+        ev = self.current_regulation
+        if not ev:
+            return {}
+        global_eff = ev.effect if isinstance(ev.effect, dict) else {}
+        cond_eff = ev.conditional_effects or {}
+        results: dict[str, dict] = {}
+        for pid, player in self.players.items():
+            if global_eff:
+                player.apply_penalty(global_eff, self)
+            met = player.meets_all_requirements(ev) if (cond_eff or ev.play_thresholds or ev.requirements or ev.required_card_ids) else False
+            if met and cond_eff:
+                player.apply_penalty(cond_eff, self)
+            results[pid] = {
+                "global_applied": global_eff,
+                "conditional_met": met,
+                "conditional_applied": cond_eff if met else {},
+            }
+        return results
 
     def all_regulation_resolved(self) -> bool:
         """Every player must acknowledge/resolve the regulation."""

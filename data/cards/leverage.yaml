@@ -1,5 +1,5 @@
 - name: Addiction Algorithm
-  id: 82
+  id: 96
   description: null
   type: null
   number: 1
@@ -23,9 +23,8 @@
   requirements: null
   tiers: null
   boosts: null
-  disabled: true
 - name: Scam App
-  id: 83
+  id: 97
   description: Scam users for their money. But don't worry, the App Store owner has
     a vested interest in your success.
   type: software platform
@@ -42,7 +41,7 @@
     reputation: -3
     HR: 0
     users: 0
-    fee: 6
+    fee: 4
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -65,4 +64,89 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-  disabled: true
+- name: Enshitification
+  id: 98
+  description: 'Make your app shity The reek of your enshitified platforms is casting
+    customers away. '
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 3
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: -30
+  production:
+    money: 4
+  build: null
+  requirements:
+  - social platform
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+- name: New Card
+  id: 99
+  description: null
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  conditional_effects: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: false
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
