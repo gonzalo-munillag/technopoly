@@ -1,14 +1,66 @@
-- name: Cloud Migration
-  id: 51
-  image: ''
-  description: Move to the cloud for scalable server capacity.
-  type: infrastructure
-  number: 2
+- name: In-App Browser
+  id: 84
+  description: null
+  type: software service
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 4
+    suits: 4
+    ads: 0
+    money: 18
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 20
+  effect:
+    users: 30
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 20
+  - data_cost: 600
+    users: 30
+  boosts:
+  - target_id: null
+    target_type:
+    - social platform
+    - software platform
+    bonus:
+      users: 20
+    target_count: 3
+- name: Recommender System
+  id: 85
+  description: null
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
   costs:
     engineers: 0
     suits: 0
     ads: 0
-    money: 3
+    money: 0
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -17,15 +69,29 @@
     users: 0
     fee: 0
     fee_card_id: null
-  effect:
-    servers: 2
-    data_centers: 0
-    ad_campaigns: 0
-  boosts:
-  - target_id: 36
-    bonus:
-      users: 3
-  - target_id: 38
-    bonus:
-      users: 2
-  disabled: true
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+  - data_cost: 600
+    users: 20
+  boosts: null

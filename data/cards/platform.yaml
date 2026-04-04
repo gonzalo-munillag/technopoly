@@ -1,13 +1,25 @@
-- name: Metaverse
+- name: VR/AR App
   id: 13
   description: null
   type: software platform
   number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    users: 0
+    money: 15
+    engineers: 3
+    suits: 3
+    servers: 3
+    ads: 3
+    reputation: 0
+    HR: 0
+    data_centers: 0
+    ad_campaigns: 0
+    fee: 4
+    fee_card_id: 15
   effect:
-    users: 100
+    users: 30
     money: 0
     engineers: 0
     servers: 0
@@ -17,142 +29,12 @@
     data_centers: 0
     ad_campaigns: 0
     suits: 0
-  costs:
-    users: 0
-    money: 500
-    engineers: 3
-    suits: 3
-    servers: 3
-    ads: 3
-    reputation: 0
-    HR: 0
-    data_centers: 0
-    ad_campaigns: 0
-    fee: 0
-    fee_card_id: null
-  requirements: null
-  tiers:
-  - users: 20
-    money: 0
-    data_cost: 400
-  - users: 40
-    money: 0
-    data_cost: 800
-  - users: 80
-    money: 0
-    data_cost: 1600
-  boosts:
-  - target_id: null
-    target_type:
-    - software platform
-    - online marketplace
-    bonus:
-      users: 10
-    target_count: 3
-  disabled: true
-- name: Social Network
-  id: 14
-  description: null
-  type: social platform
-  number: 3
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
-  costs:
-    engineers: 5
-    suits: 4
-    ads: 4
-    money: 500
-    servers: 4
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 200
-    fee_card_id: 15
-  effect:
-    users: 100
-  requirements: null
-  tiers:
-  - users: 20
-    money: 0
-    data_cost: 200
-  - users: 40
-    money: 0
-    data_cost: 600
-  - users: 80
-    money: 0
-    data_cost: 1000
-  boosts:
-  - target_id: null
-    target_type:
-    - software platform
-    - online marketplace
-    bonus:
-      users: 10
-    target_count: 3
-  disabled: true
-- name: App Store
-  id: 15
-  description: null
-  type: online marketplace
-  number: 3
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
-  effect:
-    users: 20
-  costs:
-    engineers: 4
-    suits: 4
-    ads: 3
-    money: 400
-    servers: 5
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 400
-    fee_card_id: 16
-  requirements: null
-  tiers:
-  - users: 40
-    money: 2
-    data_cost: 150
-  - users: 80
-    money: 4
-    data_cost: 400
-  boosts: null
-  disabled: true
-- name: Operating System
-  id: 16
-  description: null
-  type: software platform
-  number: 3
-  disabled: 'true'
-  adjacent_placement_fee: 0
-  effect:
-    users: 20
-  costs:
-    engineers: 6
-    suits: 0
-    ads: 3
-    money: 500
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 0
-    fee_card_id: null
   production: null
   build: null
   requirements: null
   min_reputation: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: neutral
   fee_for_green: null
   only_playable_next_to: null
@@ -163,12 +45,165 @@
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers:
-  - users: 50
-    money: 0
-    data_cost: 250
-  - users: 100
-    money: 0
-    data_cost: 600
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 20
+  - data_cost: 600
+    users: 30
+    money: 1
+  boosts:
+  - target_id: null
+    target_type:
+    - software platform
+    - online marketplace
+    bonus:
+      users: 10
+    target_count: 3
+- name: Social Network
+  id: 14
+  description: null
+  type: social platform
+  number: 2
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 4
+    ads: 4
+    money: 30
+    servers: 4
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 4
+    fee_card_id: 15
+  effect:
+    users: 50
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 20
+  - data_cost: 600
+    users: 30
+    money: 1
+  - data_cost: 1000
+    users: 40
+    money: 2
+  boosts:
+  - target_id: null
+    target_type:
+    - software platform
+    - online marketplace
+    bonus:
+      users: 10
+    target_count: 3
+- name: App Store
+  id: 15
+  description: null
+  type: online marketplace
+  number: 3
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 4
+    suits: 4
+    ads: 3
+    money: 40
+    servers: 5
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 4
+    fee_card_id: 16
+  effect:
+    users: 30
+  production:
+    money: 2
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 20
+  - data_cost: 400
+    users: 30
+    money: 1
+  - data_cost: 600
+    users: 40
+  boosts: null
+- name: Operating System
+  id: 16
+  description: null
+  type: software platform
+  number: 3
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 6
+    suits: 0
+    ads: 3
+    money: 25
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+  effect:
+    users: 20
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 20
+  - data_cost: 400
+    users: 30
+    money: 1
   boosts:
   - target_id: 15
     target_type: null
@@ -181,14 +216,13 @@
   description: null
   type: software engine
   number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
     engineers: 7
-    suits: 5
+    suits: 0
     ads: 0
-    money: 500
+    money: 15
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -200,90 +234,12 @@
     fee_card_type: null
     fee_company_type: null
   effect: null
-  requirements: null
-  tiers:
-  - users: 0
-    money: 2
-    data_cost: 200
-  - users: 0
-    money: 2
-    data_cost: 200
-  boosts:
-  - target_id: 18
-    target_type: null
-    bonus:
-      users: 20
-  - target_id: 19
-    target_type: null
-    bonus:
-      users: 20
-  disabled: true
-- name: Web Browser
-  id: 18
-  description: null
-  type: software platform
-  number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
-  costs:
-    engineers: 5
-    suits: 5
-    ads: 5
-    money: 400
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    fee: 400
-    fee_card_id: 17
-  effect:
-    users: 50
-  requirements: null
-  tiers:
-  - users: 20
-    money: 0
-    data_cost: 400
-  - users: 20
-    money: 0
-    data_cost: 400
-  - users: 20
-    money: 0
-    data_cost: 400
-  boosts:
-  - target_id: 24
-    target_type: null
-    bonus:
-      users: 20
-  disabled: true
-- name: In-App Browser
-  id: 19
-  description: null
-  type: software service
-  number: 1
-  disabled: 'true'
-  adjacent_placement_fee: 0
-  costs:
-    engineers: 4
-    suits: 4
-    ads: 0
-    money: 300
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 200
-    fee_card_id: 17
-  effect:
-    users: 30
   production: null
   build: null
   requirements: null
   min_reputation: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: neutral
   fee_for_green: null
   only_playable_next_to: null
@@ -294,36 +250,129 @@
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers:
-  - users: 10
-    money: 0
-    data_cost: 200
-  - users: 20
-    money: 0
-    data_cost: 400
-  - users: 30
-    money: 0
-    data_cost: 600
+  - data_cost: 200
+    money: 2
+  - data_cost: 400
+    users: 10
+    money: 2
   boosts:
-  - target_id: null
-    target_type:
-    - social platform
-    - software platform
+  - target_id: 19
+    target_type: null
     bonus:
       users: 20
-    target_count: 3
+  - target_id: 20
+    target_type: null
+    bonus:
+      users: 20
+- name: Professional Network
+  id: 18
+  description: 'Let people thrillingly announce their unachievements by building a
+    cringe platform that is itself confused about what it is. '
+  type: social platform
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 6
+    suits: 3
+    ads: 4
+    money: 15
+    servers: 4
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 4
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 30
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 20
+  - data_cost: 600
+    users: 30
+    money: 1
+  boosts: null
+- name: Web Browser
+  id: 19
+  description: null
+  type: software platform
+  number: 2
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 5
+    ads: 5
+    money: 18
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    fee: 4
+    fee_card_id: 20
+  effect:
+    users: 50
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 20
+  - data_cost: 400
+    users: 30
+  - data_cost: 600
+    users: 40
+  boosts:
+  - target_id: 23
+    target_type: null
+    bonus:
+      users: 20
 - name: Online Search Engine
   id: 20
   description: null
   type: software engine
   number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
     engineers: 10
     suits: 10
     ads: 4
-    money: 1500
+    money: 45
     servers: 10
     data_centers: 0
     ad_campaigns: 0
@@ -336,66 +385,92 @@
     fee_company_type: null
   effect:
     users: 0
+  production: null
+  build: null
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
-  - users: 20
+  - data_cost: 200
+    users: 10
+    money: 1
+  - data_cost: 400
+    users: 20
     money: 2
-    data_cost: 200
-  - users: 40
-    money: 2
-    data_cost: 400
-  - users: 40
-    money: 4
-    data_cost: 600
+  - data_cost: 600
+    users: 30
+    money: 3
   boosts:
-  - target_id: 18
-    target_type: null
-    bonus:
-      users: 30
   - target_id: 19
     target_type: null
     bonus:
-      users: 30
-  disabled: true
+      users: 40
+  - target_id: 20
+    target_type: null
+    bonus:
+      users: 40
 - name: Web Browser Extension Store
   id: 21
   description: null
   type: online marketplace
   number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
     engineers: 5
     suits: 5
     ads: 3
-    money: 400
+    money: 12
     servers: 0
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 300
-    fee_card_id: 18
+    fee: 4
+    fee_card_id: 19
     fee_card_type: null
     fee_company_type: null
   effect:
     users: 30
-  requirements: null
-  tiers:
-  - users: 10
+  production:
     money: 1
-    data_cost: 200
-  - users: 20
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+    money: 1
+  - data_cost: 400
+    users: 20
     money: 2
-    data_cost: 400
   boosts:
-  - target_id: 18
+  - target_id: 19
     target_type: null
     bonus:
       users: 20
-  disabled: true
 - name: Advertising Service
   id: 22
   description: null
@@ -407,7 +482,7 @@
     engineers: 10
     suits: 10
     ads: 0
-    money: 1500
+    money: 45
     servers: 10
     data_centers: 0
     ad_campaigns: 0
@@ -425,6 +500,7 @@
   requirements: null
   min_reputation: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: neutral
   fee_for_green: null
   only_playable_next_to: null
@@ -435,51 +511,61 @@
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers:
-  - users: 0
+  - data_cost: 200
     money: 1
-    data_cost: 200
-  - users: 0
+  - data_cost: 400
     money: 2
-    data_cost: 400
-  - users: 0
+  - data_cost: 600
     money: 3
-    data_cost: 600
   boosts:
   - target_id: null
     target_type:
     - social platform
     - software platform
     - search service
-    bonus:
-      money: 300
+    bonus: {}
+    production:
+      money: 1
     target_count: 3
-- name: Video Game Console OEM
+- name: Smartphone OEM
   id: 23
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
+  disabled: 'true'
   costs:
     engineers: 10
-    suits: 3
-    ads: 10
-    money: 500
+    suits: 4
+    ads: 8
+    money: 24
     servers: 0
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 400
+    fee: 12
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
   effect:
-    users: 30
+    users: 50
   production: null
   build: factory
   requirements: null
-  only_playable_next_to: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
   only_playable_on_terrains: null
   adjacent_placement_fee_target_types:
   - nuclear_power_plant
@@ -497,34 +583,44 @@
     money: 1
     data_cost: 200
   boosts: null
-  disabled: true
-- name: Smartphone OEM
+- name: Tablet OEM
   id: 24
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
   costs:
-    engineers: 10
-    suits: 4
-    ads: 8
-    money: 800
+    engineers: 6
+    suits: 3
+    ads: 4
+    money: 12
     servers: 0
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 400
+    fee: 6
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
   effect:
-    users: 50
+    users: 20
   production: null
   build: factory
   requirements: null
-  only_playable_next_to: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
   only_playable_on_terrains: null
   adjacent_placement_fee_target_types:
   - nuclear_power_plant
@@ -555,7 +651,7 @@
     engineers: 5
     suits: 3
     ads: 5
-    money: 1000
+    money: 30
     servers: 10
     data_centers: 0
     ad_campaigns: 0
@@ -577,20 +673,76 @@
     data_cost: 200
   boosts: null
   disabled: true
-- name: Robot OEM
+- name: Video Game Console OEM
   id: 26
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  disabled: 'true'
+  adjacent_placement_fee: 6
+  costs:
+    engineers: 10
+    suits: 3
+    ads: 10
+    money: 15
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 4
+    fee_card_id: 16
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 30
+  production: null
+  build: factory
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+    money: 1
+  boosts: null
+- name: Robot OEM
+  id: 27
+  description: null
+  type: hardware manufacturer
+  number: 1
+  adjacent_placement_fee: 6
   costs:
     engineers: 10
     suits: 5
     ads: 2
-    money: 1000
+    money: 30
     servers: 4
     reputation: 0
-    fee: 200
+    fee: 6
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -625,35 +777,31 @@
   boosts: null
   disabled: true
 - name: Weapon Tech OEM
-  id: 27
+  id: 28
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
   disabled: 'true'
   costs:
     engineers: 8
-    suits: 5
+    suits: 8
     ads: 0
-    money: 1000
-    servers: 4
+    money: 36
+    servers: 5
     data_centers: 0
     ad_campaigns: 0
     reputation: -4
     HR: 0
     users: 0
-    fee: 0
-    fee_card_id: null
-    fee_card_type: null
-    fee_company_type: null
-  effect:
-    money: 0
+  effect: null
   production:
-    money: 3
+    money: 6
   build: factory
   requirements: null
   min_reputation: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: neutral
   fee_for_green: null
   only_playable_next_to:
@@ -676,33 +824,37 @@
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers:
-  - users: 0
+  - data_cost: 200
     money: 2
-    data_cost: 200
   boosts:
-  - target_id: 26
+  - target_id: 27
+    target_type: null
+    bonus: {}
+    production:
+      money: 2
+  - target_id: 56
     target_type: null
     bonus: {}
     production:
       money: 2
 - name: Wearable OEM
-  id: 28
+  id: 29
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
   costs:
     engineers: 6
     suits: 4
     ads: 7
-    money: 400
+    money: 12
     servers: 1
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 200
+    fee: 6
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -735,47 +887,59 @@
     money: 1
     data_cost: 200
   boosts:
-  - target_id: 30
+  - target_id: 32
     target_type: null
     bonus:
       users: 10
   disabled: true
 - name: Video Game Studio
-  id: 29
+  id: 30
   description: null
   type: software service
   number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
     engineers: 7
     suits: 3
     ads: 8
-    money: 500
+    money: 15
     servers: 3
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 200
-    fee_card_id: 31
+    fee: 4
+    fee_card_id: 33
     fee_card_type: null
     fee_company_type: null
   effect:
     users: 30
   production: null
+  build: null
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
-  - users: 10
+  - data_cost: 200
+    users: 10
     money: 1
-    data_cost: 200
-  - users: 20
+  - data_cost: 200
+    users: 20
     money: 2
-    data_cost: 200
   boosts:
-  - target_id: 23
+  - target_id: 26
     target_type: null
     bonus:
       users: 20
@@ -783,9 +947,62 @@
     target_type: null
     bonus:
       users: 20
-  disabled: true
+- name: Game Engine
+  id: 31
+  description: null
+  type: software engine
+  number: 1
+  adjacent_placement_fee: 0
+  disabled: 'true'
+  costs:
+    engineers: 7
+    suits: 0
+    ads: 0
+    money: 15
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    money: 1
+  - data_cost: 400
+    money: 2
+  boosts:
+  - target_id: 30
+    target_type: null
+    bonus: {}
+    production:
+      money: 1
+  - target_id: 13
+    target_type: null
+    bonus: {}
+    production:
+      money: 1
 - name: Fitness & Wellness App
-  id: 30
+  id: 32
   description: null
   type: software platform
   number: 1
@@ -797,14 +1014,14 @@
     engineers: 4
     suits: 4
     ads: 7
-    money: 400
+    money: 12
     servers: 2
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 200
+    fee: 6
     fee_card_id: 15
     fee_card_type: null
     fee_company_type: null
@@ -821,70 +1038,33 @@
     data_cost: 400
   boosts: null
 - name: Game Store
-  id: 31
+  id: 33
   description: null
   type: online marketplace
   number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
     engineers: 6
     suits: 4
     ads: 6
-    money: 400
+    money: 12
     servers: 4
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 200
-    fee_card_id: 23
-    fee_card_type: null
-    fee_company_type: null
+    fee: 6
   effect:
     users: 30
-  production: null
-  requirements: null
-  tiers:
-  - users: 10
+  production:
     money: 1
-    data_cost: 200
-  - users: 20
-    money: 2
-    data_cost: 400
-  boosts: null
-  disabled: true
-- name: Virtual Assistant
-  id: 32
-  description: null
-  type: software service
-  number: 1
-  disabled: 'true'
-  adjacent_placement_fee: 0
-  costs:
-    engineers: 0
-    suits: 0
-    ads: 0
-    money: 0
-    servers: 0
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 200
-    fee_card_id: 16
-    fee_card_type: null
-    fee_company_type: null
-  effect:
-    users: 20
-  production: null
   build: null
   requirements: null
   min_reputation: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: neutral
   fee_for_green: null
   only_playable_next_to: null
@@ -895,15 +1075,59 @@
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers:
-  - users: 10
-    money: 0
-    data_cost: 200
-  - users: 20
-    money: 0
-    data_cost: 400
-  - users: 30
-    money: 0
-    data_cost: 600
+  - data_cost: 200
+    users: 10
+    money: 1
+  - data_cost: 400
+    users: 20
+    money: 2
+  boosts: null
+- name: Virtual Assistant
+  id: 34
+  description: null
+  type: software service
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 8
+    suits: 0
+    ads: 5
+    money: 25
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: 0
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 20
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 20
+  - data_cost: 600
+    users: 30
   boosts:
   - target_id: null
     target_type:
@@ -915,57 +1139,73 @@
     bonus:
       users: 10
     target_count: 5
+  - target_id: 55
+    target_type: null
+    bonus:
+      users: 10
 - name: Productivity Suit
-  id: 33
+  id: 35
   description: null
   type: software service
   number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
     engineers: 8
     suits: 4
     ads: 4
-    money: 500
+    money: 9
     servers: 0
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 200
-    fee_card_id: 16
-    fee_card_type: null
-    fee_company_type: null
   effect:
-    users: 30
+    users: 20
   production: null
+  build: null
   requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers:
-  - users: 10
-    money: 0
-    data_cost: 200
-  boosts: null
-  disabled: true
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+  boosts:
+  - target_id: 58
+    target_type: null
+    bonus:
+      money: 10
 - name: VR/AR Headset OEM
-  id: 34
+  id: 36
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
   costs:
     engineers: 8
     suits: 4
     ads: 5
-    money: 500
+    money: 15
     servers: 2
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 200
+    fee: 6
     fee_card_id: 16
     fee_card_type: null
     fee_company_type: null
@@ -1004,17 +1244,17 @@
       users: 20
   disabled: true
 - name: Quantum Computer OEM
-  id: 35
+  id: 37
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
   disabled: 'true'
   costs:
     engineers: 15
     suits: 0
     ads: 0
-    money: 1000
+    money: 30
     servers: 20
     data_centers: 0
     ad_campaigns: 0
@@ -1063,7 +1303,7 @@
     - chip enterprise
     - search service
     bonus:
-      money: 300
+      money: 9
     target_count: 3
   - target_id: null
     target_type: data center
@@ -1072,19 +1312,19 @@
       data_centers: 1
     target_count: 5
 - name: Mainframe Computer OEM
-  id: 36
+  id: 38
   description: 'Designed for reliability and massive transaction processing.
 
     Handles millions of operations and is extremely stable and secure.'
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
   disabled: 'true'
   costs:
     engineers: 8
     suits: 0
     ads: 0
-    money: 500
+    money: 15
     servers: 10
     data_centers: 0
     ad_campaigns: 0
@@ -1132,7 +1372,7 @@
     - chip enterprise
     - search service
     bonus:
-      money: 100
+      money: 3
     target_count: 2
   - target_id: null
     target_type: data center
@@ -1140,18 +1380,80 @@
     production:
       data_centers: 1
     target_count: 3
+- name: Smart Vehicle OEM
+  id: 39
+  description: 'Manufacture passenger cars, boats, planes, motorbikes, ... whatever
+    you want, that''s not the point. Just be sure to slap some software subscription
+    on it later. '
+  type: hardware manufacturer
+  number: 1
+  adjacent_placement_fee: 4
+  costs:
+    engineers: 7
+    suits: 3
+    ads: 5
+    money: 30
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 4
+    fee_card_id: 16
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 40
+  production:
+    money: 2
+  build: factory
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 400
+    users: 20
+  boosts:
+  - target_id: 60
+    target_type: null
+    bonus: {}
+    production:
+      money: 1
 - name: Supercomputer OEM
-  id: 37
+  id: 40
   description: null
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
   disabled: 'true'
   costs:
     engineers: 8
     suits: 0
     ads: 0
-    money: 800
+    money: 24
     servers: 8
     data_centers: 0
     ad_campaigns: 0
@@ -1199,7 +1501,7 @@
     - chip enterprise
     - search service
     bonus:
-      money: 150
+      money: 4.5
   - target_id: null
     target_type: data center
     bonus: {}
@@ -1207,7 +1509,7 @@
       data_centers: 1
     target_count: 3
 - name: Content Delivery Network
-  id: 38
+  id: 41
   description: null
   type: software service
   number: 1
@@ -1217,7 +1519,7 @@
     engineers: 5
     suits: 0
     ads: 0
-    money: 500
+    money: 15
     servers: 8
     data_centers: 0
     ad_campaigns: 0
@@ -1258,16 +1560,17 @@
       data_centers: 1
     target_count: 2
 - name: AI Core Service
-  id: 39
+  id: 42
   description: null
   type: software service
   number: 1
+  disabled: 'true'
   adjacent_placement_fee: 0
   costs:
     engineers: 10
     suits: 0
     ads: 3
-    money: 1000
+    money: 35
     servers: 10
     data_centers: 0
     ad_campaigns: 0
@@ -1284,6 +1587,7 @@
   requirements: null
   min_reputation: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: neutral
   fee_for_green: null
   only_playable_next_to: null
@@ -1294,34 +1598,42 @@
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers:
-  - users: 10
-    money: 0
-    data_cost: 200
-  - users: 20
-    money: 0
-    data_cost: 400
-  - users: 30
-    money: 0
-    data_cost: 600
-  - users: 40
-    money: 0
-    data_cost: 800
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 20
+  - data_cost: 600
+    users: 30
+  - data_cost: 800
+    users: 40
   boosts:
   - target_id: null
     target_type:
     - social platform
-    - hardware manufacturer
     - chip enterprise
-    - software service
     - software platform
     - online marketplace
     - search service
     bonus:
       users: 10
-    target_count: 5
-  disabled: true
+    target_count: 3
+  - target_id: 27
+    target_type: null
+    bonus: {}
+    production:
+      money: 1
+  - target_id: 56
+    target_type: null
+    bonus: {}
+    production:
+      money: 1
+  - target_id: 34
+    target_type: null
+    bonus: {}
+    production:
+      money: 1
 - name: Semiconductor Equipment OEM
-  id: 40
+  id: 43
   description: 'Equipment to manufacture chips
 
 
@@ -1331,13 +1643,13 @@
     Example: ASML'
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
   disabled: 'true'
   costs:
     engineers: 12
     suits: 2
     ads: 0
-    money: 500
+    money: 15
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -1384,22 +1696,22 @@
     - hardware manufacturer
     - chip enterprise
     bonus:
-      money: 200
+      money: 6
     target_count: 2
 - name: System on a Chip OEM
-  id: 41
+  id: 44
   description: SoC is an integrated circuit that combines CPU, RAM, input/output,
     and often GPU, connectivity (Wifi, cellular, USB, Bluetooth), and neural, media,
     crypto accelerators—onto a single chip.
   type: hardware manufacturer
   number: 1
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
   disabled: 'true'
   costs:
     engineers: 7
     suits: 0
     ads: 0
-    money: 500
+    money: 15
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -1446,67 +1758,20 @@
   - target_id: null
     target_type: hardware manufacturer
     bonus:
-      money: 200
+      money: 6
     target_count: 3
-- name: E-Commerce Marketplace
-  id: 42
-  description: Amazon
-  type: online marketplace
-  number: 1
-  adjacent_placement_fee: 0
-  costs:
-    engineers: 4
-    suits: 8
-    ads: 0
-    money: 1000
-    servers: 6
-    data_centers: 0
-    ad_campaigns: 0
-    reputation: 0
-    HR: 0
-    users: 0
-    fee: 200
-    fee_card_type: distribution center
-  effect:
-    users: 40
-  production:
-    money: 3
-  build: null
-  requirements: null
-  min_reputation: null
-  court_threshold_modifier: null
-  pollution_tag: neutral
-  fee_for_green: null
-  only_playable_next_to: null
-  only_playable_on_terrains: null
-  adjacent_placement_fee_target_types: null
-  bonuses_by_placing_next_to_building: null
-  bonuses_by_building_on_terrain_type: null
-  bonuses_by_building_adjacent_to_terrain_type: null
-  placed_tile_adjacency_bonuses: null
-  tiers:
-  - users: 10
-    money: 1
-    data_cost: 200
-  - users: 10
-    money: 2
-    data_cost: 400
-  - users: 10
-    money: 3
-    data_cost: 600
-  boosts: null
-  disabled: true
 - name: Satellite OEM
-  id: 43
+  id: 45
   description: null
   type: hardware manufacturer
   number: 3
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
+  disabled: 'true'
   costs:
     engineers: 13
     suits: 0
     ads: 0
-    money: 1500
+    money: 45
     servers: 3
     data_centers: 0
     ad_campaigns: 0
@@ -1529,9 +1794,9 @@
   - name: Data Center Satellite
     build: satellite_dc
     cost:
-      money: 200
+      money: 6
       engineers: 3
-    fee: 200
+    fee: 6
     fee_card_type: rocket oem
     requires_placed_build: null
     only_playable_next_to: []
@@ -1543,9 +1808,9 @@
   - name: Communication Satellite
     build: communication_satellite
     cost:
-      money: 200
+      money: 6
       engineers: 3
-    fee: 200
+    fee: 6
     fee_card_type: rocket oem
     requires_placed_build: null
     only_playable_next_to: []
@@ -1576,9 +1841,14 @@
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers: null
-  boosts: null
+  boosts:
+  - target_id: 49
+    target_type: null
+    bonus: {}
+    production:
+      money: 1
 - name: Rocket OEM
-  id: 44
+  id: 46
   description: Design and manufacture orbital launch vehicles. Build a launching pad
     to reach space.
   type: hardware manufacturer
@@ -1588,7 +1858,7 @@
     engineers: 9
     suits: 1
     ads: 0
-    money: 1000
+    money: 30
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -1620,18 +1890,20 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Telco
-  id: 45
+  id: 47
   description: null
   type: hardware manufacturer
   number: 1
   undefined: empty
-  adjacent_placement_fee: 200
+  adjacent_placement_fee: 6
+  disabled: 'true'
   costs:
     engineers: 10
     suits: 3
     ads: 3
-    money: 800
+    money: 36
     servers: 5
     data_centers: 0
     ad_campaigns: 0
@@ -1654,7 +1926,7 @@
   - name: Cell Tower
     build: communication_tower
     cost:
-      money: 200
+      money: 6
       engineers: 3
     fee: 0
     fee_card_type: null
@@ -1686,4 +1958,1531 @@
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers: null
+  boosts:
+  - target_id: 23
+    target_type: null
+    bonus:
+      users: 10
+  - target_id: null
+    target_type: social platform
+    bonus:
+      users: 10
+    target_count: 4
+- name: E-Commerce Marketplace
+  id: 48
+  description: Amazon
+  type: online marketplace
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 4
+    suits: 8
+    ads: 0
+    money: 30
+    servers: 6
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+  effect:
+    users: 40
+  production:
+    money: 3
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+    money: 1
+  - data_cost: 400
+    users: 10
+    money: 2
+  - data_cost: 600
+    users: 10
+    money: 3
+  boosts: null
+- name: Location Services
+  id: 49
+  description: null
+  type: software service
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 0
+    ads: 0
+    money: 15
+    servers: 4
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 45
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 30
+  production:
+    money: 1
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+    money: 1
+  - data_cost: 400
+    users: 10
+    money: 1
+  - data_cost: 600
+    users: 10
+    money: 1
+  boosts:
+  - target_id: null
+    target_type:
+    - social platform
+    - software platform
+    bonus:
+      users: 10
+    target_count: 3
+  - target_id: 74
+    target_type: null
+    bonus:
+      money: 5
+- name: Cloud Platform
+  id: 50
+  description: null
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 10
+    suits: 3
+    ads: 0
+    money: 30
+    servers: 6
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: null
+    fee_card_type: chip enterprise
+    fee_company_type: null
+  effect:
+    users: 40
+  production:
+    money: 2
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts:
+  - target_id: null
+    target_type:
+    - social platform
+    - software service
+    - software platform
+    - online marketplace
+    - search service
+    bonus: {}
+    production:
+      money: 1
+    target_count: 5
+  disabled: true
+- name: CRM Software
+  id: 51
+  description: Customer Relationship Management
+  type: software service
+  number: 1
+  adjacent_placement_fee: 0
+  disabled: 'true'
+  costs:
+    engineers: 6
+    suits: 3
+    ads: 5
+    money: 12
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 20
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    money: 1
+  - data_cost: 400
+    money: 1
+  - data_cost: 600
+    money: 1
+  boosts: null
+- name: News Platform
+  id: 52
+  description: Build your own news sharing and aggregation platform to push your absolutely
+    not biased agenda.
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 3
+    suits: 5
+    ads: 5
+    money: 6
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 20
+    reputation: 1
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    reputation: 1
+  - data_cost: 400
+    reputation: 1
+  - data_cost: 600
+    reputation: 1
+  boosts: null
+  disabled: true
+- name: Life-Streaming Platform
+  id: 53
+  description: Twitch
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  disabled: 'true'
+  costs:
+    engineers: 5
+    suits: 2
+    ads: 2
+    money: 9
+    servers: 5
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 20
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+  - data_cost: 600
+    users: 10
+    money: 1
+  boosts: null
+- name: EdTech Platform
+  id: 54
+  description: null
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  disabled: 'true'
+  costs:
+    engineers: 3
+    suits: 5
+    ads: 5
+    money: 3
+    servers: 2
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 10
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+  - data_cost: 600
+    users: 10
+    money: 1
+  boosts: null
+- name: Smart Home Assistant
+  id: 55
+  description: null
+  type: hardware manufacturer
+  number: 1
+  adjacent_placement_fee: 6
+  costs:
+    engineers: 6
+    suits: 2
+    ads: 5
+    money: 10
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 4
+    fee_card_id: 16
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 20
+  production: null
+  build: factory
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+    money: 1
+  boosts: null
+  disabled: true
+- name: Drones OEM
+  id: 56
+  description: null
+  type: hardware manufacturer
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 6
+  costs:
+    engineers: 7
+    suits: 3
+    ads: 3
+    money: 8
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 16
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 10
+  production:
+    money: 1
+  build: factory
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  boosts: null
+- name: 'Audio Streaming App '
+  id: 57
+  description: Music, audio books, and podcast store and streaming platform
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 3
+    ads: 4
+    money: 6
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 20
+  production:
+    money: 1
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+  - data_cost: 600
+    users: 10
+    money: 1
+  boosts: null
+  disabled: true
+- name: Laptop OEM
+  id: 58
+  description: null
+  type: hardware manufacturer
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 6
+  costs:
+    engineers: 10
+    suits: 3
+    ads: 5
+    money: 20
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 16
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 40
+  production:
+    money: 1
+  build: factory
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - factory
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 0
+    users: 10
+    money: 1
+  boosts: null
+- name: Smart TV
+  id: 59
+  description: null
+  type: hardware manufacturer
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 6
+  costs:
+    engineers: 8
+    suits: 3
+    ads: 8
+    money: 21
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 16
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 30
+  production:
+    money: 1
+  build: factory
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types:
+  - nuclear_power_plant
+  - natural_gas_power_plant
+  - coal_power_plant
+  - pv_power_plant
+  - wind_power_plant
+  - hydroelectric_power_plant
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  boosts: null
+- name: Ride Hailing Platform
+  id: 60
+  description: Uber
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 8
+    suits: 3
+    ads: 3
+    money: 15
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 30
+  production:
+    money: 1
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+  - data_cost: 600
+    users: 10
+    money: 1
+  boosts:
+  - target_id: 61
+    target_type: null
+    bonus: {}
+    production:
+      money: 1
+  disabled: true
+- name: Food Delivery Platform
+  id: 61
+  description: null
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 3
+    ads: 3
+    money: 12
+    servers: 2
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 10
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+  - data_cost: 600
+    users: 10
+    money: 1
+  boosts: null
+  disabled: true
+- name: Academic Search Engine
+  id: 62
+  description: null
+  type: software engine
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 0
+    ads: 0
+    money: 6
+    servers: 2
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 10
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+  boosts: null
+  disabled: true
+- name: Email Service
+  id: 63
+  description: null
+  type: social platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 0
+    ads: 0
+    money: 21
+    servers: 4
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 30
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  boosts:
+  - target_id: 35
+    target_type: null
+    bonus:
+      users: 20
+  disabled: true
+- name: Accommodation Marketplace
+  id: 64
+  description: Air B&B
+  type: online marketplace
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 3
+    ads: 5
+    money: 12
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 20
+  production:
+    money: 1
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 20
+    money: 2
+  boosts: null
+- name: Crowdfunding Platform
+  id: 65
+  description: null
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 3
+    ads: 5
+    money: 9
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 10
+  production:
+    money: 1
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+  - data_cost: 600
+    users: 10
+    money: 1
+  boosts: null
+  disabled: true
+- name: Identity Service
+  id: 66
+  description: null
+  type: software service
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 1
+    ads: 0
+    money: 9
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 10
+  production:
+    money: 1
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    money: 1
+  boosts: null
+  disabled: true
+- name: Instant Messaging Service
+  id: 67
+  description: WhatsApp
+  type: social platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 10
+    suits: 3
+    ads: 2
+    money: 39
+    servers: 8
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 50
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 600
+    users: 20
+  - data_cost: 1000
+    users: 30
+  boosts:
+  - target_id: null
+    target_type:
+    - social platform
+    - software platform
+    bonus:
+      users: 10
+    target_count: 2
+  disabled: true
+- name: Video Streaming Service
+  id: 68
+  description: Netflix
+  type: software platform
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 7
+    suits: 3
+    ads: 3
+    money: 21
+    servers: 5
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 30
+  production:
+    money: 1
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+    money: 1
+  - data_cost: 600
+    users: 10
+    money: 2
+  boosts:
+  - target_id: 59
+    target_type: null
+    bonus:
+      users: 20
+    production:
+      money: 1
+- name: Video Sharing Platform
+  id: 69
+  description: null
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 7
+    suits: 3
+    ads: 0
+    money: 30
+    servers: 5
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 40
+  production:
+    money: 2
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 20
+  - data_cost: 600
+    users: 30
+    money: 1
+  boosts: null
+  disabled: true
+- name: Payment Service
+  id: 70
+  description: null
+  type: software service
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 4
+    suits: 2
+    ads: 0
+    money: 24
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production:
+    money: 4
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts:
+  - target_id: null
+    target_type:
+    - software service
+    - software platform
+    - online marketplace
+    bonus:
+      money: 6
+    target_count: 3
+- name: Dating Platform
+  id: 71
+  description: Build a sex... Build a dating platform for people to find true love...
+    but not too true, otherwise they will not come back to the platform.
+  type: social platform
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 5
+    suits: 3
+    ads: 0
+    money: 15
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 30
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+  - data_cost: 600
+    users: 10
+  boosts:
+  - target_id: 14
+    target_type: null
+    bonus:
+      users: 10
+- name: Porn Platform
+  id: 72
+  description: null
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 6
+    suits: 6
+    ads: 6
+    money: 12
+    servers: 5
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 3
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 50
+  production:
+    money: 2
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts:
+  - target_id: 14
+    target_type: null
+    bonus:
+      users: 20
+    production:
+      money: 1
+  disabled: true
+- name: Cybersecurity Services
+  id: 73
+  description: null
+  type: software service
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 8
+    suits: 3
+    ads: 2
+    money: 8
+    servers: 2
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 10
+  production:
+    money: 1
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    money: 1
+  - data_cost: 400
+    users: 10
+  boosts: null
+  disabled: true
+- name: Map Service
+  id: 74
+  description: null
+  type: search service
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 8
+    suits: 0
+    ads: 0
+    money: 20
+    servers: 4
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 40
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 400
+    users: 20
+  - data_cost: 600
+    users: 20
+  - data_cost: 800
+    users: 30
+    money: 1
+  boosts:
+  - target_id: 60
+    target_type: null
+    bonus:
+      users: 10
+  disabled: true
+- name: Push Notification Service
+  id: 75
+  description: null
+  type: software service
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 4
+    suits: 0
+    ads: 0
+    money: 5
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 10
+  production: null
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 400
+    money: 1
+  boosts:
+  - target_id: null
+    target_type:
+    - social platform
+    - software platform
+    - online marketplace
+    bonus: {}
+    target_count: 3
+- name: FinTech Platform
+  id: 76
+  description: null
+  type: online marketplace
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 6
+    suits: 6
+    ads: 6
+    money: 20
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 20
+  production:
+    money: 2
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    money: 1
+  - data_cost: 600
+    money: 2
+  boosts:
+  - target_id: 22
+    target_type: null
+    bonus: {}
+    production:
+      money: 2
+- name: Travel Booking Service
+  id: 77
+  description: null
+  type: online marketplace
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 6
+    suits: 5
+    ads: 5
+    money: 12
+    servers: 3
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 20
+  production:
+    money: 1
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers:
+  - data_cost: 200
+    users: 10
+  - data_cost: 400
+    users: 10
+    money: 1
+  - data_cost: 600
+    users: 10
+    money: 2
   boosts: null

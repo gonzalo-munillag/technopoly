@@ -88,6 +88,7 @@ class Card:
     _effective_pollution_tag: str | None = field(default=None, repr=False, compare=False, hash=False)
     # Tracks which producible indices have been used this year (reset at year start)
     _producibles_used: set[int] = field(default_factory=set, repr=False, compare=False, hash=False)
+    _tier_upgraded_this_year: bool = field(default=False, repr=False, compare=False, hash=False)
 
     @property
     def effective_pollution_tag(self) -> str:
@@ -159,6 +160,7 @@ class Card:
             "fee_for_green": self.fee_for_green,
             "effective_pollution_tag": self.effective_pollution_tag,
             "producibles_used": list(self._producibles_used),
+            "tier_upgraded_this_year": self._tier_upgraded_this_year,
             "instance_id": self._instance_id,
         }
         return d

@@ -85,6 +85,8 @@ class Player:
             return {"ok": False, "error": "Card has no tier system."}
         if card.current_tier == 0:
             return {"ok": False, "error": "Play the card before purchasing a tier."}
+        if card._tier_upgraded_this_year:
+            return {"ok": False, "error": "Already upgraded this card's tier this year. Wait for the next year."}
         next_idx = card.current_tier - 1  # 0-based index of tier to purchase
         if next_idx >= len(tiers):
             return {"ok": False, "error": "Already at maximum tier."}
@@ -93,25 +95,45 @@ class Player:
         if self.resources.get("data", 0) < data_cost:
             return {"ok": False, "error": f"Not enough data — need {data_cost}PB to upgrade."}
         self.resources["data"] = self.resources.get("data", 0) - data_cost
-        # Incremental users gained (with reputation modifier, same as card play)
-        users_gained = tier.get("users", 0)
-        if users_gained > 0:
-            self.gain_users(users_gained, game)
-            mod = self.reputation_modifier()
-            if mod != 0:
-                delta = max(-users_gained, mod)
-                self.users = max(0, self.users + delta)
-                if game and delta > 0:
-                    game.user_pool = max(0, game.user_pool - delta)
-        # Incremental money production gained
-        money_gained = tier.get("money", 0)
-        if money_gained:
-            self.production["money"] = self.production.get("money", 0) + money_gained
+        _PRODUCTION_KEYS = {"HR", "data_centers", "ad_campaigns"}
+        resource_gains = {}
+        production_gains = {}
+        for k, v in tier.items():
+            if k == "data_cost" or not v:
+                continue
+            if k in _PRODUCTION_KEYS:
+                production_gains[k] = v
+            elif k == "money" and "users" not in tier and not any(rk in tier for rk in _PRODUCTION_KEYS):
+                production_gains[k] = v
+            elif k == "money" and any(rk in tier for rk in ("users", "engineers", "suits", "servers", "ads", "reputation", "data")):
+                production_gains[k] = v
+            else:
+                resource_gains[k] = v
+
+        users_gained = 0
+        for res, amt in resource_gains.items():
+            if res == "users":
+                users_gained = amt
+                self.gain_users(amt, game)
+                mod = self.reputation_modifier()
+                if mod != 0:
+                    delta = max(-amt, mod)
+                    self.users = max(0, self.users + delta)
+                    if game and delta > 0:
+                        game.user_pool = max(0, game.user_pool - delta)
+            else:
+                self.resources[res] = self.resources.get(res, 0) + amt
+
+        for res, amt in production_gains.items():
+            self.production[res] = self.production.get(res, 0) + amt
+
         card.current_tier += 1
+        card._tier_upgraded_this_year = True
         return {
             "ok": True,
+            "resource_gains": resource_gains,
+            "production_gains": production_gains,
             "users_gained": users_gained,
-            "money_gained": money_gained,
             "new_tier": card.current_tier,
             "card_name": card.name,
         }

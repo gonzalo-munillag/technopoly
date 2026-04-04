@@ -481,6 +481,7 @@ class Game:
             for c in player.played_cards:
                 if c is not None:
                     c._producibles_used.clear()
+                    c._tier_upgraded_this_year = False
             if went_bankrupt:
                 bankrupt.append((pid, player.name))
         for pid, _ in bankrupt:

@@ -1,5 +1,5 @@
 - name: DDoS Storm
-  id: 46
+  id: 78
   description: 'Overwhelm a competitor''s servers, reducing their uptime. INT NOTE:
     There should be 75% attacks and 25% defense, or 80/20'
   type: null
@@ -11,7 +11,7 @@
     engineers: 1
     suits: 0
     ads: 0
-    money: 3
+    money: 0.09
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -28,7 +28,7 @@
   tiers: null
   boosts: null
 - name: Firewall Shield
-  id: 47
+  id: 79
   description: 'Deploy enterprise-grade firewalls and intrusion detection systems,
     protecting your infrastructure from cyber attacks this year.
 
@@ -36,7 +36,7 @@
   type: cyber defense
   number: 2
   costs:
-    money: 20
+    money: 0.6000000000000001
     engineers: 1
   effect:
     reputation: 1

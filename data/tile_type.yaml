@@ -245,13 +245,8 @@ geothermal:
   adjacency_bonuses: []
 rare_metal_mine:
   only_build:
-  - data_center
   - rare_metal_mine
-  build_bonuses:
-  - immediate:
-      money: -200
-    production: {}
-    build_type: data_center
+  build_bonuses: []
   adjacency_bonuses: []
 natural_park:
   only_build:

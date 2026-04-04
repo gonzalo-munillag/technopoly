@@ -1,5 +1,5 @@
 - name: Addiction Algorithm
-  id: 50
+  id: 82
   description: null
   type: null
   number: 1
@@ -21,6 +21,48 @@
     fee_card_id: null
   effect: null
   requirements: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Scam App
+  id: 83
+  description: Scam users for their money. But don't worry, the App Store owner has
+    a vested interest in your success.
+  type: software platform
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 3
+    suits: 5
+    ads: 7
+    money: 15
+    servers: 1
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: -3
+    HR: 0
+    users: 0
+    fee: 6
+    fee_card_id: 15
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production:
+    money: 3
+  build: null
+  requirements: null
+  min_reputation: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
   disabled: true

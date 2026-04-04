@@ -1,5 +1,5 @@
 - name: Anti-Monopoly Ruling
-  id: 82
+  id: 116
   description: Large companies are fined for anti-competitive practices.
   tag: antitrust
   targets_all: 1
@@ -9,15 +9,15 @@
   factory_refund: 0
   dc_production_bonus: 0
   compliance:
-    money: -3
+    money: -0.09
   court_penalty:
-    money: -8
+    money: -0.24
     reputation: -3
   requirements: null
   tiers: null
   boosts: null
 - name: Anti-Monopoly Ruling 2
-  id: 83
+  id: 117
   description: Large companies are fined for anti-competitive practices.
   tag: antitrust
   targets_all: 1
@@ -25,13 +25,13 @@
   target_type: null
   court_threshold: 4
   compliance:
-    money: -3
+    money: -0.09
   court_penalty:
-    money: -8
+    money: -0.24
     reputation: -3
   boosts: null
 - name: Cybersecurity Mandate
-  id: 84
+  id: 118
   description: All companies must meet minimum cybersecurity standards.
   tag: security
   image: null
@@ -39,14 +39,14 @@
   target_id: null
   target_type: null
   compliance:
-    money: -4
+    money: -0.12
     reputation: -1
   court_penalty:
-    money: -12
+    money: -0.36
     reputation: -4
   court_threshold: 5
 - name: Platform Licensing Act
-  id: 85
+  id: 119
   description: Search engines must acquire a government license or shut down.
   tag: licensing
   image: null
@@ -54,13 +54,13 @@
   target_id: null
   target_type: search service
   compliance:
-    money: -5
+    money: -0.15000000000000002
   court_penalty:
-    money: -10
+    money: -0.30000000000000004
     reputation: -2
   court_threshold: 4
 - name: 'Climate Change: Rising see level'
-  id: 86
+  id: 120
   tag: null
   description: 'int note: you need to pay extra to build dikes around power plants
     next to the see'
@@ -75,7 +75,7 @@
   requirements: null
   boosts: null
 - name: Green Deal
-  id: 87
+  id: 121
   tag: null
   description: 'int comment: you pay X for every fossil fuel power plant'
   targets_all: 1

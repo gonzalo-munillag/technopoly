@@ -2529,14 +2529,22 @@ function createCardElement(card, options = {}) {
       const locked = notPlayed || curTier < tierNum;
 
       const cost = t.data_cost ?? 0;
-      const usersGain = t.users ?? 0;
-      const moneyGain = t.money ?? 0;
       const canAfford = myData >= cost;
 
-      // Build label: T1: 200PB → +150M👥 +5B💰/yr
+      const _PROD_KEYS = new Set(["HR", "data_centers", "ad_campaigns"]);
+      const gainParts = [];
+      for (const [k, v] of Object.entries(t)) {
+        if (k === "data_cost" || !v) continue;
+        if (_PROD_KEYS.has(k)) {
+          gainParts.push(`+${fmtCardVal(k, v)} ${emojiRes(k)}/yr`);
+        } else if (k === "money" && Object.keys(t).some(rk => ["users","engineers","suits","servers","ads","reputation","data"].includes(rk) && t[rk])) {
+          gainParts.push(`+${fmtCardVal(k, v)} ${emojiRes(k)}/yr`);
+        } else {
+          gainParts.push(`+${fmtCardVal(k, v)} ${emojiRes(k)}`);
+        }
+      }
       let label = `T${tierNum}: ${cost}PB`;
-      if (usersGain) label += ` → +${usersGain}M👥`;
-      if (moneyGain) label += ` +$${moneyGain}B/yr`;
+      if (gainParts.length) label += ` → ${gainParts.join(" ")}`;
 
       // Hover tooltip always shows current data
       const dataHint = `You have ${myData}PB`;
@@ -2555,6 +2563,10 @@ function createCardElement(card, options = {}) {
         btn.classList.add("tier-btn-owned");
         btn.disabled = true;
         btn.title = `Tier ${tierNum} purchased ✓`;
+      } else if (card.tier_upgraded_this_year) {
+        btn.classList.add("tier-btn-cant");
+        btn.disabled = true;
+        btn.title = "Already upgraded this card this year — resets next year";
       } else if (isNext) {
         const blocked = !canInteract && myTurn && phase === "player_turns";
         const noActions = blocked && actionsLeft <= 0;
@@ -3762,111 +3774,95 @@ function renderEditorForm() {
   const fields = document.createElement("div");
   fields.className = "editor-fields";
 
-  const EDITOR_HIDDEN_FIELDS = new Set(["image", "starting_tiles", "factory_refund", "dc_production_bonus"]);
-  const ALWAYS_SHOW_FIELDS = ["adjacent_placement_fee"];
+  const EDITOR_HIDDEN_FIELDS = new Set([
+    "image", "starting_tiles", "factory_refund", "dc_production_bonus",
+    "effective_pollution_tag", "current_tier", "instance_id",
+  ]);
+
+  // Canonical field order — every card renders fields in this sequence.
+  // Fields not present on the card get sensible defaults.
+  const FIELD_ORDER = [
+    "name", "id", "description", "type", "card_color_type", "number", "disabled",
+    "build",
+    "costs",
+    "effect",
+    "production",
+    "starting_resources", "starting_production",
+    "requirements", "min_reputation",
+    "only_playable_next_to", "only_playable_on_terrains",
+    "adjacent_placement_fee", "adjacent_placement_fee_target_types",
+    "pollution_tag", "fee_for_green", "responsible_mining",
+    "court_threshold_modifier",
+    "tiers",
+    "boosts",
+    "producibles",
+    "bonuses_by_placing_next_to_building",
+    "bonuses_by_building_on_terrain_type",
+    "bonuses_by_building_adjacent_to_terrain_type",
+    "placed_tile_adjacency_bonuses",
+    "compliance", "court_penalty", "court_threshold",
+    "target_id", "target_type",
+  ];
+
+  const SPECIAL_BUILDERS = {
+    build:         v => buildBuildField(v),
+    boosts:        v => buildBoostsField(v || []),
+    requirements:  v => buildRequirementsField(v || []),
+    min_reputation: v => buildMinReputationField(v),
+    court_threshold_modifier: v => buildCourtThresholdModifierField(v),
+    producibles:   v => buildProduciblesField(v || []),
+    pollution_tag: v => buildPollutionTagField(v ?? "neutral"),
+    fee_for_green: v => buildFeeForGreenField(v),
+    only_playable_next_to: v => buildOnlyPlayableNextToField(v || []),
+    only_playable_on_terrains: v => buildOnlyPlayableOnTerrainsField(v || []),
+    adjacent_placement_fee_target_types: v => buildAdjacentPlacementFeeTargetTypesField(v || []),
+    bonuses_by_placing_next_to_building: v => buildBonusesByPlacingNextToBuildingField(v || []),
+    bonuses_by_building_on_terrain_type: v => buildBonusesByBuildingOnTerrainTypeField(v || []),
+    bonuses_by_building_adjacent_to_terrain_type: v => buildBonusesByBuildingAdjacentToTerrainTypeField(v || []),
+    placed_tile_adjacency_bonuses: v => buildPlacedTileAdjacencyBonusesField(v || []),
+    tiers:         v => buildTiersField(v || []),
+  };
+
   const renderedKeys = new Set();
 
-  for (const [key, value] of Object.entries(card)) {
-    if (EDITOR_HIDDEN_FIELDS.has(key)) continue;
+  function renderField(key) {
+    if (renderedKeys.has(key) || EDITOR_HIDDEN_FIELDS.has(key)) return;
     renderedKeys.add(key);
-    if (key === "build") {
-      fields.appendChild(buildBuildField(value));
-    } else if (key === "boosts") {
-      fields.appendChild(buildBoostsField(value || []));
-    } else if (key === "requirements") {
-      fields.appendChild(buildRequirementsField(value || []));
-    } else if (key === "min_reputation") {
-      fields.appendChild(buildMinReputationField(value));
-    } else if (key === "court_threshold_modifier") {
-      fields.appendChild(buildCourtThresholdModifierField(value));
-    } else if (key === "producibles") {
-      fields.appendChild(buildProduciblesField(value || []));
-    } else if (key === "pollution_tag") {
-      fields.appendChild(buildPollutionTagField(value));
-    } else if (key === "fee_for_green") {
-      fields.appendChild(buildFeeForGreenField(value));
-    } else if (key === "effective_pollution_tag") {
-      // skip — derived from pollution_tag + runtime override
-    } else if (key === "only_playable_next_to") {
-      fields.appendChild(buildOnlyPlayableNextToField(value || []));
-    } else if (key === "only_playable_on_terrains") {
-      fields.appendChild(buildOnlyPlayableOnTerrainsField(value || []));
-    } else if (key === "adjacent_placement_fee_target_types") {
-      fields.appendChild(buildAdjacentPlacementFeeTargetTypesField(value || []));
-    } else if (key === "bonuses_by_placing_next_to_building") {
-      fields.appendChild(buildBonusesByPlacingNextToBuildingField(value || []));
-    } else if (key === "bonuses_by_building_on_terrain_type") {
-      fields.appendChild(buildBonusesByBuildingOnTerrainTypeField(value || []));
-    } else if (key === "bonuses_by_building_adjacent_to_terrain_type") {
-      fields.appendChild(buildBonusesByBuildingAdjacentToTerrainTypeField(value || []));
-    } else if (key === "placed_tile_adjacency_bonuses") {
-      fields.appendChild(buildPlacedTileAdjacencyBonusesField(value || []));
-    } else if (key === "tiers") {
-      fields.appendChild(buildTiersField(value || []));
-    } else if (key === "current_tier" || key === "instance_id") {
-      // skip — managed by backend
+    const value = card[key];
+    if (SPECIAL_BUILDERS[key]) {
+      fields.appendChild(SPECIAL_BUILDERS[key](value));
     } else if (DICT_FIELDS.has(key)) {
       const dictVal = (value && typeof value === "object" && !Array.isArray(value)) ? value : {};
       fields.appendChild(buildDictField(key, dictVal));
     } else {
-      fields.appendChild(buildSimpleField(key, value, cardType));
+      fields.appendChild(buildSimpleField(key, value ?? null, cardType));
     }
   }
 
-  // Always show these fields even if absent from the card data
-  for (const key of ALWAYS_SHOW_FIELDS) {
-    if (!renderedKeys.has(key)) {
-      fields.appendChild(buildSimpleField(key, null, cardType));
+  // Render in canonical order first
+  for (const key of FIELD_ORDER) {
+    if (key in card || SPECIAL_BUILDERS[key] || key === "adjacent_placement_fee" || key === "production") {
+      renderField(key);
     }
   }
 
-  if (!("production" in card)) {
-    fields.appendChild(buildDictField("production", {}));
+  // Then any remaining card keys not in FIELD_ORDER (future-proof)
+  for (const key of Object.keys(card)) {
+    renderField(key);
   }
-  if (!("boosts" in card)) {
-    fields.appendChild(buildBoostsField([]));
-  }
-  if (!("requirements" in card)) {
-    fields.appendChild(buildRequirementsField([]));
-  }
-  if (!("min_reputation" in card)) {
-    fields.appendChild(buildMinReputationField(null));
-  }
-  if (!("court_threshold_modifier" in card)) {
-    fields.appendChild(buildCourtThresholdModifierField(null));
-  }
-  if (!("producibles" in card)) {
-    fields.appendChild(buildProduciblesField([]));
-  }
-  if (!("pollution_tag" in card)) {
-    fields.appendChild(buildPollutionTagField("neutral"));
-  }
-  if (!("fee_for_green" in card)) {
-    fields.appendChild(buildFeeForGreenField(null));
-  }
-  if (!("only_playable_next_to" in card)) {
-    fields.appendChild(buildOnlyPlayableNextToField([]));
-  }
-  if (!("only_playable_on_terrains" in card)) {
-    fields.appendChild(buildOnlyPlayableOnTerrainsField([]));
-  }
-  if (!("adjacent_placement_fee_target_types" in card)) {
-    fields.appendChild(buildAdjacentPlacementFeeTargetTypesField([]));
-  }
-  if (!("bonuses_by_placing_next_to_building" in card)) {
-    fields.appendChild(buildBonusesByPlacingNextToBuildingField([]));
-  }
-  if (!("bonuses_by_building_on_terrain_type" in card)) {
-    fields.appendChild(buildBonusesByBuildingOnTerrainTypeField([]));
-  }
-  if (!("bonuses_by_building_adjacent_to_terrain_type" in card)) {
-    fields.appendChild(buildBonusesByBuildingAdjacentToTerrainTypeField([]));
-  }
-  if (!("placed_tile_adjacency_bonuses" in card)) {
-    fields.appendChild(buildPlacedTileAdjacencyBonusesField([]));
-  }
-  if (!("tiers" in card)) {
-    fields.appendChild(buildTiersField([]));
+
+  // Always ensure these fields exist even if absent from card data
+  const ALWAYS_ENSURE = [
+    "production", "boosts", "requirements", "min_reputation",
+    "court_threshold_modifier", "producibles", "pollution_tag", "fee_for_green",
+    "only_playable_next_to", "only_playable_on_terrains",
+    "adjacent_placement_fee", "adjacent_placement_fee_target_types",
+    "bonuses_by_placing_next_to_building", "bonuses_by_building_on_terrain_type",
+    "bonuses_by_building_adjacent_to_terrain_type", "placed_tile_adjacency_bonuses",
+    "tiers",
+  ];
+  for (const key of ALWAYS_ENSURE) {
+    renderField(key);
   }
 
   function saveAndGoBack() {
@@ -5051,20 +5047,38 @@ function buildTiersField(tiers) {
   list.className = "editor-tiers-list";
   container.appendChild(list);
 
+  const TIER_RESOURCE_KEYS = ["users", "money", "engineers", "suits", "servers", "ads", "reputation", "data"];
+  const TIER_PRODUCTION_KEYS = ["money", "HR", "data_centers", "ad_campaigns"];
+
+  function _detectExisting(tierData) {
+    let resKey = "users", resVal = 0, prodKey = "money", prodVal = 0;
+    for (const k of TIER_RESOURCE_KEYS) {
+      if (tierData[k] !== undefined && tierData[k] !== 0 && k !== "money") {
+        resKey = k; resVal = tierData[k]; break;
+      }
+    }
+    if (resKey === "users" && tierData.users !== undefined) resVal = tierData.users;
+    for (const k of TIER_PRODUCTION_KEYS) {
+      if (k === resKey) continue;
+      if (tierData[k] !== undefined && tierData[k] !== 0) {
+        prodKey = k; prodVal = tierData[k]; break;
+      }
+    }
+    if (prodKey === "money" && resKey !== "money" && tierData.money !== undefined) prodVal = tierData.money;
+    return { resKey, resVal, prodKey, prodVal };
+  }
+
   function addTierRow(tierData, idx) {
     const row = document.createElement("div");
     row.className = "editor-tier-row";
     row.style.cssText = "display:flex;flex-direction:column;gap:.25rem;margin-bottom:.5rem;padding:.4rem .5rem;border:1px solid var(--border);border-radius:4px;";
 
-    // ── header row: label + remove button ──
     const headerRow = document.createElement("div");
     headerRow.style.cssText = "display:flex;align-items:center;justify-content:space-between;";
-
     const lbl = document.createElement("span");
     lbl.style.cssText = "font-size:.78rem;font-weight:600;color:var(--primary);";
     lbl.textContent = `T${idx + 1}`;
     headerRow.appendChild(lbl);
-
     const rmBtn = document.createElement("button");
     rmBtn.className = "btn btn-sm editor-remove-btn";
     rmBtn.textContent = "×";
@@ -5072,46 +5086,75 @@ function buildTiersField(tiers) {
     headerRow.appendChild(rmBtn);
     row.appendChild(headerRow);
 
-    // ── gains row: users + money ──
-    const gainsRow = document.createElement("div");
-    gainsRow.style.cssText = "display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;";
+    const { resKey, resVal, prodKey, prodVal } = _detectExisting(tierData || {});
 
-    const usersLbl = document.createElement("span");
-    usersLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
-    usersLbl.textContent = "+users (M):";
-    gainsRow.appendChild(usersLbl);
+    // ── resource gain row ──
+    const resRow = document.createElement("div");
+    resRow.style.cssText = "display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;";
+    const resLbl = document.createElement("span");
+    resLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
+    resLbl.textContent = "+resource:";
+    resRow.appendChild(resLbl);
 
-    const usersInput = document.createElement("input");
-    usersInput.type = "number";
-    usersInput.className = "editor-tier-users";
-    usersInput.min = 0;
-    usersInput.value = tierData?.users ?? 0;
-    usersInput.style.cssText = "width:5rem;";
-    gainsRow.appendChild(makeNumSpinner(usersInput, { min: 0 }));
+    const resSel = document.createElement("select");
+    resSel.className = "editor-tier-res-key";
+    resSel.style.cssText = "font-size:.75rem;";
+    TIER_RESOURCE_KEYS.forEach(k => {
+      const o = document.createElement("option");
+      o.value = k; o.textContent = k;
+      if (k === resKey) o.selected = true;
+      resSel.appendChild(o);
+    });
+    resRow.appendChild(resSel);
 
-    const moneyLbl = document.createElement("span");
-    moneyLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-left:.3rem;";
-    moneyLbl.textContent = "+$B/yr:";
-    gainsRow.appendChild(moneyLbl);
+    const resInput = document.createElement("input");
+    resInput.type = "number";
+    resInput.className = "editor-tier-res-val";
+    resInput.min = 0;
+    resInput.value = resVal;
+    resInput.style.cssText = "width:5rem;";
+    resRow.appendChild(makeNumSpinner(resInput, { min: 0 }));
+    row.appendChild(resRow);
 
-    const moneyInput = document.createElement("input");
-    moneyInput.type = "number";
-    moneyInput.className = "editor-tier-money";
-    moneyInput.min = 0;
-    moneyInput.value = tierData?.money ?? 0;
-    moneyInput.style.cssText = "width:5rem;";
-    gainsRow.appendChild(makeNumSpinner(moneyInput, { min: 0 }));
-    row.appendChild(gainsRow);
+    // ── production gain row ──
+    const prodRow = document.createElement("div");
+    prodRow.style.cssText = "display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;";
+    const prodLbl = document.createElement("span");
+    prodLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
+    prodLbl.textContent = "+production/yr:";
+    prodRow.appendChild(prodLbl);
+
+    const prodSel = document.createElement("select");
+    prodSel.className = "editor-tier-prod-key";
+    prodSel.style.cssText = "font-size:.75rem;";
+    const noneOpt = document.createElement("option");
+    noneOpt.value = ""; noneOpt.textContent = "(none)";
+    if (!prodVal) noneOpt.selected = true;
+    prodSel.appendChild(noneOpt);
+    TIER_PRODUCTION_KEYS.forEach(k => {
+      const o = document.createElement("option");
+      o.value = k; o.textContent = k;
+      if (k === prodKey && prodVal) o.selected = true;
+      prodSel.appendChild(o);
+    });
+    prodRow.appendChild(prodSel);
+
+    const prodInput = document.createElement("input");
+    prodInput.type = "number";
+    prodInput.className = "editor-tier-prod-val";
+    prodInput.min = 0;
+    prodInput.value = prodVal;
+    prodInput.style.cssText = "width:5rem;";
+    prodRow.appendChild(makeNumSpinner(prodInput, { min: 0 }));
+    row.appendChild(prodRow);
 
     // ── cost row ──
     const costRow = document.createElement("div");
     costRow.style.cssText = "display:flex;align-items:center;gap:.5rem;";
-
     const dataLbl = document.createElement("span");
     dataLbl.style.cssText = "font-size:.72rem;color:var(--text-dim);";
     dataLbl.textContent = "Data cost (PB):";
     costRow.appendChild(dataLbl);
-
     const costInput = document.createElement("input");
     costInput.type = "number";
     costInput.className = "editor-tier-cost";
@@ -5476,10 +5519,15 @@ function collectFormData(fieldsEl, originalCard) {
     const tierRows = tiersContainer.querySelectorAll(".editor-tier-row");
     const tiersArr = [];
     tierRows.forEach((row) => {
-      const users = Number(row.querySelector(".editor-tier-users")?.value) || 0;
-      const money = Number(row.querySelector(".editor-tier-money")?.value) || 0;
+      const resKey = row.querySelector(".editor-tier-res-key")?.value || "users";
+      const resVal = Number(row.querySelector(".editor-tier-res-val")?.value) || 0;
+      const prodKey = row.querySelector(".editor-tier-prod-key")?.value || "";
+      const prodVal = Number(row.querySelector(".editor-tier-prod-val")?.value) || 0;
       const dataCost = Number(row.querySelector(".editor-tier-cost")?.value) || 0;
-      tiersArr.push({ users, money, data_cost: dataCost });
+      const entry = { data_cost: dataCost };
+      if (resVal) entry[resKey] = resVal;
+      if (prodKey && prodVal) entry[prodKey] = prodVal;
+      tiersArr.push(entry);
     });
     data.tiers = tiersArr.length > 0 ? tiersArr : null;
   }
@@ -5667,28 +5715,34 @@ function renderTreesView() {
     const boostersCol = document.createElement("div");
     boostersCol.className = "tree-boosters-col";
 
-    tree.boosters.forEach(b => {
+    const _renderTreeRow = (b, kind) => {
       const row = document.createElement("div");
       row.className = "tree-booster-row";
 
       const wrapper = document.createElement("div");
       wrapper.className = "tree-card-wrapper";
 
-      const boosterLockKey = findEditorKeyForId(b.card.id, b.card_type);
-      const lockStatus = boosterLockKey ? (treesLocksMap[boosterLockKey] || null) : null;
+      const lockKey = findEditorKeyForId(b.card.id, b.card_type);
+      const lockStatus = lockKey ? (treesLocksMap[lockKey] || null) : null;
       if (lockStatus === "other") wrapper.classList.add("editor-card-locked");
 
       const cardEl = createCardElement(b.card, { interactive: false, deckType: b.card_type });
 
-      const bonusTag = document.createElement("div");
-      bonusTag.className = "tree-bonus-tag";
-      const bonusParts = [
-        ...Object.entries(b.bonus || {}).map(([k,v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`),
-        ...Object.entries(b.production || {}).map(([k,v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}/yr`),
-      ];
-      const bonusStr = bonusParts.join(" ") || "none";
-      const countStr = b.target_count ? ` (×${b.target_count} max)` : "";
-      bonusTag.textContent = `Boost: ${bonusStr}${countStr}`;
+      const tag = document.createElement("div");
+      tag.className = "tree-bonus-tag";
+      if (kind === "boost") {
+        const bonusParts = [
+          ...Object.entries(b.bonus || {}).map(([k,v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}`),
+          ...Object.entries(b.production || {}).map(([k,v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}/yr`),
+        ];
+        const bonusStr = bonusParts.join(" ") || "none";
+        const countStr = b.target_count ? ` (×${b.target_count} max)` : "";
+        tag.textContent = `Boost: ${bonusStr}${countStr}`;
+      } else {
+        tag.textContent = `Fee: 💰$${b.fee}B`;
+        tag.style.background = "rgba(231,76,60,0.15)";
+        tag.style.borderColor = "#e74c3c";
+      }
 
       if (lockStatus === "other") {
         const lockLabel = document.createElement("div");
@@ -5698,25 +5752,28 @@ function renderTreesView() {
       }
 
       wrapper.appendChild(cardEl);
-      wrapper.appendChild(bonusTag);
+      wrapper.appendChild(tag);
 
-      if (lockStatus !== "other" && boosterLockKey) {
+      if (lockStatus !== "other" && lockKey) {
         wrapper.style.cursor = "pointer";
         wrapper.addEventListener("click", () => {
           editorContext = "trees";
-          const [ct, idx] = boosterLockKey.split(":");
+          const [ct, idx] = lockKey.split(":");
           socket.emit("lock_card", { card_type: ct, index: parseInt(idx) });
         });
       }
 
       const arrow = document.createElement("div");
       arrow.className = "tree-arrow";
-      arrow.textContent = "\u2192";
+      arrow.textContent = kind === "boost" ? "\u2192" : "\u2192 💰";
 
       row.appendChild(wrapper);
       row.appendChild(arrow);
       boostersCol.appendChild(row);
-    });
+    };
+
+    tree.boosters.forEach(b => _renderTreeRow(b, "boost"));
+    (tree.fee_payers || []).forEach(b => _renderTreeRow(b, "fee"));
 
     treeLayout.appendChild(boostersCol);
 

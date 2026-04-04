@@ -1,11 +1,11 @@
 - name: Headquarters
-  id: 52
+  id: 86
   description: null
   type: office
   number: 3
   adjacent_placement_fee: 0
   costs:
-    money: 900
+    money: 27
   effect:
     reputation: 0
     suits: 3
@@ -26,7 +26,7 @@
   boosts: null
   disabled: true
 - name: Home Office Gear
-  id: 53
+  id: 87
   description: null
   type: office
   number: 2
@@ -35,7 +35,7 @@
     engineers: 0
     suits: 0
     ads: 0
-    money: 50
+    money: 1.5
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -62,7 +62,7 @@
   boosts: null
   disabled: true
 - name: Coworking Rental
-  id: 54
+  id: 88
   description: null
   type: office
   number: 1
@@ -71,7 +71,7 @@
     engineers: 0
     suits: 0
     ads: 0
-    money: 300
+    money: 9
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -97,13 +97,13 @@
   boosts: null
   disabled: true
 - name: Office Building
-  id: 55
+  id: 89
   description: null
   type: office
   number: 2
   adjacent_placement_fee: 0
   costs:
-    money: 550
+    money: 16.5
   effect:
     engineers: 3
     suits: 3
@@ -125,13 +125,13 @@
   boosts: null
   disabled: true
 - name: Office Building Rental
-  id: 56
+  id: 90
   description: null
   type: office
   number: 1
   adjacent_placement_fee: 0
   costs:
-    money: 450
+    money: 13.5
   effect:
     engineers: 2
     suits: 2
@@ -150,7 +150,7 @@
   boosts: null
   disabled: true
 - name: Brand-Owned Store
-  id: 57
+  id: 91
   description: Sell only one brand’s products. Apple Store
   type: store
   number: 3
@@ -159,7 +159,7 @@
     engineers: 0
     suits: 2
     ads: 5
-    money: 300
+    money: 9
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -184,7 +184,7 @@
   boosts: null
   disabled: true
 - name: Electronics Retailer
-  id: 58
+  id: 92
   description: 'Large stores selling many brands and categories
 
     TVs, laptops, phones, appliances
@@ -197,7 +197,7 @@
     engineers: 0
     suits: 3
     ads: 3
-    money: 300
+    money: 9
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -224,7 +224,7 @@
   boosts: null
   disabled: true
 - name: Authorized Reseller
-  id: 59
+  id: 93
   description: 'Official partners of brands
 
     Sell genuine products with warranty support
@@ -237,7 +237,7 @@
     engineers: 0
     suits: 2
     ads: 3
-    money: 5
+    money: 0.15000000000000002
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -264,7 +264,7 @@
   boosts: null
   disabled: true
 - name: Hyperscale Data Center
-  id: 60
+  id: 94
   description: "INT NOTE: fee to HW someone who has a HW focused company. choose to\
     \ pay  \nMassive facilities built for huge-scale operations."
   type: data center
@@ -274,10 +274,10 @@
     engineers: 4
     suits: 0
     ads: 0
-    money: 400
+    money: 12
     servers: 10
     ad_campaigns: 0
-    fee: 500
+    fee: 15
     fee_card_type: chip enterprise
   effect: null
   production:
@@ -299,7 +299,7 @@
   boosts: null
   disabled: true
 - name: Data Center
-  id: 61
+  id: 95
   description: Third-party facilities where multiple businesses rent space.
   type: data center
   number: 3
@@ -309,14 +309,14 @@
     engineers: 3
     suits: 0
     ads: 0
-    money: 200
+    money: 6
     servers: 5
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 500
+    fee: 15
     fee_company_type: chip enterprise
   effect: null
   production:
@@ -337,7 +337,7 @@
   tiers: null
   boosts: null
 - name: On-Premise Data Center
-  id: 62
+  id: 96
   description: "INT NOTE: fee to HW vendor. \nOwned and operated by a single company\
     \ for its own internal use."
   type: data center
@@ -349,14 +349,14 @@
     engineers: 3
     suits: 0
     ads: 0
-    money: 100
+    money: 3
     servers: 3
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 200
+    fee: 6
     fee_company_type: chip enterprise
   effect: null
   production:
@@ -381,7 +381,7 @@
   tiers: null
   boosts: null
 - name: Edge Data Center
-  id: 63
+  id: 97
   description: "INT NOTE: fee to HW vendor. \nSmaller distributed data center closer\
     \ to users. "
   type: data center
@@ -393,11 +393,11 @@
     engineers: 2
     suits: 0
     ads: 0
-    money: 100
+    money: 3
     servers: 1
     data_centers: 0
     ad_campaigns: 0
-    fee: 200
+    fee: 6
     fee_company_type: chip enterprise
   effect: null
   production:
@@ -415,14 +415,14 @@
   bonuses_by_building_on_terrain_type: null
   bonuses_by_building_adjacent_to_terrain_type:
   - immediate:
-      money: 200
+      money: 6
     production: {}
     terrain_type: commercial
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
 - name: Nuclear Power Plant
-  id: 64
+  id: 98
   description: High-output zero-emission power. Essential for data centers. Requires
     significant investment but delivers clean energy at scale.
   type: nuclear power plant
@@ -432,7 +432,7 @@
   costs:
     suits: 0
     ads: 0
-    money: 1500
+    money: 45
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -460,8 +460,9 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Natural Gas Power Plant
-  id: 65
+  id: 99
   description: Fast to build and flexible. A reliable bridge fuel for powering your
     data centers, though it carries a reputation cost.
   type: natural gas power plant
@@ -472,7 +473,7 @@
     engineers: 5
     suits: 0
     ads: 0
-    money: 900
+    money: 27
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -503,8 +504,9 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
+  disabled: true
 - name: PV Power Plant
-  id: 66
+  id: 100
   description: Photovoltaic solar array. Ideal on sun or offshore solar terrain. Boosts
     adjacent data centers.
   type: pv power plant
@@ -515,7 +517,7 @@
     engineers: 3
     suits: 0
     ads: 0
-    money: 400
+    money: 12
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -548,8 +550,9 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Wind Farm
-  id: 67
+  id: 101
   description: Onshore or offshore wind turbines. Best on wind or offshore wind terrain.
     Boosts adjacent data centers.
   type: wind power plant
@@ -561,7 +564,7 @@
     engineers: 5
     suits: 0
     ads: 0
-    money: 400
+    money: 12
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -595,7 +598,7 @@
   tiers: null
   boosts: null
 - name: Coal Power Plant
-  id: 68
+  id: 102
   description: Cheap and abundant but highly polluting. Cheap energy that hurts your
     reputation.
   type: coal power plant
@@ -607,7 +610,7 @@
     engineers: 5
     suits: 0
     ads: 0
-    money: 800
+    money: 24
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -641,7 +644,7 @@
   tiers: null
   boosts: null
 - name: Hydroelectric Power Plant
-  id: 69
+  id: 103
   description: 'Build a hydroelectric dam on a lake tile. Generates clean power, boosting
     data center production.
 
@@ -651,7 +654,7 @@
   adjacent_placement_fee: 0
   disabled: 'true'
   costs:
-    money: 600
+    money: 18
     engineers: 7
   effect:
     reputation: 1
@@ -674,7 +677,7 @@
   tiers: null
   boosts: null
 - name: Digital Banner Ads
-  id: 70
+  id: 104
   description: Targeted advertising infrastructure reaching billions of eyeballs.
   type: ad campaign
   number: 3
@@ -683,11 +686,11 @@
     engineers: 1
     suits: 4
     ads: 4
-    money: 200
+    money: 6
     servers: 0
     data_centers: 0
     ad_campaigns: 0
-    fee: 200
+    fee: 6
     fee_card_id: 22
   effect:
     users: 15
@@ -709,7 +712,7 @@
   boosts: null
   disabled: true
 - name: Video Ads
-  id: 71
+  id: 105
   description: null
   type: ad campaign
   number: 3
@@ -718,14 +721,14 @@
     engineers: 1
     suits: 5
     ads: 6
-    money: 300
+    money: 9
     servers: 0
     data_centers: 0
     ad_campaigns: 0
     reputation: 0
     HR: 0
     users: 0
-    fee: 200
+    fee: 6
     fee_card_id: 22
     fee_card_type: null
     fee_company_type: null
@@ -746,7 +749,7 @@
   boosts: null
   disabled: true
 - name: Influencer Advertising
-  id: 72
+  id: 106
   description: Pay a soulless influencer to advertise your ads.
   type: ad campaign
   number: 1
@@ -755,7 +758,7 @@
     engineers: 0
     suits: 6
     ads: 0
-    money: 700
+    money: 21
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -783,7 +786,7 @@
   boosts: null
   disabled: true
 - name: Billboard Blitz
-  id: 73
+  id: 107
   description: Plaster your brand across every surface. Old school, still works.
   type: ad campaign
   number: 1
@@ -792,7 +795,7 @@
     engineers: 0
     suits: 1
     ads: 4
-    money: 800
+    money: 24
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -815,7 +818,7 @@
   boosts: null
   disabled: true
 - name: Lobbying Group
-  id: 74
+  id: 108
   description: Get together with your Big Tech buddies and finance a group to say
     the things you cannot afford to say yourself in public.
   type: lobby
@@ -825,7 +828,7 @@
     engineers: 0
     suits: 6
     ads: 0
-    money: 500
+    money: 15
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -850,7 +853,7 @@
   boosts: null
   disabled: true
 - name: Grassroots Lobbying
-  id: 75
+  id: 109
   description: mobilize public to pressure officials
   type: lobby
   number: 1
@@ -859,7 +862,7 @@
     engineers: 0
     suits: 10
     ads: 0
-    money: 1000
+    money: 30
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -887,7 +890,7 @@
   boosts: null
   disabled: true
 - name: Law Firm
-  id: 76
+  id: 110
   description: null
   type: lobby
   number: 2
@@ -896,7 +899,7 @@
     engineers: 0
     suits: 10
     ads: 0
-    money: 800
+    money: 24
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -924,7 +927,7 @@
   boosts: null
   disabled: true
 - name: Consolidation Center
-  id: 77
+  id: 111
   description: Gather smaller shipments from multiple suppliers into one larger shipment
     to maximize shipping efficiency.
   type: distribution center
@@ -934,7 +937,7 @@
     engineers: 4
     suits: 8
     ads: 0
-    money: 700
+    money: 21
     servers: 3
     data_centers: 0
     ad_campaigns: 0
@@ -964,14 +967,14 @@
     money: 1
     data_cost: 200
   boosts:
-  - target_id: 42
+  - target_id: 48
     target_type: null
     bonus: {}
     production:
       money: 2
   disabled: true
 - name: E-Commerce Center
-  id: 78
+  id: 112
   description: Focus on processing individual, smaller orders at high speed for end
     consumers.
   type: distribution center
@@ -980,7 +983,7 @@
   costs:
     engineers: 3
     suits: 8
-    money: 500
+    money: 15
     servers: 3
     data_centers: 0
     ad_campaigns: 0
@@ -1007,14 +1010,14 @@
     money: 1
     data_cost: 200
   boosts:
-  - target_id: 42
+  - target_id: 48
     target_type: null
     bonus: {}
     production:
       money: 1
   disabled: true
 - name: Cross-Docking Center
-  id: 79
+  id: 113
   description: Goods arrive and are directly transferred to outbound vehicles, minimizing
     inventory holding costs and time.
   type: distribution center
@@ -1024,7 +1027,7 @@
     engineers: 3
     suits: 6
     ads: 0
-    money: 500
+    money: 15
     servers: 0
     data_centers: 0
     ad_campaigns: 0
@@ -1054,14 +1057,14 @@
     money: 1
     data_cost: 200
   boosts:
-  - target_id: 42
+  - target_id: 48
     target_type: null
     bonus: {}
     production:
       money: 1
   disabled: true
 - name: Airborne Distribution Network
-  id: 80
+  id: 114
   description: null
   type: distribution center
   number: 1
@@ -1071,7 +1074,7 @@
     engineers: 6
     suits: 3
     ads: 0
-    money: 500
+    money: 15
     servers: 2
     data_centers: 0
     ad_campaigns: 0
@@ -1105,21 +1108,21 @@
     money: 1
     data_cost: 200
   boosts:
-  - target_id: 42
+  - target_id: 48
     target_type: null
     bonus: {}
     production:
       money: 1
   disabled: true
 - name: Rare Metal Mine
-  id: 81
+  id: 115
   description: null
   type: rare metal mine
   number: 2
   responsible_mining: '[object Object]'
   adjacent_placement_fee: 0
   costs:
-    money: 700
+    money: 21
     engineers: 4
     reputation: -1
   effect: null
@@ -1131,7 +1134,7 @@
   court_threshold_modifier: null
   pollution_tag: polluting
   fee_for_green:
-    money: 300
+    money: 9
   only_playable_next_to: null
   only_playable_on_terrains: null
   adjacent_placement_fee_target_types: null

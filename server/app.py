@@ -1749,6 +1749,10 @@ def _build_card_trees() -> dict:
     type_key_to_boosters: dict[str, list[dict]] = {}
     type_key_to_types: dict[str, list] = {}   # key → original types value
 
+    # fee connections: cards that pay fees to a target card (by id or type)
+    target_to_fee_payers: dict[int, list[dict]] = {}
+    type_key_to_fee_payers: dict[str, list[dict]] = {}
+
     booster_ids_with_connections: set[int] = set()
     platform_ids_with_connections: set[int] = set()
 
@@ -1770,6 +1774,7 @@ def _build_card_trees() -> dict:
                             "card": card,
                             "card_type": card_type,
                             "bonus": boost.get("bonus", {}),
+                            "production": boost.get("production", {}),
                             "target_count": boost.get("target_count"),
                         })
                         booster_ids_with_connections.add(cid)
@@ -1784,26 +1789,54 @@ def _build_card_trees() -> dict:
                         "card": card,
                         "card_type": card_type,
                         "bonus": boost.get("bonus", {}),
+                        "production": boost.get("production", {}),
                         "target_count": boost.get("target_count"),
                     })
                     type_key_to_types[key] = raw_tt
                     booster_ids_with_connections.add(cid)
 
+            # ── fee connections ───────────────────────────────
+            costs = card.get("costs") or {}
+            fee_amount = costs.get("fee", 0) or 0
+            if fee_amount:
+                fee_tid = costs.get("fee_card_id")
+                fee_ct = costs.get("fee_card_type")
+                fee_entry = {
+                    "card": card,
+                    "card_type": card_type,
+                    "fee": fee_amount,
+                }
+                if fee_tid and int(fee_tid) in card_by_id:
+                    target_to_fee_payers.setdefault(int(fee_tid), []).append(fee_entry)
+                    platform_ids_with_connections.add(int(fee_tid))
+                    booster_ids_with_connections.add(cid)
+                elif fee_ct:
+                    types_list = fee_ct if isinstance(fee_ct, list) else [fee_ct]
+                    key = "|".join(sorted(str(t) for t in types_list))
+                    type_key_to_fee_payers.setdefault(key, []).append(fee_entry)
+                    if key not in type_key_to_types:
+                        type_key_to_types[key] = types_list
+                    booster_ids_with_connections.add(cid)
+
     trees = []
     # Card-id trees
-    for tid, boosters in target_to_boosters.items():
+    all_target_ids = set(target_to_boosters.keys()) | set(target_to_fee_payers.keys())
+    for tid in all_target_ids:
         trees.append({
             "is_type_target": False,
             "target": card_by_id[tid],
             "target_card_type": card_type_by_id[tid],
-            "boosters": boosters,
+            "boosters": target_to_boosters.get(tid, []),
+            "fee_payers": target_to_fee_payers.get(tid, []),
         })
     # Type-label trees
-    for key, boosters in type_key_to_boosters.items():
+    all_type_keys = set(type_key_to_boosters.keys()) | set(type_key_to_fee_payers.keys())
+    for key in all_type_keys:
         trees.append({
             "is_type_target": True,
             "target_types": type_key_to_types[key],
-            "boosters": boosters,
+            "boosters": type_key_to_boosters.get(key, []),
+            "fee_payers": type_key_to_fee_payers.get(key, []),
         })
 
     platform_ids = {cid for cid, ct in card_type_by_id.items() if ct == "platform"}

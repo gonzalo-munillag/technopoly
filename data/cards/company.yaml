@@ -9,7 +9,7 @@
     engineers: 50
     suits: 50
     ads: 50
-    money: 3000
+    money: 90
     servers: 50
     reputation: 0
     users: 0
@@ -29,7 +29,7 @@
     engineers: 100
     suits: 100
     ads: 100
-    money: 3000
+    money: 90
     servers: 200
     reputation: 3
     users: 5
@@ -49,7 +49,7 @@
     engineers: 200
     suits: 100
     ads: 300
-    money: 1500
+    money: 45
     servers: 100
     reputation: 0
     users: 8
@@ -80,7 +80,7 @@
     engineers: 300
     suits: 100
     ads: 100
-    money: 6000
+    money: 180
     servers: 300
     reputation: 1
     users: 2
@@ -103,7 +103,7 @@
     engineers: 200
     suits: 200
     ads: 200
-    money: 5000
+    money: 150
     servers: 200
     reputation: 6
     users: 1
@@ -126,7 +126,7 @@
     engineers: 200
     suits: 100
     ads: 100
-    money: 2000
+    money: 60
     servers: 100
     reputation: 7
     users: 3
@@ -150,7 +150,7 @@
     engineers: 100
     suits: 100
     ads: 200
-    money: 5000
+    money: 150
     servers: 200
     reputation: 0
     users: 100
@@ -185,7 +185,7 @@
     engineers: 100
     suits: 100
     ads: 100
-    money: 5000
+    money: 150
     servers: 100
     reputation: 0
     users: 100
@@ -212,7 +212,7 @@
     engineers: 100
     suits: 100
     ads: 100
-    money: 5000
+    money: 150
     servers: 100
     reputation: 0
     users: 100
@@ -236,7 +236,7 @@
     engineers: 100
     suits: 100
     ads: 100
-    money: 5000
+    money: 150
     servers: 100
     reputation: 0
     users: 100
@@ -260,7 +260,7 @@
     engineers: 100
     suits: 100
     ads: 100
-    money: 5000
+    money: 150
     servers: 100
     reputation: 0
     users: 100
@@ -285,7 +285,7 @@
     engineers: 100
     suits: 100
     ads: 100
-    money: 5000
+    money: 150
     servers: 100
     reputation: 0
     users: 100
