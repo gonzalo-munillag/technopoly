@@ -1,44 +1,71 @@
 - name: Addiction Algorithm
-  id: 96
+  id: 95
   description: null
   type: null
   number: 1
-  build: null
-  factory_refund: 0
-  dc_production_bonus: 0
+  disabled: 'true'
+  adjacent_placement_fee: 0
   costs:
-    engineers: 0
+    engineers: 5
     suits: 0
     ads: 0
-    money: 0
+    money: 20
     servers: 0
     data_centers: 0
     ad_campaigns: 0
-    reputation: 0
+    reputation: -1
     HR: 0
     users: 0
     fee: 0
     fee_card_id: null
   effect: null
+  production: null
+  conditional_effects: null
+  build: null
   requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
   tiers: null
-  boosts: null
+  boosts:
+  - target_id: null
+    target_type:
+    - social platform
+    - software platform
+    - online marketplace
+    bonus:
+      users: 10
+    target_count: 6
 - name: Scam App
-  id: 97
+  id: 96
   description: Scam users for their money. But don't worry, the App Store owner has
     a vested interest in your success.
   type: software platform
   number: 1
+  disabled: 'true'
   adjacent_placement_fee: 0
   costs:
-    engineers: 3
-    suits: 5
+    engineers: 1
+    suits: 3
     ads: 7
-    money: 15
+    money: 10
     servers: 1
     data_centers: 0
     ad_campaigns: 0
-    reputation: -3
+    reputation: -1
     HR: 0
     users: 0
     fee: 4
@@ -47,10 +74,15 @@
     fee_company_type: null
   effect: null
   production:
-    money: 3
+    money: 6
+  conditional_effects: null
   build: null
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
   court_threshold_modifier: null
   producibles: []
   pollution_tag: neutral
@@ -65,11 +97,12 @@
   tiers: null
   boosts: null
 - name: Enshitification
-  id: 98
+  id: 97
   description: 'Make your app shity The reek of your enshitified platforms is casting
     customers away. '
   type: null
   number: 1
+  disabled: 'true'
   adjacent_placement_fee: 0
   costs:
     engineers: 3
@@ -79,7 +112,7 @@
     servers: 0
     data_centers: 0
     ad_campaigns: 0
-    reputation: 0
+    reputation: -1
     HR: 0
     users: 0
     fee: 0
@@ -87,13 +120,18 @@
     fee_card_type: null
     fee_company_type: null
   effect:
-    users: -30
+    users: -20
   production:
     money: 4
+  conditional_effects: null
   build: null
   requirements:
   - social platform
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
   court_threshold_modifier: null
   producibles: []
   pollution_tag: neutral
@@ -107,8 +145,8 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-- name: New Card
-  id: 99
+- name: Employee Poaching
+  id: 98
   description: null
   type: null
   number: 1
@@ -136,7 +174,10 @@
   required_card_ids: null
   play_thresholds: null
   lose_card_rule: null
-  steal_card: false
+  steal_card: null
+  poach_employees:
+    max: 6
+    price: 2
   court_threshold_modifier: null
   producibles: []
   pollution_tag: neutral
@@ -150,3 +191,891 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
+  disabled: true
+- name: Intellectual Property Theft
+  id: 99
+  description: But don't worry, there's honour amongst thieves. You won't lose reputation
+    from the public.
+  type: null
+  number: 1
+  disabled: 'true'
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 2
+    ads: 0
+    money: 2
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  conditional_effects: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: innovation
+  poach_employees: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+- name: Air Pollution
+  id: 100
+  description: 'Do even less than the bare minimum on sustainability to get some extra
+    profits. '
+  type: null
+  number: 1
+  disabled: 'true'
+  costs:
+    engineers: 1
+    suits: 2
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: polluting
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts:
+  - target_id: null
+    target_type:
+    - hardware manufacturer
+    - chip enterprise
+    bonus:
+      money: 1
+    target_count_unlimited: true
+- name: Child Labor
+  id: 101
+  description: null
+  type: null
+  number: 1
+  disabled: 'true'
+  costs:
+    engineers: 0
+    suits: 3
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 3
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts:
+  - target_id: null
+    target_type:
+    - hardware manufacturer
+    - chip enterprise
+    bonus:
+      money: 2
+    target_count_unlimited: true
+- name: Forced User Account Expansion
+  id: 102
+  description: Sign up each of your end users to all the platforms you own.
+  type: null
+  number: 1
+  costs:
+    engineers: 1
+    suits: 2
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements:
+  - types:
+    - social platform
+    - software platform
+    - online marketplace
+    count: 4
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts:
+  - target_id: null
+    target_type:
+    - social platform
+    - software platform
+    - online marketplace
+    bonus:
+      money: 1
+    target_count_unlimited: true
+  disabled: true
+- name: Insider Trading
+  id: 103
+  description: null
+  type: null
+  number: 1
+  costs:
+    engineers: 0
+    suits: 2
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    money: 6
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: From Non-Profit to Profit
+  id: 104
+  description: null
+  type: null
+  number: 1
+  disabled: 'true'
+  costs:
+    engineers: 0
+    suits: 4
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: -1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    money: 8
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+- name: Sell User Data Illegally
+  id: 105
+  description: Dealing with illegal data brokers is quite profitable.
+  type: null
+  number: 1
+  costs:
+    engineers: 0
+    suits: 0
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: -1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+    data: 600
+  effect:
+    money: 6
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage: null
+  court_threshold_modifier: null
+  producibles: []
+  resource_conversion:
+    name: Sell User Data
+    cost:
+      data: 200
+    gain:
+      money: 2
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Termination Conditions Maze
+  id: 106
+  description: null
+  type: null
+  number: 1
+  costs:
+    engineers: 2
+    suits: 2
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: -1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    users: 10
+  production: null
+  build: null
+  requirements:
+  - types:
+    - social platform
+    - software service
+    - software platform
+    - online marketplace
+    count: 1
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Patent Hoarding
+  id: 107
+  description: null
+  type: null
+  number: 1
+  costs:
+    suits: 7
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: -1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: innovation
+  poach_employees: null
+  targeted_leverage: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts:
+  - target_id: null
+    target_type:
+    - hardware manufacturer
+    - chip enterprise
+    bonus:
+      money: 1
+    target_count_unlimited: true
+  disabled: true
+- name: Hostile Takeover
+  id: 108
+  description: But don't worry, there's honour amongst thieves. You won't lose reputation
+    from the public.
+  type: null
+  number: 1
+  adjacent_placement_fee: 0
+  costs:
+    engineers: 0
+    suits: 2
+    ads: 0
+    money: 2
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  conditional_effects: null
+  build: null
+  requirements: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: platform
+  poach_employees: null
+  court_threshold_modifier: null
+  producibles: []
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Parity Clause
+  id: 109
+  description: null
+  type: null
+  number: 1
+  costs:
+    engineers: 0
+    suits: 3
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: -1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements:
+  - online marketplace
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage:
+    no_condition: false
+    vulnerability_type: null
+    vulnerability_card_id: null
+    actions:
+    - type: steal_money
+      amount: 5
+  court_threshold_modifier: null
+  producibles: []
+  resource_conversion: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Vendor Lock-In
+  id: 110
+  description: One of your customers has become dependent on you, a single supplier
+    for your platform, making it too costly, complex, or slow to switch to a competito.
+  type: null
+  number: 1
+  costs:
+    engineers: 0
+    suits: 3
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 0
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements:
+  - types:
+    - software platform
+    - online marketplace
+    count: 1
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage:
+    no_condition: true
+    vulnerability_type: null
+    vulnerability_card_id: null
+    actions:
+    - type: steal_money
+      amount: 5
+  court_threshold_modifier: null
+  producibles: []
+  resource_conversion: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Kick Out Competitor
+  id: 111
+  description: null
+  type: null
+  number: 1
+  costs:
+    engineers: 0
+    suits: 3
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements: null
+  required_card_ids:
+  - 15
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage:
+    no_condition: false
+    vulnerability_type: null
+    vulnerability_card_id: 15
+    target_card_type: null
+    target_card_id: null
+    target_fee_card_id: 15
+    actions:
+    - type: deactivate_cards
+      count: 1
+      chooser: attacker
+  court_threshold_modifier: null
+  producibles: []
+  resource_conversion: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: 'Block Competitor '
+  id: 112
+  description: null
+  type: null
+  number: 1
+  costs:
+    engineers: 0
+    suits: 3
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements: null
+  required_card_ids:
+  - 16
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage:
+    no_condition: false
+    vulnerability_type: null
+    vulnerability_card_id: 16
+    target_card_type: null
+    target_card_id: null
+    target_fee_card_id: 16
+    actions:
+    - type: deactivate_cards
+      count: 1
+      chooser: attacker
+  court_threshold_modifier: null
+  producibles: []
+  resource_conversion: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true
+- name: Programmed Obsolescense
+  id: 113
+  description: null
+  type: null
+  number: 1
+  costs:
+    engineers: 4
+    suits: 2
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements:
+  - hardware manufacturer
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage: null
+  court_threshold_modifier: null
+  producibles: []
+  resource_conversion: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts:
+  - target_id: null
+    target_type:
+    - hardware manufacturer
+    - chip enterprise
+    bonus:
+      money: 2
+    target_count: 3
+  disabled: true
+- name: Data Portability Lock
+  id: 114
+  description: null
+  type: null
+  number: 1
+  disabled: 'true'
+  costs:
+    engineers: 0
+    suits: 3
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect: null
+  production: null
+  build: null
+  requirements:
+  - types:
+    - social platform
+    - software platform
+    count: 1
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage:
+    no_condition: true
+    vulnerability_type: null
+    vulnerability_card_id: null
+    target_card_type: null
+    target_card_id: null
+    target_fee_card_id: null
+    actions:
+    - type: steal_users
+      amount: 20
+  court_threshold_modifier: null
+  producibles: []
+  resource_conversion: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+- name: Price Fixing
+  id: 115
+  description: Y
+  type: null
+  number: 1
+  costs:
+    engineers: 0
+    suits: 3
+    ads: 0
+    money: 0
+    servers: 0
+    data_centers: 0
+    ad_campaigns: 0
+    reputation: 1
+    HR: 0
+    users: 0
+    fee: 0
+    fee_card_id: null
+    fee_card_type: null
+    fee_company_type: null
+  effect:
+    money: 6
+  production: null
+  build: null
+  requirements:
+  - types:
+    - hardware manufacturer
+    - chip enterprise
+    count: 3
+  required_card_ids: null
+  play_thresholds:
+  - key: data center
+    min: 3
+    kind: opponents_total_played_type
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage: null
+  court_threshold_modifier: null
+  producibles: []
+  resource_conversion: null
+  pollution_tag: neutral
+  fee_for_green: null
+  only_playable_next_to: null
+  only_playable_on_terrains: null
+  adjacent_placement_fee: 0
+  adjacent_placement_fee_target_types: null
+  bonuses_by_placing_next_to_building: null
+  bonuses_by_building_on_terrain_type: null
+  bonuses_by_building_adjacent_to_terrain_type: null
+  placed_tile_adjacency_bonuses: null
+  tiers: null
+  boosts: null
+  disabled: true

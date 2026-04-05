@@ -1,5 +1,5 @@
 - name: Headquarters
-  id: 102
+  id: 118
   description: null
   type: office
   number: 3
@@ -26,7 +26,7 @@
   boosts: null
   disabled: true
 - name: Home Office Gear
-  id: 103
+  id: 119
   description: null
   type: office
   number: 2
@@ -62,7 +62,7 @@
   boosts: null
   disabled: true
 - name: Coworking Rental
-  id: 104
+  id: 120
   description: null
   type: office
   number: 1
@@ -97,7 +97,7 @@
   boosts: null
   disabled: true
 - name: Office Building
-  id: 105
+  id: 121
   description: null
   type: office
   number: 2
@@ -125,7 +125,7 @@
   boosts: null
   disabled: true
 - name: Office Building Rental
-  id: 106
+  id: 122
   description: null
   type: office
   number: 1
@@ -150,7 +150,7 @@
   boosts: null
   disabled: true
 - name: Brand-Owned Store
-  id: 107
+  id: 123
   description: Sell only one brand’s products. Apple Store
   type: store
   number: 3
@@ -184,7 +184,7 @@
   boosts: null
   disabled: true
 - name: Electronics Retailer
-  id: 108
+  id: 124
   description: 'Large stores selling many brands and categories
 
     TVs, laptops, phones, appliances
@@ -224,7 +224,7 @@
   boosts: null
   disabled: true
 - name: Authorized Reseller
-  id: 109
+  id: 125
   description: 'Official partners of brands
 
     Sell genuine products with warranty support
@@ -264,7 +264,7 @@
   boosts: null
   disabled: true
 - name: Hyperscale Data Center
-  id: 110
+  id: 126
   description: "INT NOTE: fee to HW someone who has a HW focused company. choose to\
     \ pay  \nMassive facilities built for huge-scale operations."
   type: data center
@@ -297,14 +297,12 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-  disabled: true
 - name: Data Center
-  id: 111
+  id: 127
   description: Third-party facilities where multiple businesses rent space.
   type: data center
   number: 3
   adjacent_placement_fee: 0
-  disabled: 'true'
   costs:
     engineers: 3
     suits: 0
@@ -337,14 +335,13 @@
   tiers: null
   boosts: null
 - name: On-Premise Data Center
-  id: 112
+  id: 128
   description: "INT NOTE: fee to HW vendor. \nOwned and operated by a single company\
     \ for its own internal use."
   type: data center
   number: 3
   adjacent_placement_fee: 0
   undefined: empty
-  disabled: 'true'
   costs:
     engineers: 3
     suits: 0
@@ -381,14 +378,11 @@
   tiers: null
   boosts: null
 - name: Edge Data Center
-  id: 113
+  id: 129
   description: "INT NOTE: fee to HW vendor. \nSmaller distributed data center closer\
     \ to users. "
   type: data center
   number: 2
-  adjacent_placement_fee: 0
-  undefined: empty
-  disabled: 'true'
   costs:
     engineers: 2
     suits: 0
@@ -404,31 +398,38 @@
     data_centers: 1
   build: data_center
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage: null
   court_threshold_modifier: null
+  producibles: []
+  resource_conversion: null
   pollution_tag: neutral
   fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
+  adjacent_placement_fee: 0
   adjacent_placement_fee_target_types: null
   bonuses_by_placing_next_to_building: null
   bonuses_by_building_on_terrain_type: null
   bonuses_by_building_adjacent_to_terrain_type:
   - immediate:
-      money: 6
+      money: 3
     production: {}
     terrain_type: commercial
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
 - name: Nuclear Power Plant
-  id: 114
+  id: 130
   description: High-output zero-emission power. Essential for data centers. Requires
     significant investment but delivers clean energy at scale.
   type: nuclear power plant
   number: 2
   undefined: null
-  adjacent_placement_fee: 0
   costs:
     suits: 0
     ads: 0
@@ -447,28 +448,36 @@
     money: 6
   build: nuclear_power_plant
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: polluting
   fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
+  adjacent_placement_fee: 0
   adjacent_placement_fee_target_types: null
-  bonuses_by_placing_next_to_building: null
+  bonuses_by_placing_next_to_building:
+  - immediate:
+      money: 1
+    production: {}
+    build_type: data_center
   bonuses_by_building_on_terrain_type: null
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-  disabled: true
 - name: Natural Gas Power Plant
-  id: 115
+  id: 131
   description: Fast to build and flexible. A reliable bridge fuel for powering your
     data centers, though it carries a reputation cost.
   type: natural gas power plant
   number: 3
   undefined: empty
-  adjacent_placement_fee: 0
   costs:
     engineers: 5
     suits: 0
@@ -487,14 +496,24 @@
     money: 3
   build: natural_gas_power_plant
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: polluting
   fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
+  adjacent_placement_fee: 0
   adjacent_placement_fee_target_types: null
-  bonuses_by_placing_next_to_building: null
+  bonuses_by_placing_next_to_building:
+  - immediate:
+      money: 1
+    production: {}
+    build_type: data_center
   bonuses_by_building_on_terrain_type:
   - immediate: {}
     production:
@@ -504,15 +523,13 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-  disabled: true
 - name: PV Power Plant
-  id: 116
+  id: 132
   description: Photovoltaic solar array. Ideal on sun or offshore solar terrain. Boosts
     adjacent data centers.
   type: pv power plant
   number: 3
   undefined: empty
-  adjacent_placement_fee: 0
   costs:
     engineers: 3
     suits: 0
@@ -533,14 +550,24 @@
     money: 1
   build: pv_power_plant
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: green
   fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
+  adjacent_placement_fee: 0
   adjacent_placement_fee_target_types: null
-  bonuses_by_placing_next_to_building: null
+  bonuses_by_placing_next_to_building:
+  - immediate:
+      money: 1
+    production: {}
+    build_type: data_center
   bonuses_by_building_on_terrain_type:
   - immediate: {}
     production:
@@ -552,14 +579,12 @@
   boosts: null
   disabled: true
 - name: Wind Farm
-  id: 117
+  id: 133
   description: Onshore or offshore wind turbines. Best on wind or offshore wind terrain.
     Boosts adjacent data centers.
   type: wind power plant
   number: 3
   undefined: empty
-  adjacent_placement_fee: 0
-  disabled: 'true'
   costs:
     engineers: 5
     suits: 0
@@ -580,14 +605,24 @@
     money: 1
   build: wind_power_plant
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: green
   fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
+  adjacent_placement_fee: 0
   adjacent_placement_fee_target_types: null
-  bonuses_by_placing_next_to_building: null
+  bonuses_by_placing_next_to_building:
+  - immediate:
+      money: 1
+    production: {}
+    build_type: data_center
   bonuses_by_building_on_terrain_type:
   - immediate: {}
     production:
@@ -597,15 +632,14 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Coal Power Plant
-  id: 118
+  id: 134
   description: Cheap and abundant but highly polluting. Cheap energy that hurts your
     reputation.
   type: coal power plant
   number: 3
-  adjacent_placement_fee: 0
   undefined: empty
-  disabled: 'true'
   costs:
     engineers: 5
     suits: 0
@@ -626,14 +660,24 @@
     money: 3
   build: coal_power_plant
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: polluting
   fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
+  adjacent_placement_fee: 0
   adjacent_placement_fee_target_types: null
-  bonuses_by_placing_next_to_building: null
+  bonuses_by_placing_next_to_building:
+  - immediate:
+      money: 1
+    production: {}
+    build_type: data_center
   bonuses_by_building_on_terrain_type:
   - immediate: {}
     production:
@@ -643,16 +687,15 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Hydroelectric Power Plant
-  id: 119
+  id: 135
   description: 'Build a hydroelectric dam on a lake tile. Generates clean power, boosting
     data center production.
 
     '
   type: hydroelectric power plant
   number: 2
-  adjacent_placement_fee: 0
-  disabled: 'true'
   costs:
     money: 18
     engineers: 7
@@ -662,22 +705,33 @@
     money: 3
   build: hydroelectric_power_plant
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
   court_threshold_modifier: null
+  producibles: []
   pollution_tag: green
   fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains:
   - lake
+  adjacent_placement_fee: 0
   adjacent_placement_fee_target_types: null
-  bonuses_by_placing_next_to_building: null
+  bonuses_by_placing_next_to_building:
+  - immediate:
+      money: 1
+    production: {}
+    build_type: data_center
   bonuses_by_building_on_terrain_type: null
   bonuses_by_building_adjacent_to_terrain_type: null
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
+  disabled: true
 - name: Digital Banner Ads
-  id: 120
+  id: 136
   description: Targeted advertising infrastructure reaching billions of eyeballs.
   type: ad campaign
   number: 3
@@ -712,7 +766,7 @@
   boosts: null
   disabled: true
 - name: Video Ads
-  id: 121
+  id: 137
   description: null
   type: ad campaign
   number: 3
@@ -749,7 +803,7 @@
   boosts: null
   disabled: true
 - name: Influencer Advertising
-  id: 122
+  id: 138
   description: Pay a soulless influencer to advertise your ads.
   type: ad campaign
   number: 1
@@ -786,7 +840,7 @@
   boosts: null
   disabled: true
 - name: Billboard Blitz
-  id: 123
+  id: 139
   description: Plaster your brand across every surface. Old school, still works.
   type: ad campaign
   number: 1
@@ -818,7 +872,7 @@
   boosts: null
   disabled: true
 - name: Lobbying Group
-  id: 124
+  id: 140
   description: Get together with your Big Tech buddies and finance a group to say
     the things you cannot afford to say yourself in public.
   type: lobby
@@ -853,7 +907,7 @@
   boosts: null
   disabled: true
 - name: Grassroots Lobbying
-  id: 125
+  id: 141
   description: mobilize public to pressure officials
   type: lobby
   number: 1
@@ -894,7 +948,7 @@
   tiers: null
   boosts: null
 - name: Law Firm
-  id: 126
+  id: 142
   description: null
   type: lobby
   number: 2
@@ -931,7 +985,7 @@
   boosts: null
   disabled: true
 - name: Consolidation Center
-  id: 127
+  id: 143
   description: Gather smaller shipments from multiple suppliers into one larger shipment
     to maximize shipping efficiency.
   type: distribution center
@@ -978,7 +1032,7 @@
       money: 2
   disabled: true
 - name: E-Commerce Center
-  id: 128
+  id: 144
   description: Focus on processing individual, smaller orders at high speed for end
     consumers.
   type: distribution center
@@ -1021,7 +1075,7 @@
       money: 1
   disabled: true
 - name: Cross-Docking Center
-  id: 129
+  id: 145
   description: Goods arrive and are directly transferred to outbound vehicles, minimizing
     inventory holding costs and time.
   type: distribution center
@@ -1068,7 +1122,7 @@
       money: 1
   disabled: true
 - name: Airborne Distribution Network
-  id: 130
+  id: 146
   description: null
   type: distribution center
   number: 1
@@ -1119,7 +1173,7 @@
       money: 1
   disabled: true
 - name: Rare Metal Mine
-  id: 131
+  id: 147
   description: null
   type: rare metal mine
   number: 2

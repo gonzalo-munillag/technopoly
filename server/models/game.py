@@ -253,7 +253,7 @@ class Game:
             fuckups = []
             for card in drawn:
                 if card.card_type == "fuck_up":
-                    if player.meets_all_requirements(card):
+                    if player.meets_all_requirements(card, self):
                         player.add_to_hand(card)
                     else:
                         card._dodged = True
@@ -425,7 +425,7 @@ class Game:
         for pid, player in self.players.items():
             if global_eff:
                 player.apply_penalty(global_eff, self)
-            met = player.meets_all_requirements(ev) if (cond_eff or ev.play_thresholds or ev.requirements or ev.required_card_ids) else False
+            met = player.meets_all_requirements(ev, self) if (cond_eff or ev.play_thresholds or ev.requirements or ev.required_card_ids) else False
             if met and cond_eff:
                 player.apply_penalty(cond_eff, self)
             results[pid] = {
@@ -508,6 +508,7 @@ class Game:
             for c in player.played_cards:
                 if c is not None:
                     c._producibles_used.clear()
+                    c._conversion_used_this_year = False
                     c._tier_upgraded_this_year = False
             if went_bankrupt:
                 bankrupt.append((pid, player.name))

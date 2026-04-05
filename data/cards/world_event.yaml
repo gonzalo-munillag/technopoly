@@ -1,5 +1,5 @@
 - name: Climate Change
-  id: 138
+  id: 154
   description: null
   adjacent_placement_fee: 0
   court_threshold: 4
@@ -29,7 +29,7 @@
   tiers: null
   boosts: null
 - name: Market Crisis
-  id: 139
+  id: 155
   description: Some people will make money out of this crisis, but not you.
   adjacent_placement_fee: 0
   court_threshold: 4

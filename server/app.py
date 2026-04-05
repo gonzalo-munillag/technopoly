@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 import os
 import time
 import uuid
@@ -134,6 +135,30 @@ def _placement_error_hint(tile_type: str, meta: dict | None = None) -> str:
     return " ".join(parts)
 
 
+def _card_matches_type(card, req_type: str | None) -> bool:
+    if not card or not req_type:
+        return False
+    return req_type in {
+        getattr(card, "card_color_type", None),
+        getattr(card, "secondary_card_color_type", None),
+        getattr(card, "card_type", None),
+    }
+
+
+def _find_card_name_by_id(card_id):
+    """Search all decks and players for a card with the given ID and return its name."""
+    for deck in [game.projects_deck, game.boosters_deck, game.build_deck,
+                 game.regulation_deck, game.company_cards]:
+        for c in deck:
+            if getattr(c, "id", None) == card_id:
+                return c.name
+    for p in game.players.values():
+        for c in list(p.hand) + list(p.played_cards):
+            if c is not None and getattr(c, "id", None) == card_id:
+                return c.name
+    return None
+
+
 def _has_any_legal_tile_placement(
     player,
     tile_type: str,
@@ -141,7 +166,17 @@ def _has_any_legal_tile_placement(
     money_after_card: int | None = None,
 ) -> bool:
     """Check if player can legally place this tile anywhere right now."""
-    played_types = {getattr(c, "card_color_type", None) for c in player.played_cards if c is not None and getattr(c, "card_color_type", None)}
+    played_types = set()
+    for c in player.played_cards:
+        if c is None:
+            continue
+        for t in (
+            getattr(c, "card_color_type", None),
+            getattr(c, "secondary_card_color_type", None),
+            getattr(c, "card_type", None),
+        ):
+            if t:
+                played_types.add(t)
     only_next_to = (meta or {}).get("only_playable_next_to") or []
     only_terrains = (meta or {}).get("only_playable_on_terrains") or []
     for t in game.board.to_list():
@@ -690,6 +725,9 @@ def on_play_card(data):
     if player.pending_poach:
         emit("error", {"message": "You must complete employee poaching first."})
         return
+    if player.pending_targeted_leverage:
+        emit("error", {"message": "You must complete your leverage action first."})
+        return
 
     if player.has_pending_fuckups():
         if card.card_type != "fuck_up":
@@ -717,7 +755,7 @@ def on_play_card(data):
     use_optional = data.get("use_optional") or {}
     pay_to = data.get("pay_to") or {}
     use_responsible_mining = bool(data.get("responsible_mining"))
-    req_err = player.check_requirements(card)
+    req_err = player.check_requirements(card, game)
     if req_err:
         emit("error", {"message": req_err})
         return
@@ -770,11 +808,11 @@ def on_play_card(data):
             if card.fee_card_id:
                 eligible = any(getattr(c, "id", None) == card.fee_card_id for c in target_player.played_cards if c is not None)
             elif card.fee_card_type:
-                eligible = any(getattr(c, "card_color_type", None) == card.fee_card_type for c in target_player.played_cards if c is not None)
+                eligible = any(_card_matches_type(c, card.fee_card_type) for c in target_player.played_cards if c is not None)
             elif card.fee_company_type:
                 eligible = bool(
                     target_player.company and
-                    target_player.company.card_color_type == card.fee_company_type
+                    _card_matches_type(target_player.company, card.fee_company_type)
                 )
             if eligible:
                 target_player.resources["money"] = (
@@ -785,6 +823,8 @@ def on_play_card(data):
     if not played:
         emit("error", {"message": f"Failed to play '{card_name}' — card not found in hand."})
         return
+
+    player.try_reactivate_cards(played, game)
 
     # Notify all players that a card was played
     socketio.emit("card_played_notification", {
@@ -814,8 +854,9 @@ def on_play_card(data):
 
     _handle_steal_card(player, played)
     _handle_poach_employees(player, played)
+    _handle_targeted_leverage(player, played)
 
-    if player.pending_card_steal or player.pending_poach:
+    if player.pending_card_steal or player.pending_poach or player.pending_targeted_leverage:
         socketio.emit("game_state", game.to_dict(), room="game")
         _send_private_states()
     elif not _maybe_auto_end_turn(player):
@@ -849,6 +890,9 @@ def on_play_build_card(data):
     if player.pending_poach:
         emit("error", {"message": "You must complete employee poaching first."})
         return
+    if player.pending_targeted_leverage:
+        emit("error", {"message": "You must complete your leverage action first."})
+        return
 
     cpt = P("cards_per_turn", 2)
     if player.cards_played_this_turn >= cpt:
@@ -866,7 +910,7 @@ def on_play_build_card(data):
         return
 
     # Check requirements and costs
-    req_err = player.check_requirements(card)
+    req_err = player.check_requirements(card, game)
     if req_err:
         emit("error", {"message": req_err})
         return
@@ -1005,6 +1049,9 @@ def on_produce_item(data):
     if player.pending_poach:
         emit("error", {"message": "You must complete employee poaching first."})
         return
+    if player.pending_targeted_leverage:
+        emit("error", {"message": "You must complete your leverage action first."})
+        return
 
     instance_id = data.get("instance_id")
     item_index = int(data.get("item_index", -1))
@@ -1055,7 +1102,7 @@ def on_produce_item(data):
 
     # ── Check whether player owns the fee card (pays fee to themselves → free) ──
     owns_fee_card = fee_card_type and any(
-        (getattr(c, "card_color_type", None) or "") == fee_card_type
+        _card_matches_type(c, fee_card_type)
         for c in player.played_cards if c is not None
     )
     effective_fee = 0 if owns_fee_card else fee
@@ -1095,7 +1142,7 @@ def on_produce_item(data):
         if pay_to and pay_to in game.players and pay_to != player_id:
             target_player = game.players[pay_to]
             if fee_card_type and any(
-                (getattr(c, "card_color_type", None) or "") == fee_card_type
+                _card_matches_type(c, fee_card_type)
                 for c in target_player.played_cards if c is not None
             ):
                 target_player.resources["money"] = target_player.resources.get("money", 0) + effective_fee
@@ -1130,6 +1177,65 @@ def on_produce_item(data):
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
     _check_win_condition()
+
+
+@socketio.on("convert_resource")
+def on_convert_resource(data):
+    """Once-per-year resource conversion button on a played card."""
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.PLAYER_TURNS:
+        return
+    player = game.players.get(player_id)
+    if not player or game.current_player_id != player_id:
+        return
+    if player.pending_card_steal:
+        emit("error", {"message": "You must complete your IP theft first."})
+        return
+    if player.pending_poach:
+        emit("error", {"message": "You must complete employee poaching first."})
+        return
+    if player.pending_targeted_leverage:
+        emit("error", {"message": "You must complete your leverage action first."})
+        return
+
+    instance_id = data.get("instance_id")
+    card = next(
+        (c for c in player.played_cards if c is not None and c._instance_id == instance_id),
+        None,
+    )
+    if not card:
+        emit("error", {"message": "Card not found in your played cards."})
+        return
+    conv = getattr(card, "resource_conversion", None)
+    if not conv:
+        emit("error", {"message": "This card has no resource conversion."})
+        return
+    if card._conversion_used_this_year:
+        emit("error", {"message": "You already converted from this card this year."})
+        return
+
+    cost = conv.get("cost") or {}
+    gain = conv.get("gain") or {}
+    for res, amt in cost.items():
+        pool = getattr(player, player._get_pool(res))
+        if pool.get(res, 0) < amt:
+            emit("error", {"message": f"Not enough {res} (need {amt}, have {pool.get(res, 0)})."})
+            return
+
+    for res, amt in cost.items():
+        pool = getattr(player, player._get_pool(res))
+        pool[res] = pool.get(res, 0) - amt
+    for res, amt in gain.items():
+        if res == "users":
+            player.gain_users(amt, game)
+        else:
+            pool = getattr(player, player._get_pool(res))
+            pool[res] = pool.get(res, 0) + amt
+
+    card._conversion_used_this_year = True
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
 
 
 @socketio.on("buy_resource")
@@ -1196,6 +1302,9 @@ def on_upgrade_card_tier(data):
     if player.pending_poach:
         emit("error", {"message": "You must complete employee poaching first."})
         return
+    if player.pending_targeted_leverage:
+        emit("error", {"message": "You must complete your leverage action first."})
+        return
     instance_id = data.get("instance_id", "")
     result = player.upgrade_card_tier(instance_id, game)
     if result["ok"]:
@@ -1261,44 +1370,110 @@ def on_choose_card_to_lose(data):
 
 
 def _handle_steal_card(player, card):
-    """Leverage: player steals a card from an opponent's hand."""
-    if not getattr(card, "steal_card", False):
+    """Leverage: player steals a card of a specific type from an opponent's hand.
+
+    Step 1: show ALL opponents (no hint about who has matching cards).
+    Step 2 (choose_steal_target): if victim has matching cards → reveal them;
+           otherwise → tough luck, ability is consumed.
+    Step 3 (choose_card_to_steal): execute the steal.
+    """
+    target_type = getattr(card, "steal_card", None)
+    if not target_type:
         return
-    opponents = []
-    for pid, p in game.players.items():
-        if pid == player.player_id:
-            continue
-        hand = [c for c in p.hand if c.card_type != "fuck_up"]
-        if hand:
-            opponents.append({"id": pid, "name": p.name, "cards": [c.to_dict() for c in hand]})
+    opponents = [pid for pid in game.players if pid != player.player_id]
     if not opponents:
         return
-    player.pending_card_steal = {"card_name": card.name}
+    player.pending_card_steal = {
+        "card_name": card.name,
+        "instance_id": card._instance_id,
+        "target_type": target_type,
+        "phase": "choose_target",
+        "eligible": opponents,
+    }
+    targets_info = [{"id": pid, "name": game.players[pid].name} for pid in opponents]
     player_sid = next((s for s, pid in connected_players.items() if pid == player.player_id), None)
     if player_sid:
         socketio.emit("steal_card_prompt", {
             "card_name": card.name,
-            "opponents": opponents,
+            "target_type": target_type,
+            "phase": "choose_target",
+            "targets": targets_info,
         }, room=player_sid)
 
 
-@socketio.on("choose_card_to_steal")
-def on_choose_card_to_steal(data):
+@socketio.on("choose_steal_target")
+def on_choose_steal_target(data):
+    """Step 2: attacker picks which opponent to steal from.
+
+    If the victim has matching cards → reveal them for selection.
+    If not → tough luck; the steal action is consumed with no effect.
+    """
     _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id or game.phase != Phase.PLAYER_TURNS:
         return
     player = game.players.get(player_id)
-    if not player or not player.pending_card_steal:
-        emit("error", {"message": "No pending steal."})
+    pcs = player.pending_card_steal if player else None
+    if not pcs or pcs.get("phase") != "choose_target":
+        emit("error", {"message": "No pending steal target selection."})
         return
-    victim_id = data.get("victim_id", "")
-    instance_id = data.get("instance_id", "")
+    victim_id = data.get("target_id", "")
+    if victim_id not in pcs["eligible"]:
+        emit("error", {"message": "That player is not eligible."})
+        return
     victim = game.players.get(victim_id)
-    if not victim or victim_id == player_id:
+    if not victim:
         emit("error", {"message": "Invalid target."})
         return
-    stolen = next((c for c in victim.hand if c._instance_id == instance_id and c.card_type != "fuck_up"), None)
+    target_type = pcs["target_type"]
+    matching = [c for c in victim.hand if c.card_type == target_type]
+    if not matching:
+        player.pending_card_steal = None
+        player_sid = next((s for s, pid in connected_players.items() if pid == player.player_id), None)
+        if player_sid:
+            socketio.emit("steal_card_miss", {
+                "card_name": pcs["card_name"],
+                "target_type": target_type,
+                "victim_name": victim.name,
+            }, room=player_sid)
+        socketio.emit("game_state", game.to_dict(), room="game")
+        _send_private_states()
+        if not player.pending_poach and not player.pending_targeted_leverage:
+            _maybe_auto_end_turn(player)
+        return
+    pcs["phase"] = "choose_card"
+    pcs["victim_id"] = victim_id
+    player_sid = next((s for s, pid in connected_players.items() if pid == player.player_id), None)
+    if player_sid:
+        socketio.emit("steal_cards_revealed", {
+            "card_name": pcs["card_name"],
+            "target_type": target_type,
+            "victim_id": victim_id,
+            "victim_name": victim.name,
+            "cards": [c.to_dict() for c in matching],
+        }, room=player_sid)
+
+
+@socketio.on("choose_card_to_steal")
+def on_choose_card_to_steal(data):
+    """Step 3: attacker picks a specific card to steal."""
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.PLAYER_TURNS:
+        return
+    player = game.players.get(player_id)
+    pcs = player.pending_card_steal if player else None
+    if not pcs or pcs.get("phase") != "choose_card":
+        emit("error", {"message": "No pending steal."})
+        return
+    victim_id = pcs.get("victim_id", "")
+    instance_id = data.get("instance_id", "")
+    victim = game.players.get(victim_id)
+    if not victim:
+        emit("error", {"message": "Invalid target."})
+        return
+    target_type = pcs.get("target_type")
+    stolen = next((c for c in victim.hand if c._instance_id == instance_id and c.card_type == target_type), None)
     if not stolen:
         emit("error", {"message": "Card not found in target's hand."})
         return
@@ -1307,12 +1482,13 @@ def on_choose_card_to_steal(data):
     player.pending_card_steal = None
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
-    if not player.pending_poach:
+    if not player.pending_poach and not player.pending_targeted_leverage:
         _maybe_auto_end_turn(player)
 
 
-@socketio.on("skip_steal")
-def on_skip_steal():
+@socketio.on("cancel_steal")
+def on_cancel_steal():
+    """Cancel steal — card stays in played_cards (ability forfeited, player saw opponents' hands)."""
     _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id:
@@ -1323,7 +1499,7 @@ def on_skip_steal():
     player.pending_card_steal = None
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
-    if not player.pending_poach:
+    if not player.pending_poach and not player.pending_targeted_leverage:
         _maybe_auto_end_turn(player)
 
 
@@ -1342,7 +1518,7 @@ def _handle_poach_employees(player, card):
             opponents.append({"id": pid, "name": p.name, "engineers": eng, "suits": suits})
     if not opponents:
         return
-    player.pending_poach = {"card_name": card.name, "max": pe["max"], "price": pe.get("price", 0)}
+    player.pending_poach = {"card_name": card.name, "max": pe["max"], "price": pe.get("price", 0), "instance_id": card._instance_id}
     player_sid = next((s for s, pid in connected_players.items() if pid == player.player_id), None)
     if player_sid:
         socketio.emit("poach_prompt", {
@@ -1393,12 +1569,13 @@ def on_confirm_poach(data):
     player.pending_poach = None
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
-    if not player.pending_card_steal:
+    if not player.pending_card_steal and not player.pending_targeted_leverage:
         _maybe_auto_end_turn(player)
 
 
-@socketio.on("skip_poach")
-def on_skip_poach():
+@socketio.on("cancel_poach")
+def on_cancel_poach():
+    """Cancel poach — return the card to hand so the player can try again later."""
     _touch_activity()
     player_id = connected_players.get(request.sid)
     if not player_id:
@@ -1406,10 +1583,315 @@ def on_skip_poach():
     player = game.players.get(player_id)
     if not player or not player.pending_poach:
         return
+    iid = player.pending_poach.get("instance_id")
+    if iid:
+        card = next((c for c in player.played_cards if c._instance_id == iid), None)
+        if card:
+            player.played_cards = [c for c in player.played_cards if c._instance_id != iid]
+            player.hand.append(card)
+            player.cards_played_this_turn = max(0, player.cards_played_this_turn - 1)
     player.pending_poach = None
     socketio.emit("game_state", game.to_dict(), room="game")
     _send_private_states()
-    if not player.pending_card_steal:
+    if not player.pending_card_steal and not player.pending_targeted_leverage:
+        _maybe_auto_end_turn(player)
+
+
+def _tl_card_matches_filter(card, tl_config):
+    """Check if a card matches the top-level target filter of a targeted_leverage config.
+
+    Returns True if the card matches ANY of the set filters (OR logic).
+    If no filters are set, all cards are eligible.
+    """
+    tc_type = tl_config.get("target_card_type")
+    tc_id = tl_config.get("target_card_id")
+    tc_fee_id = tl_config.get("target_fee_card_id")
+    has_filter = bool(tc_type or tc_id is not None or tc_fee_id is not None)
+    if not has_filter:
+        return True
+    if tc_type and _card_matches_type(card, tc_type):
+        return True
+    if tc_id is not None and getattr(card, "id", None) == tc_id:
+        return True
+    if tc_fee_id is not None and getattr(card, "fee_card_id", None) == tc_fee_id:
+        return True
+    return False
+
+
+def _tl_needs_hand_cards(tl_config):
+    """Check if any action steals cards from hand."""
+    return any(a.get("type") == "steal_cards"
+               for a in (tl_config.get("actions") or []))
+
+
+def _tl_needs_played_cards(tl_config):
+    """Check if any action targets played cards (deactivate/delete)."""
+    return any(a.get("type") in ("deactivate_cards", "delete_cards")
+               for a in (tl_config.get("actions") or []))
+
+
+def _handle_targeted_leverage(player, card):
+    """Leverage: targeted leverage action — find eligible opponents and prompt attacker."""
+    tl = getattr(card, "targeted_leverage", None)
+    if not tl or not tl.get("actions"):
+        return
+    no_cond = tl.get("no_condition", False)
+    vuln_type = tl.get("vulnerability_type")
+    vuln_id = tl.get("vulnerability_card_id")
+    check_hand = _tl_needs_hand_cards(tl)
+    check_played = _tl_needs_played_cards(tl)
+
+    eligible = []
+    for pid, p in game.players.items():
+        if pid == player.player_id:
+            continue
+        if not no_cond:
+            protected = False
+            if vuln_type:
+                protected = any(_card_matches_type(c, vuln_type) for c in p.played_cards if c)
+            if not protected and vuln_id is not None:
+                protected = any(getattr(c, "id", None) == vuln_id for c in p.played_cards if c)
+            if protected:
+                continue
+        if check_played:
+            has_played = any(
+                c is not None and not c._dodged and _tl_card_matches_filter(c, tl)
+                for c in p.played_cards
+            )
+            if not has_played:
+                continue
+        if check_hand:
+            has_hand = any(
+                c is not None and _tl_card_matches_filter(c, tl)
+                for c in p.hand
+            )
+            if not has_hand:
+                continue
+        eligible.append(pid)
+    if not eligible:
+        return
+
+    player.pending_targeted_leverage = {
+        "card_name": card.name,
+        "instance_id": card._instance_id,
+        "actions": tl["actions"],
+        "vulnerability_type": vuln_type,
+        "vulnerability_card_id": vuln_id,
+        "no_condition": no_cond,
+        "target_card_type": tl.get("target_card_type"),
+        "target_card_id": tl.get("target_card_id"),
+        "target_fee_card_id": tl.get("target_fee_card_id"),
+        "eligible_targets": eligible,
+        "phase": "choose_target",
+        "target_id": None,
+        "pending_action_idx": 0,
+        "chooser": None,
+    }
+    targets_info = []
+    for pid in eligible:
+        p = game.players[pid]
+        targets_info.append({"id": pid, "name": p.name})
+
+    player_sid = next((s for s, pid in connected_players.items() if pid == player.player_id), None)
+    if player_sid:
+        socketio.emit("targeted_leverage_prompt", {
+            "card_name": card.name,
+            "actions": tl["actions"],
+            "targets": targets_info,
+            "phase": "choose_target",
+        }, room=player_sid)
+
+
+@socketio.on("targeted_leverage_choose_target")
+def on_tl_choose_target(data):
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.PLAYER_TURNS:
+        return
+    player = game.players.get(player_id)
+    ptl = player.pending_targeted_leverage if player else None
+    if not ptl or ptl["phase"] != "choose_target":
+        emit("error", {"message": "No pending targeted leverage."})
+        return
+    target_id = data.get("target_id", "")
+    if target_id not in ptl["eligible_targets"]:
+        emit("error", {"message": "Target is not eligible."})
+        return
+    ptl["target_id"] = target_id
+    _tl_execute_actions(player)
+
+
+@socketio.on("targeted_leverage_choose_cards")
+def on_tl_choose_cards(data):
+    """Attacker or victim picks cards for deactivate/delete/steal_cards actions."""
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id or game.phase != Phase.PLAYER_TURNS:
+        return
+    # The sender might be the attacker or the victim (when chooser == "victim").
+    # Find the attacker who owns the pending_targeted_leverage.
+    player = game.players.get(player_id)
+    ptl = player.pending_targeted_leverage if player else None
+    if not ptl or ptl.get("phase") != "choose_cards":
+        # Victim case: find the attacker whose TL targets this player
+        player = None
+        ptl = None
+        for p in game.players.values():
+            t = p.pending_targeted_leverage
+            if (t and t.get("phase") == "choose_cards"
+                    and t.get("chooser") == "victim"
+                    and t.get("target_id") == player_id):
+                player = p
+                ptl = t
+                break
+    if not ptl or ptl["phase"] != "choose_cards":
+        emit("error", {"message": "No pending card choice."})
+        return
+    chosen_ids = data.get("instance_ids", [])
+    action = ptl["actions"][ptl["pending_action_idx"]]
+    count = action.get("count", 1)
+    if len(chosen_ids) > count:
+        emit("error", {"message": f"Choose at most {count} card(s)."})
+        return
+    if len(chosen_ids) == 0:
+        emit("error", {"message": "Select at least one card."})
+        return
+    target = game.players.get(ptl["target_id"])
+    if not target:
+        player.pending_targeted_leverage = None
+        return
+    act_type = action["type"]
+    for iid in chosen_ids:
+        if act_type == "steal_cards":
+            card = next((c for c in target.hand if c._instance_id == iid), None)
+            if card:
+                target.hand = [c for c in target.hand if c._instance_id != iid]
+                player.hand.append(card)
+        elif act_type == "deactivate_cards":
+            card = next((c for c in target.played_cards if c._instance_id == iid), None)
+            if card:
+                vuln_type = ptl.get("vulnerability_type")
+                vuln_id = ptl.get("vulnerability_card_id")
+                vuln_name = None
+                if vuln_id is not None:
+                    vuln_name = _find_card_name_by_id(vuln_id)
+                target.deactivate_card(card, game,
+                                       reactivate_type=vuln_type,
+                                       reactivate_card_id=vuln_id,
+                                       reactivate_card_name=vuln_name)
+        elif act_type == "delete_cards":
+            card = next((c for c in target.played_cards if c._instance_id == iid), None)
+            if card:
+                target.played_cards = [c for c in target.played_cards if c._instance_id != iid]
+    ptl["pending_action_idx"] += 1
+    _tl_execute_actions(player)
+
+
+@socketio.on("cancel_targeted_leverage")
+def on_cancel_targeted_leverage():
+    """Cancel targeted leverage — card stays played, ability forfeited."""
+    _touch_activity()
+    player_id = connected_players.get(request.sid)
+    if not player_id:
+        return
+    player = game.players.get(player_id)
+    if not player or not player.pending_targeted_leverage:
+        return
+    player.pending_targeted_leverage = None
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+    if not player.pending_card_steal and not player.pending_poach:
+        _maybe_auto_end_turn(player)
+
+
+def _tl_execute_actions(player):
+    """Walk through remaining actions for the targeted leverage ability."""
+    ptl = player.pending_targeted_leverage
+    if not ptl:
+        return
+    target = game.players.get(ptl["target_id"])
+    if not target:
+        player.pending_targeted_leverage = None
+        socketio.emit("game_state", game.to_dict(), room="game")
+        _send_private_states()
+        return
+    actions = ptl["actions"]
+    while ptl["pending_action_idx"] < len(actions):
+        action = actions[ptl["pending_action_idx"]]
+        act_type = action["type"]
+        if act_type == "steal_money":
+            amt = action.get("amount", 0)
+            actual = min(amt, target.resources.get("money", 0))
+            if actual > 0:
+                target.resources["money"] = target.resources.get("money", 0) - actual
+                player.resources["money"] = player.resources.get("money", 0) + actual
+            ptl["pending_action_idx"] += 1
+        elif act_type == "steal_users":
+            amt = action.get("amount", 0)
+            actual = min(amt, target.users)
+            if actual > 0:
+                target.users = max(0, target.users - actual)
+                player.users += actual
+            ptl["pending_action_idx"] += 1
+        elif act_type == "steal_data":
+            amt = action.get("amount", 0)
+            actual = min(amt, target.resources.get("data", 0))
+            if actual > 0:
+                target.resources["data"] = target.resources.get("data", 0) - actual
+                player.resources["data"] = player.resources.get("data", 0) + actual
+            ptl["pending_action_idx"] += 1
+        elif act_type == "fee_per_type":
+            ct = action.get("card_type")
+            amt_per = action.get("amount", 0)
+            count = sum(1 for c in target.played_cards if _card_matches_type(c, ct))
+            total = count * amt_per
+            actual = min(total, target.resources.get("money", 0))
+            if actual > 0:
+                target.resources["money"] = target.resources.get("money", 0) - actual
+                player.resources["money"] = player.resources.get("money", 0) + actual
+            ptl["pending_action_idx"] += 1
+        elif act_type in ("steal_cards", "deactivate_cards", "delete_cards"):
+            chooser = action.get("chooser", "attacker")
+            count = action.get("count", 1)
+            if act_type == "steal_cards":
+                pool = [c for c in target.hand
+                        if c is not None and _tl_card_matches_filter(c, ptl)]
+            else:
+                pool = [c for c in target.played_cards
+                        if c is not None and not c._dodged
+                        and _tl_card_matches_filter(c, ptl)]
+            if not pool:
+                ptl["pending_action_idx"] += 1
+                player_sid = next((s for s, pid in connected_players.items() if pid == player.player_id), None)
+                if player_sid:
+                    socketio.emit("error", {
+                        "message": f"{target.name} has no eligible cards for {act_type.replace('_', ' ')}."
+                    }, room=player_sid)
+                continue
+            ptl["phase"] = "choose_cards"
+            ptl["chooser"] = chooser
+            chooser_pid = player.player_id if chooser == "attacker" else ptl["target_id"]
+            chooser_sid = next((s for s, pid in connected_players.items() if pid == chooser_pid), None)
+            if chooser_sid:
+                socketio.emit("targeted_leverage_choose_cards_prompt", {
+                    "card_name": ptl["card_name"],
+                    "action_type": act_type,
+                    "count": count,
+                    "chooser": chooser,
+                    "cards": [c.to_dict() for c in pool],
+                    "target_name": target.name,
+                    "attacker_name": player.name,
+                }, room=chooser_sid)
+            socketio.emit("game_state", game.to_dict(), room="game")
+            _send_private_states()
+            return
+        else:
+            ptl["pending_action_idx"] += 1
+
+    player.pending_targeted_leverage = None
+    socketio.emit("game_state", game.to_dict(), room="game")
+    _send_private_states()
+    if not player.pending_card_steal and not player.pending_poach:
         _maybe_auto_end_turn(player)
 
 
@@ -1421,7 +1903,8 @@ def _maybe_auto_end_turn(player):
             and not player.has_pending_fuckups()
             and not player.pending_card_loss
             and not player.pending_card_steal
-            and not player.pending_poach):
+            and not player.pending_poach
+            and not player.pending_targeted_leverage):
         _advance_to_next_or_end_year()
         return True
     return False
@@ -1452,6 +1935,9 @@ def on_end_turn():
         return
     if player and player.pending_poach:
         emit("error", {"message": "You must complete employee poaching first."})
+        return
+    if player and player.pending_targeted_leverage:
+        emit("error", {"message": "You must complete your leverage action first."})
         return
 
     _advance_to_next_or_end_year()
@@ -1484,6 +1970,9 @@ def on_end_year():
         return
     if player.pending_poach:
         emit("error", {"message": "You must complete employee poaching first."})
+        return
+    if player.pending_targeted_leverage:
+        emit("error", {"message": "You must complete your leverage action first."})
         return
     player.year_done = True
     _advance_to_next_or_end_year()
@@ -1540,8 +2029,18 @@ def on_place_tile(data):
 
     row, col = data.get("row"), data.get("col")
 
-    # Check tile requirements against player's played card subtypes (card_color_type = "social platform", etc.)
-    played_types = {getattr(c, "card_color_type", None) for c in player.played_cards if c is not None and getattr(c, "card_color_type", None)}
+    # Check tile requirements against player's played card types/subtypes (primary + secondary).
+    played_types = set()
+    for c in player.played_cards:
+        if c is None:
+            continue
+        for t in (
+            getattr(c, "card_color_type", None),
+            getattr(c, "secondary_card_color_type", None),
+            getattr(c, "card_type", None),
+        ):
+            if t:
+                played_types.add(t)
     if not game.board.player_meets_requirements(row, col, played_types):
         tile = game.board.get_tile(row, col)
         reqs = tile.get("requirements", []) if tile else []
@@ -1862,6 +2361,7 @@ def _send_private_states():
                 "pending_card_loss": player.pending_card_loss,
                 "pending_card_steal": player.pending_card_steal,
                 "pending_poach": player.pending_poach,
+                "pending_targeted_leverage": player.pending_targeted_leverage,
             }, room=sid)
 
 
@@ -1933,6 +2433,50 @@ def _read_yaml_file(filepath: Path) -> tuple[str, list[dict]]:
     with open(filepath) as f:
         data = yaml.safe_load(f) or []
     return header, data
+
+
+_RESOURCE_DICT_KEYS = frozenset({
+    "effect", "immediate", "production", "compliance", "court_penalty",
+    "costs", "starting_resources", "starting_production", "fee_for_green",
+    "conditional_effects", "responsible_mining",
+})
+_NESTED_LIST_KEYS = frozenset({
+    "boosts", "placed_tile_adjacency_bonuses", "bonuses_by_placing_next_to_building",
+    "bonuses_by_building_on_terrain_type", "bonuses_by_building_adjacent_to_terrain_type",
+    "tiers", "producibles",
+})
+_NESTED_SUB_KEYS = frozenset({
+    "bonus", "production", "immediate", "cost", "extra_cost", "extra_effect",
+})
+
+def _sanitize_card_numerics(card: dict):
+    """Round all float resource values to int in-place to prevent floating-point drift."""
+    def _intify_dict(d):
+        if not isinstance(d, dict):
+            return
+        for k, v in d.items():
+            if isinstance(v, float):
+                d[k] = int(round(v))
+    for key in _RESOURCE_DICT_KEYS:
+        _intify_dict(card.get(key))
+    if isinstance(card.get("cost"), float):
+        card["cost"] = int(round(card["cost"]))
+    for key in _NESTED_LIST_KEYS:
+        lst = card.get(key)
+        if not isinstance(lst, list):
+            continue
+        for entry in lst:
+            if not isinstance(entry, dict):
+                continue
+            for sub in _NESTED_SUB_KEYS:
+                _intify_dict(entry.get(sub))
+            for ek, ev in entry.items():
+                if isinstance(ev, float):
+                    entry[ek] = int(round(ev))
+    rc = card.get("resource_conversion")
+    if isinstance(rc, dict):
+        for sub in ("cost", "gain"):
+            _intify_dict(rc.get(sub))
 
 
 def _write_yaml_file(filepath: Path, header: str, data: list[dict]):
@@ -2233,6 +2777,7 @@ def on_save_card(data):
         emit("save_result", {"success": False, "message": "Invalid card index."})
         return
 
+    _sanitize_card_numerics(card_data)
     entries[index] = card_data
     _write_yaml_file(filepath, header, entries)
 
@@ -2292,6 +2837,7 @@ def on_add_card(data):
                 "adjacent_placement_fee_target_types": [],
                 "tiers": [],
                 "producibles": [],
+                "resource_conversion": None,
                 "pollution_tag": "neutral",
                 "fee_for_green": None,
                 "lose_card_rule": None,
@@ -2380,6 +2926,115 @@ def on_set_card_disabled(data):
         entries[index].pop("disabled", None)
     with open(filepath, "w") as f:
         yaml.dump(entries, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    cards = _read_all_cards_yaml()
+    for sid in editor_sids:
+        socketio.emit("all_cards", {
+            "cards": cards,
+            "locks": _get_locks_for_client(sid),
+        }, room=sid)
+
+
+@socketio.on("enable_all_cards")
+def on_enable_all_cards():
+    """Remove the disabled flag from every card across all YAML files."""
+    if request.sid not in editor_sids:
+        return
+    for card_type, filename in CARD_TYPE_FILES.items():
+        filepath = CARDS_DIR / filename
+        if not filepath.exists():
+            continue
+        with open(filepath) as f:
+            entries = yaml.safe_load(f) or []
+        changed = False
+        for entry in entries:
+            if entry.get("disabled"):
+                entry.pop("disabled", None)
+                changed = True
+        if changed:
+            with open(filepath, "w") as f:
+                yaml.dump(entries, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    cards = _read_all_cards_yaml()
+    for sid in editor_sids:
+        socketio.emit("all_cards", {
+            "cards": cards,
+            "locks": _get_locks_for_client(sid),
+        }, room=sid)
+
+
+@socketio.on("disable_all_cards")
+def on_disable_all_cards():
+    """Set disabled=True for every card across all YAML files."""
+    if request.sid not in editor_sids:
+        return
+    for _card_type, filename in CARD_TYPE_FILES.items():
+        filepath = CARDS_DIR / filename
+        if not filepath.exists():
+            continue
+        with open(filepath) as f:
+            entries = yaml.safe_load(f) or []
+        changed = False
+        for entry in entries:
+            if not entry.get("disabled"):
+                entry["disabled"] = True
+                changed = True
+        if changed:
+            with open(filepath, "w") as f:
+                yaml.dump(entries, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    cards = _read_all_cards_yaml()
+    for sid in editor_sids:
+        socketio.emit("all_cards", {
+            "cards": cards,
+            "locks": _get_locks_for_client(sid),
+        }, room=sid)
+
+
+@socketio.on("copy_card")
+def on_copy_card(data):
+    """Duplicate a card next to itself with name suffix and next ID."""
+    if request.sid not in editor_sids:
+        return
+    card_type = data.get("card_type")
+    raw_index = data.get("index")
+    try:
+        index = int(raw_index)
+    except Exception:
+        index = None
+    filename = CARD_TYPE_FILES.get(card_type)
+    if not filename or index is None:
+        emit("save_result", {"success": False, "message": "Invalid copy request."})
+        return
+    key = f"{card_type}:{index}"
+    if key in locked_cards and locked_cards[key] != request.sid:
+        emit("save_result", {"success": False, "message": "Card is locked by someone else."})
+        return
+
+    filepath = CARDS_DIR / filename
+    header, entries = _read_yaml_file(filepath)
+    if index < 0 or index >= len(entries):
+        emit("save_result", {"success": False, "message": "Invalid card index."})
+        return
+
+    source = entries[index] or {}
+    clone = copy.deepcopy(source)
+    base_name = str(source.get("name") or "Copied Card").strip()
+    clone["name"] = f"{base_name} V.2"
+    src_id = source.get("id")
+    try:
+        clone["id"] = int(src_id) + 1 if src_id is not None else _next_card_id()
+    except Exception:
+        clone["id"] = _next_card_id()
+
+    insert_at = index + 1
+    entries.insert(insert_at, clone)
+    _write_yaml_file(filepath, header, entries)
+    _reassign_all_ids_globally()
+
+    # Indices shifted; clear positional locks for this file.
+    for k in list(locked_cards.keys()):
+        if k.startswith(f"{card_type}:"):
+            locked_cards.pop(k, None)
+            socketio.emit("card_unlocked", {"key": k}, room="editors")
+
     cards = _read_all_cards_yaml()
     for sid in editor_sids:
         socketio.emit("all_cards", {

@@ -37,6 +37,13 @@ class Player:
     # Format: {"poacher_id": str, "fuckup_name": str, "max": int, "price": int,
     #          "available_engineers": int, "available_suits": int}
     pending_poach: dict | None = None
+    # Pending targeted leverage action: attacker must choose target + resolve actions.
+    # Format: {"card_name": str, "instance_id": str, "actions": [...],
+    #          "vulnerability_type": str|None, "vulnerability_card_id": int|None,
+    #          "no_condition": bool, "eligible_targets": [player_id, ...],
+    #          "phase": "choose_target"|"choose_cards", "target_id": str|None,
+    #          "pending_action_idx": int, "chooser": "attacker"|"victim"}
+    pending_targeted_leverage: dict | None = None
     color: str = "#c9a227"
     users: int = 0
     _remaining_starting_tiles: list = field(default_factory=list, repr=False)
@@ -105,32 +112,13 @@ class Player:
         if self.resources.get("data", 0) < data_cost:
             return {"ok": False, "error": f"Not enough data — need {data_cost}PB to upgrade."}
         self.resources["data"] = self.resources.get("data", 0) - data_cost
-        _PRODUCTION_KEYS = {"HR", "data_centers", "ad_campaigns"}
-        resource_gains = {}
-        production_gains = {}
-        for k, v in tier.items():
-            if k == "data_cost" or not v:
-                continue
-            if k in _PRODUCTION_KEYS:
-                production_gains[k] = v
-            elif k == "money" and "users" not in tier and not any(rk in tier for rk in _PRODUCTION_KEYS):
-                production_gains[k] = v
-            elif k == "money" and any(rk in tier for rk in ("users", "engineers", "suits", "servers", "ads", "reputation", "data")):
-                production_gains[k] = v
-            else:
-                resource_gains[k] = v
+        resource_gains, production_gains = self._split_tier_gains(tier)
 
         users_gained = 0
         for res, amt in resource_gains.items():
             if res == "users":
                 users_gained = amt
-                self.gain_users(amt, game)
-                mod = self.reputation_modifier()
-                if mod != 0:
-                    delta = max(-amt, mod)
-                    self.users = max(0, self.users + delta)
-                    if game and delta > 0:
-                        game.user_pool = max(0, game.user_pool - delta)
+                self._apply_user_gain_with_rep_modifier(amt, game)
             else:
                 self.resources[res] = self.resources.get(res, 0) + amt
 
@@ -186,6 +174,54 @@ class Player:
         self.users = max(0, self.users + amount)
         return amount
 
+    @staticmethod
+    def _split_tier_gains(tier: dict) -> tuple[dict, dict]:
+        """Split a tier payload into immediate resources and production deltas.
+
+        Keep this logic identical to tier-upgrade accounting to ensure deactivate/reactivate
+        reverses exactly what upgrade applied.
+        """
+        production_keys = {"HR", "data_centers", "ad_campaigns"}
+        resource_gains = {}
+        production_gains = {}
+        for k, v in (tier or {}).items():
+            if k == "data_cost" or not v:
+                continue
+            if k in production_keys:
+                production_gains[k] = v
+            elif k == "money" and "users" not in tier and not any(rk in tier for rk in production_keys):
+                production_gains[k] = v
+            elif k == "money" and any(rk in tier for rk in ("users", "engineers", "suits", "servers", "ads", "reputation", "data")):
+                production_gains[k] = v
+            else:
+                resource_gains[k] = v
+        return resource_gains, production_gains
+
+    def _apply_user_gain_with_rep_modifier(self, amount: int, game=None):
+        """Apply user gain exactly like card/tier gain paths (including reputation modifier once)."""
+        if not amount:
+            return
+        self.gain_users(amount, game)
+        mod = self.reputation_modifier()
+        if mod != 0:
+            delta = max(-amount, mod)
+            self.users = max(0, self.users + delta)
+            if game and delta > 0:
+                game.user_pool = max(0, game.user_pool - delta)
+
+    def _reverse_user_gain_with_rep_modifier(self, amount: int, game=None):
+        """Reverse a prior user gain that used _apply_user_gain_with_rep_modifier semantics."""
+        if not amount:
+            return
+        total = amount
+        mod = self.reputation_modifier()
+        if mod != 0:
+            total += max(-amount, mod)
+        if total > 0:
+            self.users = max(0, self.users - total)
+            if game:
+                game.user_pool = game.user_pool + total
+
     def apply_card_effects(self, card: Card, game=None):
         users_before = self.users
 
@@ -218,6 +254,187 @@ class Player:
                 self.users += delta
                 if game and delta > 0:
                     game.user_pool = max(0, game.user_pool - delta)
+
+    def _reverse_boost_users(self, boost, fired, game=None):
+        """Reverse user gains from a boost's bonus dict."""
+        bonus = boost.get("bonus") or {}
+        user_amt = bonus.get("users", 0)
+        if user_amt and fired:
+            total = user_amt * fired
+            if total > 0:
+                self.users = max(0, self.users - total)
+                if game:
+                    game.user_pool = game.user_pool + total
+
+    def deactivate_card(self, card: Card, game=None, reactivate_type=None, reactivate_card_id=None, reactivate_card_name=None):
+        """Reverse all ongoing/production effects of a played card (used by leverage deactivation).
+
+        Reverses:
+        - card.production (ongoing per-year bonuses)
+        - card.effect entries that are production-type keys
+        - boost-granted production AND users (both this card's boosts and others' boosts triggered by this card)
+        - users that the card grants (effect + immediate)
+        - tier upgrade gains (users, money production, resources)
+        Does NOT reverse one-time immediate resource gains (money etc.) since those are already spent.
+        """
+        for resource, amount in card.production.items():
+            if amount:
+                self.production[resource] = self.production.get(resource, 0) - amount
+
+        if isinstance(card.effect, dict):
+            for resource, amount in card.effect.items():
+                if not amount:
+                    continue
+                if resource == "users":
+                    self.users = max(0, self.users - amount)
+                    if game and amount > 0:
+                        game.user_pool = game.user_pool + amount
+                elif resource in PRODUCTION_KEYS:
+                    self.production[resource] = self.production.get(resource, 0) - amount
+
+        user_loss = card.immediate.get("users", 0)
+        if user_loss and user_loss > 0:
+            self.users = max(0, self.users - user_loss)
+            if game:
+                game.user_pool = game.user_pool + user_loss
+
+        # Reverse boost-granted production AND users from this card's own boosts
+        slots = self._boost_activations.get(card._instance_id, [])
+        already_played = [c for c in self.played_cards if c is not None and c is not card]
+        for i, boost in enumerate(card.boosts or []):
+            prod = boost.get("production") or {}
+            fired = slots[i] if i < len(slots) else 0
+            if fired <= 0:
+                # Fallback: recompute expected fires from current board state.
+                target_id = boost.get("target_id")
+                has_target_id = target_id is not None and target_id != 0
+                if has_target_id:
+                    ids = target_id if isinstance(target_id, list) else [target_id]
+                    fired = sum(1 for c in already_played if getattr(c, "id", None) in ids)
+                else:
+                    target_type = boost.get("target_type")
+                    if target_type:
+                        types = target_type if isinstance(target_type, list) else [target_type]
+                        matching = sum(1 for c in already_played if any(self._card_matches_type(c, t) for t in types))
+                        target_count = int(boost.get("target_count") or 0)
+                        unlimited = bool(boost.get("target_count_unlimited")) or target_count <= 0
+                        fired = matching if unlimited else min(matching, target_count)
+            if fired:
+                if prod:
+                    self._apply_production_bonus(prod, -fired)
+                self._reverse_boost_users(boost, fired, game)
+
+        # Reverse boost-granted production AND users from other cards' boosts triggered by this card
+        other_played = [c for c in self.played_cards if c is not None and c is not card]
+        for prev in other_played:
+            prev_slots = self._boost_activations.get(prev._instance_id, [])
+            for i, boost in enumerate(prev.boosts or []):
+                prod = boost.get("production") or {}
+                bonus = boost.get("bonus") or {}
+                if not prod and not bonus:
+                    continue
+                target_id = boost.get("target_id")
+                has_target_id = target_id is not None and target_id != 0
+                if has_target_id:
+                    ids = target_id if isinstance(target_id, list) else [target_id]
+                    if getattr(card, "id", None) in ids and i < len(prev_slots) and prev_slots[i] > 0:
+                        prev_slots[i] -= 1
+                        if prod:
+                            self._apply_production_bonus(prod, -1)
+                        self._reverse_boost_users(boost, 1, game)
+                else:
+                    target_type = boost.get("target_type")
+                    if not target_type:
+                        continue
+                    types = target_type if isinstance(target_type, list) else [target_type]
+                    if any(self._card_matches_type(card, t) for t in types):
+                        if i < len(prev_slots) and prev_slots[i] > 0:
+                            prev_slots[i] -= 1
+                            if prod:
+                                self._apply_production_bonus(prod, -1)
+                            self._reverse_boost_users(boost, 1, game)
+
+        # Reverse tier upgrade gains
+        tiers = card.tiers or []
+        if tiers and card.current_tier > 1:
+            for idx in range(card.current_tier - 1):
+                if idx >= len(tiers):
+                    break
+                tier = tiers[idx]
+                resource_gains, production_gains = self._split_tier_gains(tier)
+                for res, amt in resource_gains.items():
+                    if res == "users":
+                        self._reverse_user_gain_with_rep_modifier(amt, game)
+                    else:
+                        pool = getattr(self, self._get_pool(res))
+                        pool[res] = pool.get(res, 0) - amt
+                for res, amt in production_gains.items():
+                    self.production[res] = self.production.get(res, 0) - amt
+
+        card._dodged = True
+        card._deactivated_info = {
+            "reactivate_type": reactivate_type,
+            "reactivate_card_id": reactivate_card_id,
+            "reactivate_card_name": reactivate_card_name,
+        }
+
+    def reactivate_card(self, card: Card, game=None):
+        """Re-apply ongoing effects of a previously deactivated card."""
+        for resource, amount in card.production.items():
+            if amount:
+                self.production[resource] = self.production.get(resource, 0) + amount
+
+        if isinstance(card.effect, dict):
+            for resource, amount in card.effect.items():
+                if not amount:
+                    continue
+                if resource == "users":
+                    self.gain_users(amount, game)
+                elif resource in PRODUCTION_KEYS:
+                    self.production[resource] = self.production.get(resource, 0) + amount
+
+        user_gain = card.immediate.get("users", 0)
+        if user_gain and user_gain > 0:
+            self.gain_users(user_gain, game)
+
+        # Re-apply boost production + users from this card's own boosts
+        self._apply_boosts(card, game)
+
+        # Re-apply tier upgrade gains
+        tiers = card.tiers or []
+        if tiers and card.current_tier > 1:
+            for idx in range(card.current_tier - 1):
+                if idx >= len(tiers):
+                    break
+                tier = tiers[idx]
+                resource_gains, production_gains = self._split_tier_gains(tier)
+                for res, amt in resource_gains.items():
+                    if res == "users":
+                        self._apply_user_gain_with_rep_modifier(amt, game)
+                    else:
+                        pool = getattr(self, self._get_pool(res))
+                        pool[res] = pool.get(res, 0) + amt
+                for res, amt in production_gains.items():
+                    self.production[res] = self.production.get(res, 0) + amt
+
+        card._dodged = False
+        card._deactivated_info = None
+
+    def try_reactivate_cards(self, played_card: Card, game=None):
+        """Check if any deactivated cards can be reactivated because the player just played played_card."""
+        for card in self.played_cards:
+            if card is None or not card._deactivated_info:
+                continue
+            info = card._deactivated_info
+            rt = info.get("reactivate_type")
+            rid = info.get("reactivate_card_id")
+            match = False
+            if rt and self._card_matches_type(played_card, rt):
+                match = True
+            if rid is not None and getattr(played_card, "id", None) == rid:
+                match = True
+            if match:
+                self.reactivate_card(card, game)
 
     def _apply_bonus(self, bonus: dict, multiplier: int, game=None):
         """Apply a bonus dict (immediate resources) scaled by multiplier."""
@@ -296,9 +513,10 @@ class Player:
                 if not target_type:
                     continue
                 types = target_type if isinstance(target_type, list) else [target_type]
-                matching = sum(1 for c in already_played if getattr(c, "card_color_type", None) in types)
+                matching = sum(1 for c in already_played if any(self._card_matches_type(c, t) for t in types))
                 target_count = int(boost.get("target_count") or 0)
-                if target_count:
+                unlimited = bool(boost.get("target_count_unlimited")) or target_count <= 0
+                if not unlimited:
                     matching = min(matching, target_count)
                 new_fires = max(0, matching - slots[i])
                 if new_fires:
@@ -331,9 +549,10 @@ class Player:
                     if not target_type:
                         continue
                     types = target_type if isinstance(target_type, list) else [target_type]
-                    if getattr(card, "card_color_type", None) in types:
+                    if any(self._card_matches_type(card, t) for t in types):
                         target_count = int(boost.get("target_count") or 0)
-                        if not target_count or prev_slots[i] < target_count:
+                        unlimited = bool(boost.get("target_count_unlimited")) or target_count <= 0
+                        if unlimited or prev_slots[i] < target_count:
                             prev_slots[i] += 1
                             if bonus: self._apply_bonus(bonus, 1, game)
                             if production: self._apply_production_bonus(production, 1)
@@ -464,35 +683,66 @@ class Player:
         if card.fee_card_id:
             return any(getattr(c, "id", None) == card.fee_card_id for c in self.played_cards if c is not None)
         if card.fee_card_type:
-            return any(getattr(c, "card_color_type", None) == card.fee_card_type for c in self.played_cards if c is not None)
+            return any(self._card_matches_type(c, card.fee_card_type) for c in self.played_cards if c is not None)
         if card.fee_company_type:
-            return bool(self.company and self.company.card_color_type == card.fee_company_type)
+            return bool(self.company and self._card_matches_type(self.company, card.fee_company_type))
         return False
 
-    def check_requirements(self, card: "Card") -> str | None:
+    @staticmethod
+    def _card_matches_type(card: Card | None, req_type: str | None) -> bool:
+        if card is None or not req_type:
+            return False
+        return req_type in {
+            getattr(card, "card_color_type", None),
+            getattr(card, "secondary_card_color_type", None),
+            getattr(card, "card_type", None),
+        }
+
+    def check_requirements(self, card: "Card", game=None) -> str | None:
         """Returns error string if card requirements are not met, else None."""
         reqs = getattr(card, "requirements", None) or []
-        for req_type in reqs:
-            if not req_type:
+        for req in reqs:
+            req_count = 1
+            req_types: list[str] = []
+            if isinstance(req, dict):
+                req_count = int(req.get("count", 1) or 1)
+                if isinstance(req.get("types"), list) and req.get("types"):
+                    req_types = [str(t).strip() for t in (req.get("types") or []) if str(t).strip()]
+                else:
+                    req_type = str(req.get("type", "") or "").strip()
+                    if req_type:
+                        req_types = [req_type]
+            else:
+                req_type = str(req or "").strip()
+                if req_type:
+                    req_types = [req_type]
+            if not req_types:
                 continue
-            has_played = any(
-                getattr(c, "card_color_type", None) == req_type
-                or getattr(c, "card_type", None) == req_type
+            req_count = max(1, req_count)
+            req_set = set(req_types)
+            played_count = sum(
+                any(self._card_matches_type(c, t) for t in req_set)
                 for c in self.played_cards if c is not None
             )
-            has_company = bool(
-                self.company
-                and (self.company.card_color_type == req_type
-                     or self.company.card_type == req_type)
-            )
-            if not has_played and not has_company:
-                return f"Requirement not met: play a '{req_type}' card first."
+            company_match = bool(self.company and any(self._card_matches_type(self.company, t) for t in req_set))
+            total_count = played_count + (1 if company_match else 0)
+            if total_count < req_count:
+                if len(req_types) > 1:
+                    need_str = " / ".join(req_types)
+                    return (
+                        f"Requirement not met: need {req_count} cards of any of "
+                        f"[{need_str}] (have {total_count})."
+                    )
+                return (
+                    f"Requirement not met: need {req_count} '{req_types[0]}' card(s) "
+                    f"(have {total_count})."
+                )
         for req_id in getattr(card, "required_card_ids", None) or []:
             has_played = any(c.id == req_id for c in self.played_cards if c is not None)
             has_company = bool(self.company and self.company.id == req_id)
             if not has_played and not has_company:
                 return f"Requirement not met: play card #{req_id} first."
-        err = self._check_play_thresholds(card)
+        err = self._check_play_thresholds(card, game)
         if err:
             return err
         lcr = getattr(card, "lose_card_rule", None)
@@ -503,12 +753,47 @@ class Player:
                 return f"No eligible cards to lose ({types_str})."
         return None
 
-    def _check_play_thresholds(self, card: "Card") -> str | None:
+    def _count_opponents_played_type(self, req_type: str, game) -> tuple[int, int]:
+        """Return (total_count_across_opponents, max_count_single_opponent) for req_type."""
+        total = 0
+        max_single = 0
+        players = getattr(game, "players", {}) or {}
+        for pid, p in players.items():
+            if pid == self.player_id:
+                continue
+            count = sum(
+                1 for c in (p.played_cards or [])
+                if c is not None and self._card_matches_type(c, req_type)
+            )
+            total += count
+            if count > max_single:
+                max_single = count
+        return total, max_single
+
+    def _check_play_thresholds(self, card: "Card", game=None) -> str | None:
         """Check all play_thresholds on a card. Returns error string or None."""
         for t in getattr(card, "play_thresholds", None) or []:
             key = t.get("key", "")
-            min_val = t.get("min", 0)
+            min_val = int(t.get("min", 0) or 0)
             kind = t.get("kind", "resource")
+            if kind in ("opponents_total_played_type", "opponents_any_player_played_type"):
+                req_type = str(key or "").strip()
+                if not req_type:
+                    continue
+                if game is None or not hasattr(game, "players"):
+                    return "Cannot evaluate opponents-played threshold without game context."
+                total, max_single = self._count_opponents_played_type(req_type, game)
+                if kind == "opponents_total_played_type" and total < min_val:
+                    return (
+                        f"Requires opponents to have played at least {min_val} "
+                        f"'{req_type}' card(s) in total (currently {total})."
+                    )
+                if kind == "opponents_any_player_played_type" and max_single < min_val:
+                    return (
+                        f"Requires at least one opponent to have played {min_val}+ "
+                        f"'{req_type}' card(s) (highest currently {max_single})."
+                    )
+                continue
             if kind == "production":
                 current = self.production.get(key, 0)
             elif key == "users":
@@ -520,9 +805,9 @@ class Player:
                 return f"Requires at least {min_val} {label} (you have {current})."
         return None
 
-    def meets_all_requirements(self, card: "Card") -> bool:
+    def meets_all_requirements(self, card: "Card", game=None) -> bool:
         """True if the player meets all requirements, card-id reqs, and play_thresholds."""
-        return self.check_requirements(card) is None
+        return self.check_requirements(card, game) is None
 
     def can_afford_costs(self, card: Card, use_optional: dict | None = None) -> str | None:
         costs = card.costs
@@ -610,8 +895,7 @@ class Player:
                 continue
             if not target_types:
                 eligible.append(c)
-            elif (getattr(c, "card_color_type", "") in target_types
-                  or getattr(c, "card_type", "") in target_types):
+            elif any(self._card_matches_type(c, t) for t in target_types):
                 eligible.append(c)
         return eligible
 
@@ -645,7 +929,7 @@ class Player:
             if any(getattr(c, "id", None) in target_ids for c in self.played_cards if c is not None):
                 return True
         if regulation.target_type:
-            if any(getattr(c, "card_color_type", None) == regulation.target_type for c in self.played_cards if c is not None):
+            if any(self._card_matches_type(c, regulation.target_type) for c in self.played_cards if c is not None):
                 return True
         return False
 
@@ -659,7 +943,7 @@ class Player:
             result.extend(c for c in self.played_cards if c is not None and getattr(c, "id", None) in target_ids)
         if regulation.target_type:
             result.extend(c for c in self.played_cards
-                          if c is not None and getattr(c, "card_color_type", None) == regulation.target_type and c not in result)
+                          if c is not None and self._card_matches_type(c, regulation.target_type) and c not in result)
         return result
 
     def clamp_resources(self):
@@ -705,5 +989,6 @@ class Player:
             "pending_card_loss": self.pending_card_loss,
             "pending_card_steal": self.pending_card_steal,
             "pending_poach": self.pending_poach,
+            "pending_targeted_leverage": self.pending_targeted_leverage,
             "color": self.color,
         }

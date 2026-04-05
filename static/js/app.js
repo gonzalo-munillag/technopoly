@@ -68,6 +68,7 @@ const fuckupAlert       = document.getElementById("fuckup-alert");
 const cardLossAlert     = document.getElementById("card-loss-alert");
 const stealCardAlert    = document.getElementById("steal-card-alert");
 const poachAlert        = document.getElementById("poach-alert");
+const tlAlert           = document.getElementById("targeted-leverage-alert");
 const yearDoneWaiting   = document.getElementById("year-done-waiting");
 const turnsContent      = document.getElementById("turns-content");
 const handDiv           = document.getElementById("hand-container");
@@ -301,6 +302,18 @@ socket.on("game_state", (state) => {
 socket.on("your_state", (data) => {
   const hadPending = lastPrivateState?.pending_tile;
   lastPrivateState = data;
+  if (!data.pending_poach && _pendingPoachPrompt) {
+    _pendingPoachPrompt = null;
+    poachAlert.classList.add("hidden");
+  }
+  if (!data.pending_card_steal && _pendingStealPrompt) {
+    _pendingStealPrompt = null;
+    stealCardAlert.classList.add("hidden");
+  }
+  if (!data.pending_targeted_leverage && _pendingTLPrompt) {
+    _pendingTLPrompt = null;
+    tlAlert.classList.add("hidden");
+  }
   renderResources(data.resources);
   renderProduction(data.production);
   renderUsersPie();
@@ -349,6 +362,7 @@ function updateTurnsUI() {
     cardLossAlert.classList.add("hidden");
     stealCardAlert.classList.add("hidden");
     poachAlert.classList.add("hidden");
+    tlAlert.classList.add("hidden");
   } else {
     yearDoneWaiting.classList.add("hidden");
     turnsContent.classList.remove("hidden");
@@ -374,15 +388,22 @@ function updateTurnsUI() {
     if (lastPrivateState.pending_card_steal && !_pendingStealPrompt) {
       stealCardAlert.innerHTML = `<strong>🫳 IP Theft:</strong> Choose a card to steal...`;
       stealCardAlert.classList.remove("hidden");
-    } else if (!lastPrivateState.pending_card_steal && !_pendingStealPrompt) {
+    } else if (!lastPrivateState.pending_card_steal && !_pendingStealPrompt && !_stealMissShowing) {
       stealCardAlert.classList.add("hidden");
     }
 
     if (lastPrivateState.pending_poach && !_pendingPoachPrompt) {
-      poachAlert.innerHTML = `<strong>🕵️ Poaching:</strong> Choose a target...`;
+      poachAlert.innerHTML = `<strong>📈 Poaching:</strong> Choose a target...`;
       poachAlert.classList.remove("hidden");
     } else if (!lastPrivateState.pending_poach && !_pendingPoachPrompt) {
       poachAlert.classList.add("hidden");
+    }
+
+    if (lastPrivateState.pending_targeted_leverage && !_pendingTLPrompt) {
+      tlAlert.innerHTML = `<strong>📈 Leverage Action:</strong> Awaiting resolution...`;
+      tlAlert.classList.remove("hidden");
+    } else if (!lastPrivateState.pending_targeted_leverage && !_pendingTLPrompt) {
+      tlAlert.classList.add("hidden");
     }
   }
 }
@@ -421,63 +442,136 @@ function renderCardLossChoice(pendingLoss) {
 }
 
 let _pendingStealPrompt = null;
+let _stealMissShowing = false;
 
+// Step 1: choose which opponent to steal from (no cards revealed yet)
 socket.on("steal_card_prompt", (data) => {
   _pendingStealPrompt = data;
-  renderStealCardPrompt(data);
+  _renderStealTargetSelect(data);
   stealCardAlert.classList.remove("hidden");
 });
 
-function renderStealCardPrompt(data) {
+// Step 2a: server reveals chosen opponent's cards
+socket.on("steal_cards_revealed", (data) => {
+  _pendingStealPrompt = data;
+  _renderStealCardSelect(data);
+  stealCardAlert.classList.remove("hidden");
+});
+
+// Step 2b: chosen opponent had no matching cards — tough luck
+socket.on("steal_card_miss", (data) => {
+  _pendingStealPrompt = null;
+  _stealMissShowing = true;
+  const tt = data.target_type || "";
+  const emoji = _stealEmoji(tt);
+  const typeLabel = _stealTypeLabel(tt);
   stealCardAlert.innerHTML = "";
+  const msg = document.createElement("div");
+  msg.innerHTML = `<strong>${emoji} ${data.card_name}:</strong> ${data.victim_name} has no ${typeLabel} cards — tough luck! The ability is consumed.`;
+  msg.style.padding = ".5rem";
+  stealCardAlert.appendChild(msg);
+  const okBtn = document.createElement("button");
+  okBtn.className = "btn btn-sm btn-accent";
+  okBtn.style.marginTop = ".4rem";
+  okBtn.textContent = "OK";
+  okBtn.addEventListener("click", () => {
+    _stealMissShowing = false;
+    stealCardAlert.classList.add("hidden");
+  });
+  stealCardAlert.appendChild(okBtn);
+  stealCardAlert.classList.remove("hidden");
+});
+
+function _stealTypeLabel(tt) {
+  return tt === "platform" ? "platform" : tt === "innovation" ? "innovation" : tt;
+}
+function _stealEmoji(tt) {
+  return tt === "platform" ? "🏗️" : tt === "innovation" ? "🧠" : "🫳";
+}
+
+function _renderStealTargetSelect(data) {
+  stealCardAlert.innerHTML = "";
+  const tt = data.target_type || "";
+  const typeLabel = _stealTypeLabel(tt);
+  const emoji = _stealEmoji(tt);
+
   const title = document.createElement("div");
-  title.innerHTML = `<strong>🫳 ${data.card_name}:</strong> Steal a card from an opponent's hand`;
+  title.innerHTML = `<strong>${emoji} ${data.card_name}:</strong> Choose an opponent to steal a${tt === "innovation" ? "n" : ""} ${typeLabel} card from`;
   title.style.marginBottom = ".5rem";
   stealCardAlert.appendChild(title);
 
-  (data.opponents || []).forEach(opp => {
-    const oppLabel = document.createElement("div");
-    oppLabel.style.cssText = "font-weight:600;font-size:.8rem;margin-top:.5rem;margin-bottom:.3rem;";
-    oppLabel.textContent = `${opp.name}'s hand:`;
-    stealCardAlert.appendChild(oppLabel);
-
-    const grid = document.createElement("div");
-    grid.className = "hand-container";
-    grid.style.cssText = "gap:.5rem;";
-
-    (opp.cards || []).forEach(card => {
-      const el = createCardElement(card);
-      el.style.cursor = "pointer";
-      el.style.border = "2px solid #e67e22";
-      el.addEventListener("click", () => {
-        showConfirmDialog(
-          `Steal "${card.name}" from ${opp.name}?`,
-          () => {
-            socket.emit("choose_card_to_steal", {
-              victim_id: opp.id,
-              instance_id: card.instance_id,
-            });
-            _pendingStealPrompt = null;
-            stealCardAlert.classList.add("hidden");
-          },
-          { confirmText: "Steal Card" }
-        );
-      });
-      grid.appendChild(el);
+  const grid = document.createElement("div");
+  grid.style.cssText = "display:flex;gap:.6rem;flex-wrap:wrap;";
+  (data.targets || []).forEach(t => {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-sm btn-accent";
+    btn.textContent = `🎯 ${t.name}`;
+    btn.style.cssText = "font-size:.85rem;padding:6px 14px;";
+    btn.addEventListener("click", () => {
+      socket.emit("choose_steal_target", { target_id: t.id });
+      stealCardAlert.innerHTML = `<strong>${emoji} ${data.card_name}:</strong> Revealing ${t.name}'s ${typeLabel} cards...`;
     });
-    stealCardAlert.appendChild(grid);
+    grid.appendChild(btn);
   });
+  stealCardAlert.appendChild(grid);
 
-  const skipBtn = document.createElement("button");
-  skipBtn.className = "btn btn-sm";
-  skipBtn.style.cssText = "margin-top:.6rem;opacity:.7;";
-  skipBtn.textContent = "Skip — don't steal";
-  skipBtn.addEventListener("click", () => {
-    socket.emit("skip_steal");
-    _pendingStealPrompt = null;
-    stealCardAlert.classList.add("hidden");
+  _appendStealCancelBtn(data, false);
+}
+
+function _renderStealCardSelect(data) {
+  stealCardAlert.innerHTML = "";
+  const tt = data.target_type || "";
+  const typeLabel = _stealTypeLabel(tt);
+  const emoji = _stealEmoji(tt);
+
+  const title = document.createElement("div");
+  title.innerHTML = `<strong>${emoji} ${data.card_name}:</strong> Pick a ${typeLabel} card to steal from ${data.victim_name}`;
+  title.style.marginBottom = ".5rem";
+  stealCardAlert.appendChild(title);
+
+  const grid = document.createElement("div");
+  grid.className = "hand-container";
+  grid.style.cssText = "gap:.5rem;";
+  (data.cards || []).forEach(card => {
+    const el = createCardElement(card);
+    el.style.cursor = "pointer";
+    el.style.border = "2px solid #e67e22";
+    el.addEventListener("click", () => {
+      showConfirmDialog(
+        `Steal "${card.name}" from ${data.victim_name}?`,
+        () => {
+          socket.emit("choose_card_to_steal", { instance_id: card.instance_id });
+          _pendingStealPrompt = null;
+          stealCardAlert.classList.add("hidden");
+        },
+        { confirmText: "Steal Card" }
+      );
+    });
+    grid.appendChild(el);
   });
-  stealCardAlert.appendChild(skipBtn);
+  stealCardAlert.appendChild(grid);
+
+  _appendStealCancelBtn(data, true);
+}
+
+function _appendStealCancelBtn(data, hasSeenCards) {
+  const tt = data.target_type || "";
+  const typeLabel = _stealTypeLabel(tt);
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn btn-sm";
+  cancelBtn.style.cssText = "margin-top:.5rem;opacity:.8;";
+  cancelBtn.textContent = hasSeenCards ? "Cancel — forfeit ability" : "Cancel — don't steal";
+  cancelBtn.addEventListener("click", () => {
+    const msg = hasSeenCards
+      ? `Cancel stealing? You've seen ${data.victim_name}'s ${typeLabel} cards, so the card will be discarded.`
+      : "Cancel stealing? The leverage card will be discarded.";
+    showConfirmDialog(msg, () => {
+      socket.emit("cancel_steal");
+      _pendingStealPrompt = null;
+      stealCardAlert.classList.add("hidden");
+    }, { confirmText: "Forfeit & Discard" });
+  });
+  stealCardAlert.appendChild(cancelBtn);
 }
 
 let _pendingPoachPrompt = null;
@@ -491,7 +585,7 @@ socket.on("poach_prompt", (data) => {
 function renderPoachPrompt(data) {
   poachAlert.innerHTML = "";
   const title = document.createElement("div");
-  title.innerHTML = `<strong>🕵️ ${data.card_name}:</strong> Poach employees from an opponent`;
+  title.innerHTML = `<strong>📈 ${data.card_name}:</strong> Poach employees from an opponent`;
   title.style.marginBottom = ".3rem";
   poachAlert.appendChild(title);
 
@@ -513,21 +607,67 @@ function renderPoachPrompt(data) {
     const form = document.createElement("div");
     form.style.cssText = "display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;";
 
-    const mkInput = (label, emoji, maxVal) => {
+    const mkSpinner = (emoji, maxVal) => {
       const wrap = document.createElement("div");
-      wrap.style.cssText = "display:flex;align-items:center;gap:.3rem;";
-      const lbl = document.createElement("span");
-      lbl.textContent = `${emoji}:`;
-      lbl.style.fontSize = ".85rem";
+      wrap.style.cssText = "display:flex;flex-direction:column;align-items:center;";
+      const row = document.createElement("div");
+      row.className = "hiring-spinner";
+      const dec = document.createElement("button");
+      dec.type = "button";
+      dec.className = "hire-arrow hire-dec";
+      dec.textContent = "▼";
       const inp = document.createElement("input");
       inp.type = "number"; inp.min = "0"; inp.max = String(maxVal);
-      inp.value = "0"; inp.style.width = "50px";
-      wrap.append(lbl, inp);
+      inp.value = "0"; inp.readOnly = true;
+      inp.className = "board-form-input hiring-input";
+      const inc = document.createElement("button");
+      inc.type = "button";
+      inc.className = "hire-arrow hire-inc";
+      inc.textContent = "▲";
+      dec.addEventListener("click", () => {
+        const v = Math.max(0, (parseInt(inp.value) || 0) - 1);
+        inp.value = v;
+        updateCostCounter();
+      });
+      inc.addEventListener("click", () => {
+        const cur = parseInt(inp.value) || 0;
+        const otherVal = parseInt((emoji === "🔧" ? suiInp : engInp).value) || 0;
+        if (cur + otherVal >= data.max) return;
+        if (cur >= maxVal) return;
+        inp.value = cur + 1;
+        updateCostCounter();
+      });
+      const lbl = document.createElement("div");
+      lbl.style.cssText = "font-size:.8rem;font-weight:600;margin-bottom:.2rem;";
+      lbl.textContent = emoji;
+      row.append(dec, inp, inc);
+      wrap.append(lbl, row);
       return { wrap, inp };
     };
-    const eng = mkInput("Eng", "🔧", opp.engineers);
-    const sui = mkInput("Suits", "👔", opp.suits);
+
+    let engInp, suiInp;
+    const eng = mkSpinner("🔧", opp.engineers);
+    const sui = mkSpinner("👔", opp.suits);
+    engInp = eng.inp;
+    suiInp = sui.inp;
     form.append(eng.wrap, sui.wrap);
+
+    const costCounter = document.createElement("div");
+    costCounter.style.cssText = "font-size:.8rem;font-weight:600;width:100%;text-align:center;margin-top:.3rem;";
+
+    const updateCostCounter = () => {
+      const eV = parseInt(eng.inp.value) || 0;
+      const sV = parseInt(sui.inp.value) || 0;
+      const total = eV + sV;
+      const cost = total * data.price;
+      if (total === 0) {
+        costCounter.textContent = "";
+      } else if (data.price > 0) {
+        costCounter.textContent = `${total} employee${total > 1 ? "s" : ""} · 💰$${cost}B`;
+      } else {
+        costCounter.textContent = `${total} employee${total > 1 ? "s" : ""}`;
+      }
+    };
 
     const btn = document.createElement("button");
     btn.className = "btn btn-sm";
@@ -543,27 +683,165 @@ function renderPoachPrompt(data) {
         `Poach ${engVal} 🔧 + ${suiVal} 👔 from ${opp.name}${costMsg}?`,
         () => {
           socket.emit("confirm_poach", { victim_id: opp.id, engineers: engVal, suits: suiVal });
-          _pendingPoachPrompt = null;
-          poachAlert.classList.add("hidden");
         },
         { confirmText: "Poach" }
       );
     });
     form.appendChild(btn);
     section.appendChild(form);
+    section.appendChild(costCounter);
     poachAlert.appendChild(section);
   });
 
-  const skipBtn = document.createElement("button");
-  skipBtn.className = "btn btn-sm";
-  skipBtn.style.cssText = "margin-top:.4rem;opacity:.7;";
-  skipBtn.textContent = "Skip — don't poach";
-  skipBtn.addEventListener("click", () => {
-    socket.emit("skip_poach");
-    _pendingPoachPrompt = null;
-    poachAlert.classList.add("hidden");
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn btn-sm";
+  cancelBtn.style.cssText = "margin-top:.5rem;opacity:.8;";
+  cancelBtn.textContent = "Cancel — poach later";
+  cancelBtn.addEventListener("click", () => {
+    showConfirmDialog(
+      "Cancel poaching? The card will return to your hand so you can play it later.",
+      () => {
+        socket.emit("cancel_poach");
+        _pendingPoachPrompt = null;
+        poachAlert.classList.add("hidden");
+      },
+      { confirmText: "Cancel Poaching" }
+    );
   });
-  poachAlert.appendChild(skipBtn);
+  poachAlert.appendChild(cancelBtn);
+}
+
+// ── Targeted Leverage prompt handlers ───────────────────────
+let _pendingTLPrompt = null;
+
+socket.on("targeted_leverage_prompt", (data) => {
+  _pendingTLPrompt = data;
+  renderTLTargetPrompt(data);
+  tlAlert.classList.remove("hidden");
+});
+
+socket.on("targeted_leverage_choose_cards_prompt", (data) => {
+  _pendingTLPrompt = data;
+  renderTLChooseCardsPrompt(data);
+  tlAlert.classList.remove("hidden");
+});
+
+function renderTLTargetPrompt(data) {
+  tlAlert.innerHTML = "";
+  const title = document.createElement("div");
+  title.innerHTML = `<strong>📈 ${data.card_name}:</strong> Choose a target for your leverage action`;
+  title.style.marginBottom = ".5rem";
+  tlAlert.appendChild(title);
+
+  const actSummary = document.createElement("div");
+  actSummary.style.cssText = "font-size:.78rem;margin-bottom:.6rem;color:#aaa;";
+  actSummary.textContent = "Actions: " + (data.actions || []).map(a => {
+    if (a.type === "steal_money") return `💰 Steal $${a.amount || 0}B`;
+    if (a.type === "steal_users") return `👥 Steal ${a.amount || 0}M users`;
+    if (a.type === "steal_data") return `📊 Steal ${a.amount || 0}PB data`;
+    if (a.type === "steal_cards") return `🃏 Steal ${a.count || 1} card(s)`;
+    if (a.type === "deactivate_cards") return `⏸️ Deactivate ${a.count || 1} card(s)`;
+    if (a.type === "delete_cards") return `🗑️ Delete ${a.count || 1} card(s)`;
+    if (a.type === "fee_per_type") return `💸 $${a.amount || 0}B per ${a.card_type || "card"}`;
+    return a.type;
+  }).join(", ");
+  tlAlert.appendChild(actSummary);
+
+  const grid = document.createElement("div");
+  grid.style.cssText = "display:flex;gap:.6rem;flex-wrap:wrap;";
+
+  (data.targets || []).forEach(t => {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-sm btn-accent";
+    btn.textContent = `🎯 ${t.name}`;
+    btn.style.cssText = "font-size:.85rem;padding:6px 14px;";
+    btn.addEventListener("click", () => {
+      socket.emit("targeted_leverage_choose_target", { target_id: t.id });
+      tlAlert.innerHTML = `<strong>📈 ${data.card_name}:</strong> Executing actions against ${t.name}...`;
+    });
+    grid.appendChild(btn);
+  });
+  tlAlert.appendChild(grid);
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn btn-sm";
+  cancelBtn.style.cssText = "margin-top:.5rem;opacity:.8;";
+  cancelBtn.textContent = "Cancel — forfeit ability";
+  cancelBtn.addEventListener("click", () => {
+    showConfirmDialog(
+      "Cancel leverage action? The card stays played but the ability is forfeited.",
+      () => {
+        socket.emit("cancel_targeted_leverage");
+        _pendingTLPrompt = null;
+        tlAlert.classList.add("hidden");
+      },
+      { confirmText: "Forfeit" }
+    );
+  });
+  tlAlert.appendChild(cancelBtn);
+}
+
+function renderTLChooseCardsPrompt(data) {
+  tlAlert.innerHTML = "";
+  const actionLabel = {
+    steal_cards: "🃏 Steal",
+    deactivate_cards: "⏸️ Deactivate",
+    delete_cards: "🗑️ Delete",
+  }[data.action_type] || data.action_type;
+
+  const isAttacker = data.chooser === "attacker";
+  const roleLabel = isAttacker
+    ? `Choose up to ${data.count} card(s) to ${actionLabel.toLowerCase()} from ${data.target_name}`
+    : `${data.attacker_name} is targeting you — choose ${data.count} card(s) to ${actionLabel.toLowerCase()}`;
+
+  const title = document.createElement("div");
+  title.innerHTML = `<strong>📈 ${data.card_name}:</strong> ${roleLabel}`;
+  title.style.marginBottom = ".5rem";
+  tlAlert.appendChild(title);
+
+  const selectedIds = new Set();
+  const grid = document.createElement("div");
+  grid.className = "hand-container";
+  grid.style.cssText = "gap:.5rem;";
+
+  (data.cards || []).forEach(card => {
+    const el = createCardElement(card);
+    el.style.cursor = "pointer";
+    el.style.border = "2px solid #555";
+    el.addEventListener("click", () => {
+      const iid = card.instance_id;
+      if (selectedIds.has(iid)) {
+        selectedIds.delete(iid);
+        el.style.border = "2px solid #555";
+        el.style.opacity = "1";
+      } else {
+        if (selectedIds.size >= data.count) return;
+        selectedIds.add(iid);
+        el.style.border = "2px solid #e67e22";
+        el.style.opacity = ".85";
+      }
+      confirmBtn.disabled = selectedIds.size === 0;
+      confirmBtn.textContent = `${actionLabel} ${selectedIds.size} card(s)`;
+    });
+    grid.appendChild(el);
+  });
+  tlAlert.appendChild(grid);
+
+  const btnRow = document.createElement("div");
+  btnRow.style.cssText = "display:flex;gap:.5rem;margin-top:.5rem;";
+
+  const confirmBtn = document.createElement("button");
+  confirmBtn.className = "btn btn-sm btn-accent";
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = `${actionLabel} 0 card(s)`;
+  confirmBtn.addEventListener("click", () => {
+    socket.emit("targeted_leverage_choose_cards", {
+      instance_ids: [...selectedIds],
+    });
+    tlAlert.innerHTML = `<strong>📈 Processing...</strong>`;
+  });
+  btnRow.appendChild(confirmBtn);
+  tlAlert.appendChild(btnRow);
 }
 
 function updateRegulationUI() {
@@ -1388,6 +1666,10 @@ function canAffordCard(card) {
     for (const [res, amt] of Object.entries(costs)) {
       if (!amt || COST_SKIP.has(res)) continue;
       if (res === "money") { totalMoney += amt; continue; }
+      // Reputation is a non-blocking counter cost (server clamps to configured min/max).
+      if (res === "reputation") continue;
+      // Negative costs are penalties and should never block play.
+      if (amt < 0) continue;
       if ((resources[res] ?? 0) < amt) return false;
     }
   }
@@ -1406,6 +1688,13 @@ function canAffordCard(card) {
  */
 function findPayeesForFee(costs) {
   if (!costs || !lastGameState) return [];
+  const cardMatchesType = (card, reqType) => {
+    if (!card || !reqType) return false;
+    return reqType === card.card_color_type
+      || reqType === card.secondary_card_color_type
+      || reqType === card.secondary_type
+      || reqType === card.card_type;
+  };
   const results = [];
   for (const [pid, p] of Object.entries(lastGameState.players)) {
     if (pid === myPlayerId) continue;
@@ -1414,9 +1703,9 @@ function findPayeesForFee(costs) {
       const targetId = Number(costs.fee_card_id);
       eligible = (p.played_cards || []).some(c => Number(c.id) === targetId);
     } else if (costs.fee_card_type) {
-      eligible = (p.played_cards || []).some(c => c.card_color_type === costs.fee_card_type);
+      eligible = (p.played_cards || []).some(c => cardMatchesType(c, costs.fee_card_type));
     } else if (costs.fee_company_type) {
-      eligible = !!(p.company && p.company.card_color_type === costs.fee_company_type);
+      eligible = !!(p.company && cardMatchesType(p.company, costs.fee_company_type));
     }
     if (eligible) results.push({ pid, name: p.name });
   }
@@ -1426,6 +1715,13 @@ function findPayeesForFee(costs) {
 /** True if the current player "owns" the fee target (fee is waived for them). */
 function iOwnFeeCosts(costs) {
   if (!costs || !lastGameState) return false;
+  const cardMatchesType = (card, reqType) => {
+    if (!card || !reqType) return false;
+    return reqType === card.card_color_type
+      || reqType === card.secondary_card_color_type
+      || reqType === card.secondary_type
+      || reqType === card.card_type;
+  };
   const me = lastGameState.players[myPlayerId];
   if (!me) return false;
   if (costs.fee_card_id) {
@@ -1433,10 +1729,10 @@ function iOwnFeeCosts(costs) {
     return (me.played_cards || []).some(c => Number(c.id) === targetId);
   }
   if (costs.fee_card_type) {
-    return (me.played_cards || []).some(c => c.card_color_type === costs.fee_card_type);
+    return (me.played_cards || []).some(c => cardMatchesType(c, costs.fee_card_type));
   }
   if (costs.fee_company_type) {
-    return !!(me.company && me.company.card_color_type === costs.fee_company_type);
+    return !!(me.company && cardMatchesType(me.company, costs.fee_company_type));
   }
   return false;
 }
@@ -1724,6 +2020,17 @@ function renderPlayedCards(cards) {
     tagSpan.textContent = c.tag || c.card_type;
     div.appendChild(tagSpan);
 
+    if (c.deactivated_info) {
+      div.style.opacity = "0.45";
+      div.style.borderLeft = "3px solid #e74c3c";
+      const deactLabel = document.createElement("div");
+      deactLabel.style.cssText = "font-size:.55rem;color:#e74c3c;margin-top:.1rem;";
+      const info = c.deactivated_info;
+      const reqName = info.reactivate_card_name || info.reactivate_type || "a specific card";
+      deactLabel.textContent = `⏸️ Deactivated — play "${reqName}" to restore`;
+      div.appendChild(deactLabel);
+    }
+
     // Tier indicator (star summary — always shown when card has tiers, grayed until purchased)
     const cardTiers = Array.isArray(c.tiers) ? c.tiers : [];
     if (cardTiers.length > 0) {
@@ -1894,9 +2201,10 @@ function renderResources(resources) {
     const div = document.createElement("div");
     div.className = "resource-item";
     if (RESOURCE_WIDE.has(key)) div.classList.add("resource-wide");
-    const dispVal = key === "money" ? `$${val}B`
-                  : key === "data"  ? `${val}PB`
-                  : val;
+    const v = Number.isFinite(val) ? Math.round(val) : val;
+    const dispVal = key === "money" ? `$${v}B`
+                  : key === "data"  ? `${v}PB`
+                  : v;
     div.innerHTML = `<span class="label">${prettyRes(key)}</span><span class="value">${dispVal}</span>`;
     resourcesDiv.appendChild(div);
   });
@@ -2460,17 +2768,20 @@ function createCardElement(card, options = {}) {
   el.className = "game-card";
 
   const colorType = (card.card_color_type || card.type || "").toString().toLowerCase();
+  const secondaryType = (card.secondary_card_color_type || card.secondary_type || "").toString().toLowerCase();
   const deckType = card.card_type || options.deckType || "";
   const typeEmoji = CARD_SUBTYPE_EMOJIS[colorType]
     || CARD_DECK_EMOJIS[deckType]
     || "";
+  const secondaryEmoji = secondaryType ? (CARD_SUBTYPE_EMOJIS[secondaryType] || "") : "";
 
   if (deckType === "fuck_up") el.classList.add("fuckup-card");
-  const tintColor = CARD_TYPE_TINTS[colorType];
+  const tintColor = (secondaryType && CARD_TYPE_TINTS[secondaryType]) || CARD_TYPE_TINTS[colorType];
   if (tintColor) el.style.background = tintColor;
 
-  const stripe = typeEmoji
-    ? `<div class="card-type-emoji" title="${colorType || deckType}">${typeEmoji}</div>`
+  const combinedEmoji = secondaryEmoji ? `${secondaryEmoji}${typeEmoji}` : typeEmoji;
+  const stripe = combinedEmoji
+    ? `<div class="card-type-emoji" title="${secondaryType ? `${secondaryType} + ${colorType}` : (colorType || deckType)}">${combinedEmoji}</div>`
     : "";
 
   // Image placeholder
@@ -2482,12 +2793,15 @@ function createCardElement(card, options = {}) {
 
   // Effects (from effect dict for new cards, or immediate/production for legacy)
   let effectsHtml = "";
+  const effectClass = (v) => (v > 0 ? "card-effect-positive" : (v < 0 ? "card-effect-negative" : "card-effect-neutral"));
+  const effectItemHtml = (k, v, suffix = "") =>
+    `<span class="card-effect-item ${effectClass(v)}">${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}${suffix}</span>`;
   if (card.effect && typeof card.effect === "object") {
     const effectEntries = Object.entries(card.effect)
       .filter(([k, v]) => v && k !== "payee_card_id");
     if (effectEntries.length) {
       effectsHtml = `<div class="card-effects"><span class="card-section-label">Effects</span><span class="card-effects-row">`;
-      effectsHtml += effectEntries.map(([k, v]) => `<span class="card-effect-item">${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}</span>`).join("");
+      effectsHtml += effectEntries.map(([k, v]) => effectItemHtml(k, v)).join("");
       effectsHtml += `</span></div>`;
     }
   } else {
@@ -2501,20 +2815,8 @@ function createCardElement(card, options = {}) {
   const prodEntries = Object.entries(card.production || {}).filter(([, v]) => v !== 0);
   if (prodEntries.length) {
     effectsHtml += `<div class="card-effects"><span class="card-section-label">Production</span><span class="card-effects-row">`;
-    effectsHtml += prodEntries.map(([k, v]) =>
-      `<span class="card-effect-item">${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}<span style="font-size:.75em;opacity:.8;">/yr</span></span>`
-    ).join("");
+    effectsHtml += prodEntries.map(([k, v]) => effectItemHtml(k, v, `<span style="font-size:.75em;opacity:.8;">/yr</span>`)).join("");
     effectsHtml += `</span></div>`;
-  }
-
-  // Conditional effects (world events)
-  let condEffHtml = "";
-  const condEff = card.conditional_effects || {};
-  const condEntries = Object.entries(condEff).filter(([, v]) => v);
-  if (condEntries.length) {
-    condEffHtml = `<div class="card-effects"><span class="card-section-label">Conditional effects</span><span class="card-effects-row">`;
-    condEffHtml += condEntries.map(([k, v]) => `<span class="card-effect-item">${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}</span>`).join("");
-    condEffHtml += `</span></div>`;
   }
 
   // Boosts
@@ -2540,18 +2842,20 @@ function createCardElement(card, options = {}) {
       if (b.target_type) {
         const types = Array.isArray(b.target_type) ? b.target_type : [b.target_type];
         const typeDisplay = types.map(t => CARD_SUBTYPE_EMOJIS[t] || t).join("/");
-        const maxCount = b.target_count || 0;
+        const maxCount = Number(b.target_count || 0);
+        const unlimited = !!b.target_count_unlimited || maxCount <= 0;
         const fires = (card.boost_fires || [])[i] || 0;
         // Show thumbs: used ones grayed, remaining ones lit
         let thumbStr = "";
-        if (maxCount > 0) {
+        if (!unlimited && maxCount > 0) {
           for (let j = 0; j < maxCount; j++) {
             thumbStr += j < fires
               ? `<span style="opacity:.3;font-size:.8em">👍</span>`
               : `<span style="font-size:.8em">👍</span>`;
           }
         }
-        targetStr += (targetStr ? " / " : "") + typeDisplay + (thumbStr ? ` ${thumbStr}` : "");
+        const limitTag = unlimited ? ` <span style="font-size:.8em;opacity:.9;">×∞</span>` : "";
+        targetStr += (targetStr ? " / " : "") + typeDisplay + limitTag + (thumbStr ? ` ${thumbStr}` : "");
       }
       if (targetStr) {
         boostsHtml += `<span class="card-boost-item">${targetStr}: ${bonusStr}</span>`;
@@ -2584,8 +2888,8 @@ function createCardElement(card, options = {}) {
   const startProdEntries = Object.entries(card.starting_production || {}).filter(([, v]) => v !== 0);
   if (startEntries.length || startProdEntries.length) {
     startHtml = `<div class="card-effects"><span class="card-section-label">Starting</span><span class="card-effects-row">`;
-    startHtml += startEntries.map(([k, v]) => `<span class="card-effect-item">${fmtCardVal(k, v)} ${emojiRes(k)}</span>`).join("");
-    startHtml += startProdEntries.map(([k, v]) => `<span class="card-effect-item">${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}/yr</span>`).join("");
+    startHtml += startEntries.map(([k, v]) => effectItemHtml(k, v)).join("");
+    startHtml += startProdEntries.map(([k, v]) => effectItemHtml(k, v, "/yr")).join("");
     startHtml += `</span></div>`;
   }
 
@@ -2612,18 +2916,48 @@ function createCardElement(card, options = {}) {
   const playThresholds = card.play_thresholds || [];
   const reqCardIds = card.required_card_ids || [];
   const reqParts = [];
+  if (secondaryType) {
+    const em = CARD_SUBTYPE_EMOJIS[secondaryType] || CARD_DECK_EMOJIS[secondaryType] || "";
+    reqParts.push(`also counts as ${em ? em + " " : ""}${secondaryType}`);
+  }
   if (reqs.length) {
     reqParts.push(reqs.map(r => {
-      const emoji = CARD_SUBTYPE_EMOJIS[r] || CARD_DECK_EMOJIS[r] || "";
-      return emoji ? `${emoji} ${r}` : r;
+      const reqCount = (r && typeof r === "object") ? Math.max(1, Number(r.count || 1)) : 1;
+      if (r && typeof r === "object" && Array.isArray(r.types) && r.types.length) {
+        const items = r.types.map(t => {
+          const e = CARD_SUBTYPE_EMOJIS[t] || CARD_DECK_EMOJIS[t] || "";
+          return e ? `${e} ${t}` : t;
+        });
+        return `(${items.join(" / ")}) ×${reqCount}`;
+      }
+      const reqType = (r && typeof r === "object") ? (r.type || "") : r;
+      const emoji = CARD_SUBTYPE_EMOJIS[reqType] || CARD_DECK_EMOJIS[reqType] || "";
+      const txt = emoji ? `${emoji} ${reqType}` : reqType;
+      return reqCount > 1 ? `${txt} ×${reqCount}` : txt;
     }).join(", "));
   }
   if (reqCardIds.length) {
-    reqParts.push(reqCardIds.map(id => `🆔 #${id}`).join(", "));
+    reqParts.push(reqCardIds.map(id => {
+      const name = cardNameById(id);
+      return name && name !== "Unknown card"
+        ? `🆔 ${name} (#${id})`
+        : `🆔 #${id}`;
+    }).join(", "));
   }
   playThresholds.forEach(t => {
+    const kind = t.kind || "resource";
+    if (kind === "opponents_total_played_type") {
+      const em = CARD_SUBTYPE_EMOJIS[t.key] || CARD_DECK_EMOJIS[t.key] || "";
+      reqParts.push(`🧮 opponents total: ${em ? em + " " : ""}${t.key} ≥${t.min}`);
+      return;
+    }
+    if (kind === "opponents_any_player_played_type") {
+      const em = CARD_SUBTYPE_EMOJIS[t.key] || CARD_DECK_EMOJIS[t.key] || "";
+      reqParts.push(`👤 any opponent: ${em ? em + " " : ""}${t.key} ≥${t.min}`);
+      return;
+    }
     const emoji = RES_EMOJI[t.key] || "";
-    const label = t.kind === "production" ? `${t.key} prod` : t.key;
+    const label = kind === "production" ? `${t.key} prod` : t.key;
     reqParts.push(`${emoji} ≥${t.min} ${label}`);
   });
   if (reqParts.length) {
@@ -2662,12 +2996,46 @@ function createCardElement(card, options = {}) {
     reqHtml += `<div class="card-requirements"><span class="card-section-label">Penalty</span><span class="card-req-list">🗑️ ${modeLabel}${typesStr}</span></div>`;
   }
   if (card.steal_card) {
-    reqHtml += `<div class="card-requirements"><span class="card-section-label">Leverage</span><span class="card-req-list">🫳 Steal a card from an opponent's hand</span></div>`;
+    const stealLabel = card.steal_card === "platform" ? "🏗️ Steal a platform card (Hostile Takeover)"
+                     : card.steal_card === "innovation" ? "🧠 Steal an innovation card (IP Theft)"
+                     : `🫳 Steal a ${card.steal_card} card`;
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">Leverage</span><span class="card-req-list">${stealLabel}</span></div>`;
   }
   const pe = card.poach_employees;
   if (pe && pe.max) {
     const priceStr = pe.price ? ` for 💰$${pe.price}B each` : " for free";
     reqHtml += `<div class="card-requirements"><span class="card-section-label">Leverage</span><span class="card-req-list">🕵️ Poach up to ${pe.max} 🔧/👔 from opponent${priceStr}</span></div>`;
+  }
+  const tl = card.targeted_leverage;
+  if (tl && tl.actions && tl.actions.length) {
+    let condStr = "";
+    if (!tl.no_condition) {
+      if (tl.vulnerability_type) condStr = ` if opponent lacks ${CARD_SUBTYPE_EMOJIS[tl.vulnerability_type] || ""} ${tl.vulnerability_type}`;
+      else if (tl.vulnerability_card_id) condStr = ` if opponent lacks card #${tl.vulnerability_card_id}`;
+    }
+    const actParts = tl.actions.map(a => {
+      if (a.type === "steal_money") return `💰 steal $${a.amount || 0}B`;
+      if (a.type === "steal_users") return `👥 steal ${a.amount || 0}M users`;
+      if (a.type === "steal_data") return `📊 steal ${a.amount || 0}PB data`;
+      if (a.type === "steal_cards") return `🃏 steal ${a.count || 1} card(s)`;
+      if (a.type === "deactivate_cards") return `⏸️ deactivate ${a.count || 1} card(s)`;
+      if (a.type === "delete_cards") return `🗑️ delete ${a.count || 1} card(s)`;
+      if (a.type === "fee_per_type") return `💸 $${a.amount || 0}B per ${a.card_type || "card"}`;
+      return a.type;
+    });
+    let targetStr = "";
+    const tcParts = [];
+    if (tl.target_card_type) tcParts.push(`type: ${CARD_SUBTYPE_EMOJIS[tl.target_card_type] || ""} ${tl.target_card_type}`);
+    if (tl.target_card_id != null) tcParts.push(`card #${tl.target_card_id}`);
+    if (tl.target_fee_card_id != null) tcParts.push(`pays fee→#${tl.target_fee_card_id}`);
+    if (tcParts.length) targetStr = ` [targets: ${tcParts.join(" / ")}]`;
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">Leverage</span><span class="card-req-list">📈 ${actParts.join(", ")}${condStr}${targetStr}</span></div>`;
+  }
+  const rc = card.resource_conversion;
+  if (rc && typeof rc === "object" && (Object.keys(rc.cost || {}).length || Object.keys(rc.gain || {}).length)) {
+    const rcCost = Object.entries(rc.cost || {}).map(([k, v]) => `${fmtCardVal(k, v)}${emojiRes(k)}`).join(" ");
+    const rcGain = Object.entries(rc.gain || {}).map(([k, v]) => `+${fmtCardVal(k, v)}${emojiRes(k)}`).join(" ");
+    reqHtml += `<div class="card-requirements"><span class="card-section-label">Convert</span><span class="card-req-list">🔄 ${rc.name || "Convert"}: ${rcCost} → ${rcGain} <span style="opacity:.6;font-size:.5rem">(1×/yr)</span></span></div>`;
   }
   const nextTo = card.only_playable_next_to || [];
   if (nextTo.length) {
@@ -2783,8 +3151,8 @@ function createCardElement(card, options = {}) {
     ${imageBlock}
     ${desc}
     ${effectsHtml}
-    ${condEffHtml}
     <div class="card-producibles-slot"></div>
+    <div class="card-conversion-slot"></div>
     ${boostsHtml}
     ${boostedByHtml}
     ${feesCollectedHtml}
@@ -3030,6 +3398,66 @@ function createCardElement(card, options = {}) {
     });
   }
 
+  // ── Resource conversion button ──────────────────────────────
+  const convSlot = el.querySelector(".card-conversion-slot");
+  const conv = card.resource_conversion;
+  if (convSlot && conv && typeof conv === "object") {
+    convSlot.style.cssText = "display:flex;flex-wrap:wrap;gap:.3rem;justify-content:flex-end;padding:.2rem .4rem .25rem;";
+    const costParts = Object.entries(conv.cost || {}).map(([k, v]) =>
+      `${fmtCardVal(k, v)}${emojiRes(k)}`
+    );
+    const gainParts = Object.entries(conv.gain || {}).map(([k, v]) =>
+      `+${fmtCardVal(k, v)}${emojiRes(k)}`
+    );
+    const btn = document.createElement("button");
+    btn.className = "card-produce-btn";
+    btn.innerHTML =
+      `<span class="produce-btn-name">🔄 ${conv.name || "Convert"}</span>` +
+      `<span class="produce-btn-cost">${costParts.join(" ")} → ${gainParts.join(" ")}</span>`;
+
+    const used = !!card.conversion_used_this_year;
+    if (used) {
+      btn.disabled = true;
+      btn.style.opacity = "0.35";
+      btn.title = "Already converted this year — resets next year";
+      const badge = document.createElement("span");
+      badge.style.cssText = "font-size:.48rem;opacity:.7;margin-left:.3rem;";
+      badge.textContent = "✓ used this year";
+      btn.querySelector(".produce-btn-cost")?.appendChild(badge);
+    } else if (isPlayedCard) {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showConfirmDialog(
+          `Convert: ${costParts.join(", ")} → ${gainParts.join(", ")}?`,
+          () => {
+            btn.disabled = true;
+            socket.emit("convert_resource", { instance_id: card.instance_id });
+            setTimeout(() => { btn.disabled = false; }, 2500);
+          },
+          { confirmText: "Convert", cancelText: "Cancel" }
+        );
+      });
+    } else {
+      btn.style.opacity = "0.6";
+      btn.style.cursor = "default";
+      btn.title = "Play this card first";
+      btn.addEventListener("click", (e) => e.stopPropagation());
+    }
+    convSlot.appendChild(btn);
+  }
+
+  // ── Deactivated overlay ───────────────────────────────────────
+  if (card.deactivated_info) {
+    el.style.opacity = "0.5";
+    el.style.position = "relative";
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:absolute;bottom:0;left:0;right:0;background:rgba(231,76,60,.85);color:#fff;padding:.3rem .4rem;font-size:.55rem;text-align:center;border-radius:0 0 6px 6px;";
+    const info = card.deactivated_info;
+    const reqName = info.reactivate_card_name || info.reactivate_type || "a specific card";
+    overlay.textContent = `⏸️ DEACTIVATED — play "${reqName}" to restore`;
+    el.appendChild(overlay);
+  }
+
   return el;
 }
 
@@ -3055,7 +3483,7 @@ const PARAM_LABELS = {
 };
 
 const REP_RESOURCE_VALUE_KEYS = ["money", "engineers", "suits", "servers", "ads", "reputation", "users", "data"];
-const REP_PRODUCTION_VALUE_KEYS = ["HR", "data_centers", "ad_campaigns", "money"];
+const REP_PRODUCTION_VALUE_KEYS = ["HR", "data_centers", "ad_campaigns", "money", "data"];
 
 let currentParams = {};
 
@@ -3435,10 +3863,12 @@ let editorLocksMap = {};
 let editingKey = null;
 let editorContext = "grid"; // "grid" | "trees"
 let editorScrollTop = 0;
+const _collapsedSections = new Set();
+let _collapsedInitialized = false;
 
 const DICT_FIELDS = new Set([
   "production", "immediate", "starting_resources", "starting_production",
-  "compliance", "court_penalty", "costs", "effect", "conditional_effects",
+  "compliance", "court_penalty", "costs", "effect",
 ]);
 
 const RESOURCE_OPTIONS = [
@@ -3449,7 +3879,7 @@ const RESOURCE_OPTIONS = [
 const COST_KEY_OPTIONS = [
   "engineers", "suits", "ads", "money",
   "servers", "data_centers", "ad_campaigns",
-  "reputation", "HR", "users", "fee", "fee_card_id", "fee_card_type", "fee_company_type",
+  "reputation", "HR", "users", "data", "fee", "fee_card_id", "fee_card_type", "fee_company_type",
 ];
 
 const DICT_KEY_OPTIONS = {
@@ -3459,7 +3889,7 @@ const DICT_KEY_OPTIONS = {
   compliance: RESOURCE_OPTIONS,
   court_penalty: RESOURCE_OPTIONS,
   starting_resources: RESOURCE_OPTIONS,
-  starting_production: ["HR", "data_centers", "ad_campaigns"],
+  starting_production: ["HR", "data_centers", "ad_campaigns", "money", "data"],
 };
 
 const EDITOR_TYPE_LABELS = {
@@ -3541,6 +3971,10 @@ editorModal.addEventListener("click", (e) => {
 socket.on("all_cards", (data) => {
   editorCards = _sanitizeEditorValue(data.cards || {});
   editorLocksMap = data.locks || {};
+  if (!_collapsedInitialized) {
+    _collapsedInitialized = true;
+    for (const ct of Object.keys(editorCards)) _collapsedSections.add(ct);
+  }
   rebuildCardIndex();
   // Open the modal only when the user explicitly requested it;
   // background broadcasts (from other editors saving) must not pop it open.
@@ -3577,6 +4011,22 @@ socket.on("lock_result", (data) => {
 });
 
 editorSearch.addEventListener("input", () => renderEditorGrid());
+
+document.getElementById("enable-all-cards-btn").addEventListener("click", () => {
+  showConfirmDialog(
+    "Enable all disabled cards?",
+    () => socket.emit("enable_all_cards"),
+    { detail: "This will remove the disabled flag from every card across all decks.", confirmText: "Enable All" }
+  );
+});
+
+document.getElementById("disable-all-cards-btn").addEventListener("click", () => {
+  showConfirmDialog(
+    "Disable all cards?",
+    () => socket.emit("disable_all_cards"),
+    { detail: "This will mark every card as disabled across all decks.", confirmText: "Disable All" }
+  );
+});
 
 // ── Editor scroll-to-top button ───────────────────────────────
 const editorScrollTopBtn = document.getElementById("editor-scroll-top");
@@ -3922,16 +4372,33 @@ function renderEditorGrid() {
     addBtn.className = "btn btn-sm editor-add-card-btn";
     addBtn.textContent = "+ Add Card";
     addBtn.addEventListener("click", () => {
-      editorScrollTop = editorBody.scrollTop;  // remember position before opening new-card form
+      editorScrollTop = editorBody.scrollTop;
       editorContext = "grid";
       socket.emit("add_card", { card_type: cardType });
     });
     headerRow.appendChild(addBtn);
 
+    const collapsed = _collapsedSections.has(cardType);
+    const collapseBtn = document.createElement("button");
+    collapseBtn.className = "btn btn-sm";
+    collapseBtn.style.cssText = "font-size:.7rem;padding:.15rem .5rem;opacity:.7;";
+    collapseBtn.textContent = collapsed ? "▶ Show" : "▼ Hide";
+    collapseBtn.addEventListener("click", () => {
+      if (_collapsedSections.has(cardType)) {
+        _collapsedSections.delete(cardType);
+      } else {
+        _collapsedSections.add(cardType);
+      }
+      editorScrollTop = editorBody.scrollTop;
+      renderEditorGrid();
+    });
+    headerRow.appendChild(collapseBtn);
+
     section.appendChild(headerRow);
 
     const grid = document.createElement("div");
     grid.className = "editor-grid";
+    if (collapsed) grid.style.display = "none";
 
     let dragSrcIndex = null;
 
@@ -4005,6 +4472,22 @@ function renderEditorGrid() {
         );
       });
       overlay.appendChild(deleteBtn);
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "editor-card-delete";
+      copyBtn.style.right = "1.9rem";
+      copyBtn.textContent = "⧉";
+      copyBtn.title = "Copy card (create V.2)";
+      copyBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (lockStatus === "other") {
+          showFloatingError("Card is locked by another editor.");
+          return;
+        }
+        editorScrollTop = editorBody.scrollTop;
+        socket.emit("copy_card", { card_type: cardType, index });
+      });
+      overlay.appendChild(copyBtn);
 
       if (lockStatus === "other") {
         const lockLabel = document.createElement("div");
@@ -4080,19 +4563,23 @@ function renderEditorForm() {
     "image", "starting_tiles", "factory_refund", "dc_production_bonus",
     "effective_pollution_tag", "current_tier", "instance_id",
     "required_card_ids",
+    "conditional_effects",
+    "adjacent_placement_fee_target_types",
+    "bonuses_by_placing_next_to_building",
+    "undefined",
   ]);
 
   // Canonical field order — every card renders fields in this sequence.
   // Fields not present on the card get sensible defaults.
   const FIELD_ORDER = [
-    "name", "id", "description", "type", "card_color_type", "number", "disabled",
+    "name", "id", "description", "type", "secondary_type", "card_color_type", "number", "disabled",
     "build",
     "costs",
     "effect",
     "production",
     "starting_resources", "starting_production",
     "requirements", "play_thresholds",
-    "lose_card_rule", "steal_card", "poach_employees",
+    "lose_card_rule", "steal_card", "poach_employees", "targeted_leverage",
     "only_playable_next_to", "only_playable_on_terrains",
     "adjacent_placement_fee", "adjacent_placement_fee_target_types",
     "pollution_tag", "fee_for_green", "responsible_mining",
@@ -4100,16 +4587,17 @@ function renderEditorForm() {
     "tiers",
     "boosts",
     "producibles",
+    "resource_conversion",
     "bonuses_by_placing_next_to_building",
     "bonuses_by_building_on_terrain_type",
     "bonuses_by_building_adjacent_to_terrain_type",
     "placed_tile_adjacency_bonuses",
     "compliance", "court_penalty", "court_threshold",
-    "conditional_effects",
     "target_id", "target_type",
   ];
 
   const SPECIAL_BUILDERS = {
+    secondary_type: v => buildSecondaryTypeField(v, cardType),
     build:         v => buildBuildField(v),
     boosts:        v => buildBoostsField(v || []),
     requirements:  v => buildRequirementsField(v || [], card.required_card_ids || []),
@@ -4117,14 +4605,15 @@ function renderEditorForm() {
     lose_card_rule: v => buildLoseCardRuleField(v),
     steal_card: v => buildStealCardField(v),
     poach_employees: v => buildPoachEmployeesField(v),
+    targeted_leverage: v => buildTargetedLeverageField(v),
     court_threshold_modifier: v => buildCourtThresholdModifierField(v),
     producibles:   v => buildProduciblesField(v || []),
+    resource_conversion: v => buildResourceConversionField(v),
     pollution_tag: v => buildPollutionTagField(v ?? "neutral"),
     fee_for_green: v => buildFeeForGreenField(v),
     only_playable_next_to: v => buildOnlyPlayableNextToField(v || []),
     only_playable_on_terrains: v => buildOnlyPlayableOnTerrainsField(v || []),
-    adjacent_placement_fee_target_types: v => buildAdjacentPlacementFeeTargetTypesField(v || []),
-    bonuses_by_placing_next_to_building: v => buildBonusesByPlacingNextToBuildingField(v || []),
+    adjacent_placement_fee: () => buildAdjacentPlacementEconomicsField(card),
     bonuses_by_building_on_terrain_type: v => buildBonusesByBuildingOnTerrainTypeField(v || []),
     bonuses_by_building_adjacent_to_terrain_type: v => buildBonusesByBuildingAdjacentToTerrainTypeField(v || []),
     placed_tile_adjacency_bonuses: v => buildPlacedTileAdjacencyBonusesField(v || []),
@@ -4135,6 +4624,7 @@ function renderEditorForm() {
 
   function renderField(key) {
     if (renderedKeys.has(key) || EDITOR_HIDDEN_FIELDS.has(key)) return;
+    if (key === "secondary_type" && cardType !== "innovation") return;
     renderedKeys.add(key);
     const value = card[key];
     if (SPECIAL_BUILDERS[key]) {
@@ -4162,8 +4652,8 @@ function renderEditorForm() {
   // Always ensure these fields exist even if absent from card data
   const ALWAYS_ENSURE = [
     "production", "boosts", "requirements", "play_thresholds",
-    "lose_card_rule", "steal_card", "poach_employees",
-    "court_threshold_modifier", "producibles", "pollution_tag", "fee_for_green",
+    "lose_card_rule", "steal_card", "poach_employees", "targeted_leverage",
+    "court_threshold_modifier", "producibles", "resource_conversion", "pollution_tag", "fee_for_green",
     "only_playable_next_to", "only_playable_on_terrains",
     "adjacent_placement_fee", "adjacent_placement_fee_target_types",
     "bonuses_by_placing_next_to_building", "bonuses_by_building_on_terrain_type",
@@ -4303,6 +4793,46 @@ function buildSimpleField(key, value, cardType) {
     row.appendChild(input);
   }
 
+  return row;
+}
+
+function buildSecondaryTypeField(value, cardType) {
+  const row = document.createElement("div");
+  row.className = "editor-field";
+
+  const label = document.createElement("label");
+  label.textContent = "secondary_type";
+  row.appendChild(label);
+
+  const hint = document.createElement("div");
+  hint.className = "editor-field-hint";
+  hint.textContent = "Optional second subtype for innovation cards (e.g. software platform).";
+  row.appendChild(hint);
+
+  const select = document.createElement("select");
+  select.dataset.fieldKey = "secondary_type";
+  select.className = "editor-input";
+  select.style.width = "100%";
+
+  const noneOpt = document.createElement("option");
+  noneOpt.value = "";
+  noneOpt.textContent = "(none)";
+  if (_isUnsetLike(value) || !value) noneOpt.selected = true;
+  select.appendChild(noneOpt);
+
+  const DECK_TYPES = new Set(["platform", "innovation", "leverage", "build", "cyber_attack", "fuck_up", "regulation", "world_event", "company"]);
+  TYPE_OPTIONS.filter(opt => opt && !DECK_TYPES.has(opt)).forEach(opt => {
+    const o = document.createElement("option");
+    o.value = opt;
+    o.textContent = opt;
+    if (value === opt) o.selected = true;
+    select.appendChild(o);
+  });
+  row.appendChild(select);
+
+  if (cardType !== "innovation") {
+    row.style.display = "none";
+  }
   return row;
 }
 
@@ -4488,8 +5018,16 @@ function buildRequirementsField(requirements, requiredCardIds) {
 
   const hint = document.createElement("div");
   hint.className = "editor-field-hint";
-  hint.textContent = "Card types or specific card IDs the player must have played. For fuck-ups: if not met, the fuck-up is dodged.";
+  hint.textContent = "Card types or specific card IDs the player must have played. You can set how many cards of each type are required.";
   container.appendChild(hint);
+
+  const reqList = Array.isArray(requirements) ? requirements : [];
+  const singleTypeReqs = [];
+  const anyTypeReqs = [];
+  reqList.forEach(r => {
+    if (r && typeof r === "object" && Array.isArray(r.types) && r.types.length) anyTypeReqs.push(r);
+    else singleTypeReqs.push(r);
+  });
 
   // ── Type requirements ──
   const typeLabel = document.createElement("div");
@@ -4502,6 +5040,9 @@ function buildRequirementsField(requirements, requiredCardIds) {
   container.appendChild(list);
 
   function addReqRow(val) {
+    const reqObj = (val && typeof val === "object")
+      ? val
+      : { type: val, count: 1 };
     const row = document.createElement("div");
     row.className = "editor-req-row editor-dict-row";
     const sel = document.createElement("select");
@@ -4509,24 +5050,34 @@ function buildRequirementsField(requirements, requiredCardIds) {
     sel.style.flex = "1";
     const noneOpt = document.createElement("option");
     noneOpt.value = ""; noneOpt.textContent = "(choose type)";
-    if (!val) noneOpt.selected = true;
+    if (!reqObj.type) noneOpt.selected = true;
     sel.appendChild(noneOpt);
     TYPE_OPTIONS.forEach(t => {
       const o = document.createElement("option");
       o.value = t; o.textContent = t;
-      if (t === val) o.selected = true;
+      if (t === reqObj.type) o.selected = true;
       sel.appendChild(o);
     });
+    const countLabel = document.createElement("span");
+    countLabel.className = "editor-boost-label";
+    countLabel.textContent = "count:";
+    const countInput = document.createElement("input");
+    countInput.type = "number";
+    countInput.className = "editor-req-count";
+    countInput.value = Math.max(1, Number(reqObj.count || 1));
+    countInput.style.width = "64px";
     const rmBtn = document.createElement("button");
     rmBtn.className = "btn btn-sm editor-remove-btn";
     rmBtn.textContent = "×";
     rmBtn.addEventListener("click", () => row.remove());
     row.appendChild(sel);
+    row.appendChild(countLabel);
+    row.appendChild(makeNumSpinner(countInput, { min: 1 }));
     row.appendChild(rmBtn);
     list.appendChild(row);
   }
 
-  (requirements || []).forEach(r => addReqRow(r));
+  singleTypeReqs.forEach(r => addReqRow(r));
 
   const addBtn = document.createElement("button");
   addBtn.className = "btn btn-sm";
@@ -4534,6 +5085,75 @@ function buildRequirementsField(requirements, requiredCardIds) {
   addBtn.style.marginTop = ".4rem";
   addBtn.addEventListener("click", () => addReqRow(""));
   container.appendChild(addBtn);
+
+  // ── Any-of type group requirements ──
+  const anyLabel = document.createElement("div");
+  anyLabel.style.cssText = "font-size:.7rem;color:var(--text-dim);margin-top:.8rem;font-weight:600;";
+  anyLabel.textContent = "Required count from any of these types";
+  container.appendChild(anyLabel);
+
+  const anyHint = document.createElement("div");
+  anyHint.className = "editor-field-hint";
+  anyHint.style.marginTop = ".15rem";
+  anyHint.textContent = "Example: count 3 with types [software platform, social platform, online marketplace].";
+  container.appendChild(anyHint);
+
+  const anyList = document.createElement("div");
+  anyList.className = "editor-requirements-list";
+  container.appendChild(anyList);
+
+  function addAnyReqRow(entry) {
+    const reqObj = (entry && typeof entry === "object") ? entry : {};
+    const selected = new Set(Array.isArray(reqObj.types) ? reqObj.types : []);
+    const row = document.createElement("div");
+    row.className = "editor-req-any-row";
+    row.style.cssText = "border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:.35rem;margin-top:.35rem;";
+
+    const top = document.createElement("div");
+    top.style.cssText = "display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem;";
+    const countLabel = document.createElement("span");
+    countLabel.className = "editor-boost-label";
+    countLabel.textContent = "count:";
+    const countInput = document.createElement("input");
+    countInput.type = "number";
+    countInput.className = "editor-req-any-count";
+    countInput.value = Math.max(1, Number(reqObj.count || 1));
+    countInput.style.width = "64px";
+    const rmBtn = document.createElement("button");
+    rmBtn.className = "btn btn-sm editor-remove-btn";
+    rmBtn.textContent = "×";
+    rmBtn.style.marginLeft = "auto";
+    rmBtn.addEventListener("click", () => row.remove());
+    top.append(countLabel, makeNumSpinner(countInput, { min: 1 }), rmBtn);
+    row.appendChild(top);
+
+    const checksWrap = document.createElement("div");
+    checksWrap.className = "editor-multi-check-grid";
+    TYPE_OPTIONS.filter(Boolean).forEach(t => {
+      const lab = document.createElement("label");
+      lab.className = "editor-multi-check-item";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "editor-req-any-type-cb";
+      cb.value = t;
+      cb.checked = selected.has(t);
+      lab.appendChild(cb);
+      const span = document.createElement("span");
+      span.textContent = t;
+      lab.appendChild(span);
+      checksWrap.appendChild(lab);
+    });
+    row.appendChild(checksWrap);
+    anyList.appendChild(row);
+  }
+
+  anyTypeReqs.forEach(r => addAnyReqRow(r));
+  const addAnyBtn = document.createElement("button");
+  addAnyBtn.className = "btn btn-sm";
+  addAnyBtn.textContent = "+ Add Any-of Group Requirement";
+  addAnyBtn.style.marginTop = ".4rem";
+  addAnyBtn.addEventListener("click", () => addAnyReqRow({}));
+  container.appendChild(addAnyBtn);
 
   // ── Card ID requirements ──
   const idLabel = document.createElement("div");
@@ -4578,8 +5198,26 @@ function buildRequirementsField(requirements, requiredCardIds) {
 
 // ── Min-reputation requirement field ──────────────────────────
 function buildPlayThresholdsField(thresholds) {
-  const RESOURCE_OPTIONS = ["money","engineers","suits","servers","ads","reputation","users"];
-  const PRODUCTION_OPTIONS = ["HR","data_centers","ad_campaigns","money"];
+  const RESOURCE_OPTIONS = ["money","engineers","suits","servers","ads","reputation","users","data"];
+  const PRODUCTION_OPTIONS = ["HR","data_centers","ad_campaigns","money","data"];
+  const OPP_KIND_OPTIONS = [
+    { value: "opponents_total_played_type", label: "opponents total played type" },
+    { value: "opponents_any_player_played_type", label: "opponent any player played type" },
+  ];
+  const TYPE_OPTIONS = [];
+  const _seenTypes = new Set();
+  Object.keys(CARD_SUBTYPE_EMOJIS || {}).forEach(t => {
+    if (!_seenTypes.has(t)) {
+      _seenTypes.add(t);
+      TYPE_OPTIONS.push(t);
+    }
+  });
+  ["innovation", "platform", "leverage", "build", "company", "cyber_attack", "fuck_up", "regulation", "world_event"].forEach(t => {
+    if (!_seenTypes.has(t)) {
+      _seenTypes.add(t);
+      TYPE_OPTIONS.push(t);
+    }
+  });
 
   const container = document.createElement("div");
   container.className = "editor-boosts-field";
@@ -4592,7 +5230,7 @@ function buildPlayThresholdsField(thresholds) {
 
   const hint = document.createElement("div");
   hint.className = "editor-field-hint";
-  hint.textContent = "Minimum resource/production values to play this card. For fuck-ups: if not met, the fuck-up is dodged.";
+  hint.textContent = "Minimum values to play this card: own resources/production, or opponents' played-card type counts.";
   container.appendChild(hint);
 
   const list = document.createElement("div");
@@ -4608,22 +5246,33 @@ function buildPlayThresholdsField(thresholds) {
 
     const kindSel = document.createElement("select");
     kindSel.className = "editor-threshold-kind";
-    kindSel.style.width = "110px";
-    ["resource","production"].forEach(k => {
+    kindSel.style.width = "220px";
+    ["resource","production", ...OPP_KIND_OPTIONS.map(o => o.value)].forEach(k => {
       const o = document.createElement("option");
-      o.value = k; o.textContent = k; kindSel.appendChild(o);
+      o.value = k;
+      const label = OPP_KIND_OPTIONS.find(x => x.value === k)?.label || k;
+      o.textContent = label;
+      kindSel.appendChild(o);
     });
     kindSel.value = kind;
 
     const keySel = document.createElement("select");
     keySel.className = "editor-threshold-key";
-    keySel.style.width = "130px";
+    keySel.style.width = "190px";
     function populateKeys() {
       keySel.innerHTML = "";
-      const opts = kindSel.value === "production" ? PRODUCTION_OPTIONS : RESOURCE_OPTIONS;
+      let opts = RESOURCE_OPTIONS;
+      if (kindSel.value === "production") opts = PRODUCTION_OPTIONS;
+      if (kindSel.value === "opponents_total_played_type" || kindSel.value === "opponents_any_player_played_type") {
+        opts = TYPE_OPTIONS;
+      }
+      if (key && !opts.includes(key)) opts = [...opts, key];
       opts.forEach(k => {
         const o = document.createElement("option");
-        o.value = k; o.textContent = k; keySel.appendChild(o);
+        o.value = k;
+        const em = CARD_SUBTYPE_EMOJIS[k] || CARD_DECK_EMOJIS[k] || "";
+        o.textContent = em ? `${em} ${k}` : k;
+        keySel.appendChild(o);
       });
       if (key && opts.includes(key)) keySel.value = key;
     }
@@ -4767,7 +5416,7 @@ function buildLoseCardRuleField(value) {
   return container;
 }
 
-// ── Steal card toggle (fuck-ups) ────────────────────────────────
+// ── Steal card type selector (leverage) ─────────────────────────
 function buildStealCardField(value) {
   const container = document.createElement("div");
   container.className = "editor-boosts-field";
@@ -4775,24 +5424,32 @@ function buildStealCardField(value) {
 
   const header = document.createElement("div");
   header.className = "editor-field-header";
-  header.textContent = "steal card (IP theft)";
+  header.textContent = "steal card";
   container.appendChild(header);
 
   const hint = document.createElement("div");
   hint.className = "editor-field-hint";
-  hint.textContent = "When enabled, the player who plays this card can steal a card from an opponent's hand.";
+  hint.textContent = "Select a card type to steal from an opponent's hand. The opponent must reveal cards of that type.";
   container.appendChild(hint);
 
   const row = document.createElement("div");
   row.style.cssText = "display:flex;align-items:center;gap:.5rem;margin-top:.4rem;";
-  const cb = document.createElement("input");
-  cb.type = "checkbox";
-  cb.className = "editor-steal-card-enabled";
-  cb.checked = !!value;
-  const label = document.createElement("label");
-  label.textContent = "Enable steal card";
-  label.style.fontSize = ".8rem";
-  row.append(cb, label);
+  const sel = document.createElement("select");
+  sel.className = "editor-steal-card-select board-form-input";
+  sel.style.cssText = "width:auto;min-width:120px;font-size:.8rem;";
+  const options = [
+    { value: "", label: "— disabled —" },
+    { value: "innovation", label: "🧠 Innovation (IP Theft)" },
+    { value: "platform", label: "🏗️ Platform (Hostile Takeover)" },
+  ];
+  for (const opt of options) {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.label;
+    if ((value || "") === opt.value) o.selected = true;
+    sel.appendChild(o);
+  }
+  row.appendChild(sel);
   container.appendChild(row);
 
   return container;
@@ -4851,6 +5508,345 @@ function buildPoachEmployeesField(value) {
   priceInp.value = rule.price ?? 0;
 
   detailsDiv.append(maxLbl, maxInp, priceLbl, priceInp);
+  container.appendChild(detailsDiv);
+
+  function syncVisibility() {
+    detailsDiv.style.display = enableCb.checked ? "" : "none";
+  }
+  enableCb.addEventListener("change", syncVisibility);
+  syncVisibility();
+
+  return container;
+}
+
+// ── Targeted leverage field ─────────────────────────────────────
+function buildTargetedLeverageField(value) {
+  const tl = value || {};
+  const actions = tl.actions || [];
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.targetedLeverageKey = "targeted_leverage";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "targeted leverage action";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.className = "editor-field-hint";
+  hint.textContent = "Target opponents based on cards they have NOT played, then apply actions (steal money, steal/deactivate/delete cards, fee per type).";
+  container.appendChild(hint);
+
+  const enableRow = document.createElement("div");
+  enableRow.style.cssText = "display:flex;align-items:center;gap:.5rem;margin-top:.4rem;";
+  const enableCb = document.createElement("input");
+  enableCb.type = "checkbox";
+  enableCb.className = "editor-tl-enabled";
+  enableCb.checked = !!(tl.actions && tl.actions.length);
+  const enableLabel = document.createElement("label");
+  enableLabel.textContent = "Enable targeted leverage";
+  enableLabel.style.fontSize = ".8rem";
+  enableRow.append(enableCb, enableLabel);
+  container.appendChild(enableRow);
+
+  const detailsDiv = document.createElement("div");
+  detailsDiv.className = "editor-tl-details";
+  detailsDiv.style.cssText = "margin-top:.6rem;display:flex;flex-direction:column;gap:.6rem;";
+
+  // -- Vulnerability condition --
+  const condSection = document.createElement("div");
+  condSection.style.cssText = "border:1px solid #444;border-radius:6px;padding:.5rem;";
+  condSection.innerHTML = `<div style="font-weight:600;font-size:.8rem;margin-bottom:.4rem;">Vulnerability Condition</div>`;
+
+  const noCondRow = document.createElement("div");
+  noCondRow.style.cssText = "display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;";
+  const noCondCb = document.createElement("input");
+  noCondCb.type = "checkbox";
+  noCondCb.className = "editor-tl-no-condition";
+  noCondCb.checked = !!tl.no_condition;
+  const noCondLbl = document.createElement("label");
+  noCondLbl.style.fontSize = ".8rem";
+  noCondLbl.textContent = "No condition (target all opponents)";
+  noCondRow.append(noCondCb, noCondLbl);
+  condSection.appendChild(noCondRow);
+
+  const condFields = document.createElement("div");
+  condFields.className = "editor-tl-cond-fields";
+  condFields.style.cssText = "display:flex;gap:1rem;flex-wrap:wrap;align-items:center;";
+
+  const vtypeRow = document.createElement("div");
+  vtypeRow.style.cssText = "display:flex;align-items:center;gap:.3rem;";
+  vtypeRow.innerHTML = `<span style="font-size:.75rem;">Opp. must NOT have played type:</span>`;
+  const vtypeSel = document.createElement("select");
+  vtypeSel.className = "editor-tl-vuln-type board-form-input";
+  vtypeSel.style.cssText = "min-width:140px;font-size:.78rem;";
+  const vtypeNone = document.createElement("option");
+  vtypeNone.value = "";
+  vtypeNone.textContent = "— none —";
+  vtypeSel.appendChild(vtypeNone);
+  for (const t of Object.keys(CARD_SUBTYPE_EMOJIS)) {
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = `${CARD_SUBTYPE_EMOJIS[t]} ${t}`;
+    if ((tl.vulnerability_type || "") === t) o.selected = true;
+    vtypeSel.appendChild(o);
+  }
+  for (const t of ["innovation", "platform", "leverage", "regulation"]) {
+    if (vtypeSel.querySelector(`option[value="${t}"]`)) continue;
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = `${CARD_DECK_EMOJIS[t] || ""} ${t}`;
+    if ((tl.vulnerability_type || "") === t) o.selected = true;
+    vtypeSel.appendChild(o);
+  }
+  vtypeRow.appendChild(vtypeSel);
+  condFields.appendChild(vtypeRow);
+
+  const vidRow = document.createElement("div");
+  vidRow.style.cssText = "display:flex;align-items:center;gap:.3rem;";
+  vidRow.innerHTML = `<span style="font-size:.75rem;">OR must NOT have played card ID:</span>`;
+  const vidInp = document.createElement("input");
+  vidInp.type = "number";
+  vidInp.className = "editor-tl-vuln-card-id board-form-input";
+  vidInp.style.cssText = "width:70px;font-size:.78rem;";
+  vidInp.value = tl.vulnerability_card_id ?? "";
+  vidInp.placeholder = "#ID";
+  vidRow.appendChild(vidInp);
+  condFields.appendChild(vidRow);
+
+  condSection.appendChild(condFields);
+  detailsDiv.appendChild(condSection);
+
+  function syncCondFields() {
+    condFields.style.display = noCondCb.checked ? "none" : "";
+  }
+  noCondCb.addEventListener("change", syncCondFields);
+  syncCondFields();
+
+  // -- Target card condition (which cards can be targeted for deactivate/delete/steal) --
+  const targetSection = document.createElement("div");
+  targetSection.style.cssText = "border:1px solid #444;border-radius:6px;padding:.5rem;";
+  targetSection.innerHTML = `<div style="font-weight:600;font-size:.8rem;margin-bottom:.2rem;">Target Card Condition</div>
+    <div style="font-size:.6rem;opacity:.55;margin-bottom:.4rem;">Which cards can be targeted for deactivate/delete/steal. If all empty, any card is eligible. Conditions are OR.</div>`;
+
+  const targetFields = document.createElement("div");
+  targetFields.style.cssText = "display:flex;gap:1rem;flex-wrap:wrap;align-items:center;";
+
+  // target_card_type
+  const tctRow = document.createElement("div");
+  tctRow.style.cssText = "display:flex;align-items:center;gap:.3rem;";
+  tctRow.innerHTML = `<span style="font-size:.75rem;">Card type:</span>`;
+  const tctSel = document.createElement("select");
+  tctSel.className = "editor-tl-target-card-type board-form-input";
+  tctSel.style.cssText = "min-width:140px;font-size:.78rem;";
+  const tctNone = document.createElement("option");
+  tctNone.value = "";
+  tctNone.textContent = "— none —";
+  tctSel.appendChild(tctNone);
+  for (const t of Object.keys(CARD_SUBTYPE_EMOJIS)) {
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = `${CARD_SUBTYPE_EMOJIS[t]} ${t}`;
+    if ((tl.target_card_type || "") === t) o.selected = true;
+    tctSel.appendChild(o);
+  }
+  for (const t of ["innovation", "platform", "leverage"]) {
+    if (tctSel.querySelector(`option[value="${t}"]`)) continue;
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = `${CARD_DECK_EMOJIS[t] || ""} ${t}`;
+    if ((tl.target_card_type || "") === t) o.selected = true;
+    tctSel.appendChild(o);
+  }
+  tctRow.appendChild(tctSel);
+  targetFields.appendChild(tctRow);
+
+  // target_card_id
+  const tciRow = document.createElement("div");
+  tciRow.style.cssText = "display:flex;align-items:center;gap:.3rem;";
+  tciRow.innerHTML = `<span style="font-size:.75rem;">OR card ID:</span>`;
+  const tciInp = document.createElement("input");
+  tciInp.type = "number";
+  tciInp.className = "editor-tl-target-card-id board-form-input";
+  tciInp.style.cssText = "width:70px;font-size:.78rem;";
+  tciInp.value = tl.target_card_id ?? "";
+  tciInp.placeholder = "#ID";
+  tciRow.appendChild(tciInp);
+  targetFields.appendChild(tciRow);
+
+  // target_fee_card_id
+  const tfRow = document.createElement("div");
+  tfRow.style.cssText = "display:flex;align-items:center;gap:.3rem;";
+  tfRow.innerHTML = `<span style="font-size:.75rem;">OR pays fee to card ID:</span>`;
+  const tfInp = document.createElement("input");
+  tfInp.type = "number";
+  tfInp.className = "editor-tl-target-fee-card-id board-form-input";
+  tfInp.style.cssText = "width:70px;font-size:.78rem;";
+  tfInp.value = tl.target_fee_card_id ?? "";
+  tfInp.placeholder = "#ID";
+  tfRow.appendChild(tfInp);
+  targetFields.appendChild(tfRow);
+
+  targetSection.appendChild(targetFields);
+  detailsDiv.appendChild(targetSection);
+
+  // -- Actions list --
+  const actionsSection = document.createElement("div");
+  actionsSection.style.cssText = "border:1px solid #444;border-radius:6px;padding:.5rem;";
+  actionsSection.innerHTML = `<div style="font-weight:600;font-size:.8rem;margin-bottom:.4rem;">Actions</div>`;
+
+  const actionsContainer = document.createElement("div");
+  actionsContainer.className = "editor-tl-actions";
+  actionsContainer.style.cssText = "display:flex;flex-direction:column;gap:.5rem;";
+
+  const ACTION_TYPES = [
+    { value: "steal_money", label: "💰 Steal money" },
+    { value: "steal_users", label: "👥 Steal users" },
+    { value: "steal_data", label: "📊 Steal data" },
+    { value: "steal_cards", label: "🃏 Steal cards from hand" },
+    { value: "deactivate_cards", label: "⏸️ Deactivate played cards" },
+    { value: "delete_cards", label: "🗑️ Delete played cards" },
+    { value: "fee_per_type", label: "💸 Fee per card type played" },
+  ];
+
+  function buildActionEntry(action) {
+    const act = action || { type: "steal_money" };
+    const entry = document.createElement("div");
+    entry.className = "editor-tl-action-entry";
+    entry.style.cssText = "border:1px solid #555;border-radius:4px;padding:.4rem;position:relative;";
+
+    const topRow = document.createElement("div");
+    topRow.style.cssText = "display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;";
+
+    const typeSel = document.createElement("select");
+    typeSel.className = "editor-tl-action-type board-form-input";
+    typeSel.style.cssText = "font-size:.78rem;min-width:180px;";
+    for (const at of ACTION_TYPES) {
+      const o = document.createElement("option");
+      o.value = at.value;
+      o.textContent = at.label;
+      if (act.type === at.value) o.selected = true;
+      typeSel.appendChild(o);
+    }
+    topRow.appendChild(typeSel);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "btn btn-sm";
+    removeBtn.style.cssText = "font-size:.7rem;padding:2px 6px;margin-left:auto;";
+    removeBtn.textContent = "✕ Remove";
+    removeBtn.addEventListener("click", () => entry.remove());
+    topRow.appendChild(removeBtn);
+    entry.appendChild(topRow);
+
+    const paramsDiv = document.createElement("div");
+    paramsDiv.className = "editor-tl-action-params";
+    paramsDiv.style.cssText = "display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-top:.3rem;";
+    entry.appendChild(paramsDiv);
+
+    function renderParams() {
+      paramsDiv.innerHTML = "";
+      const t = typeSel.value;
+
+      if (t === "steal_money" || t === "steal_users" || t === "steal_data") {
+        const lbl = t === "steal_users" ? "Users:" : t === "steal_data" ? "Data (PB):" : "Amount:";
+        paramsDiv.innerHTML = `<span style="font-size:.75rem;">${lbl}</span>`;
+        const inp = document.createElement("input");
+        inp.type = "number";
+        inp.className = "editor-tl-amount board-form-input";
+        inp.style.cssText = "width:70px;font-size:.78rem;";
+        inp.min = "0";
+        inp.value = act.type === t ? (act.amount ?? 0) : 0;
+        paramsDiv.appendChild(inp);
+      } else if (t === "steal_cards" || t === "deactivate_cards" || t === "delete_cards") {
+        paramsDiv.innerHTML = `<span style="font-size:.75rem;">Count:</span>`;
+        const cntInp = document.createElement("input");
+        cntInp.type = "number";
+        cntInp.className = "editor-tl-count board-form-input";
+        cntInp.style.cssText = "width:60px;font-size:.78rem;";
+        cntInp.min = "1";
+        cntInp.value = act.type === t ? (act.count ?? 1) : 1;
+        paramsDiv.appendChild(cntInp);
+
+        const chSpan = document.createElement("span");
+        chSpan.style.fontSize = ".75rem";
+        chSpan.textContent = "Chosen by:";
+        paramsDiv.appendChild(chSpan);
+        const chSel = document.createElement("select");
+        chSel.className = "editor-tl-chooser board-form-input";
+        chSel.style.cssText = "min-width:100px;font-size:.78rem;";
+        for (const cv of [
+          { value: "attacker", label: "Attacker" },
+          { value: "victim", label: "Victim" },
+        ]) {
+          const o = document.createElement("option");
+          o.value = cv.value;
+          o.textContent = cv.label;
+          if (act.type === t && (act.chooser || "attacker") === cv.value) o.selected = true;
+          chSel.appendChild(o);
+        }
+        paramsDiv.appendChild(chSel);
+
+        const hint = document.createElement("span");
+        hint.style.cssText = "font-size:.6rem;opacity:.5;";
+        hint.textContent = "(card eligibility set in Target Card Condition above)";
+        paramsDiv.appendChild(hint);
+      } else if (t === "fee_per_type") {
+        const ctSpan = document.createElement("span");
+        ctSpan.style.fontSize = ".75rem";
+        ctSpan.textContent = "Card type:";
+        paramsDiv.appendChild(ctSpan);
+        const ctSel = document.createElement("select");
+        ctSel.className = "editor-tl-fee-card-type board-form-input";
+        ctSel.style.cssText = "min-width:130px;font-size:.78rem;";
+        for (const ct of Object.keys(CARD_SUBTYPE_EMOJIS)) {
+          const o = document.createElement("option");
+          o.value = ct;
+          o.textContent = `${CARD_SUBTYPE_EMOJIS[ct]} ${ct}`;
+          if (act.type === t && (act.card_type || "") === ct) o.selected = true;
+          ctSel.appendChild(o);
+        }
+        paramsDiv.appendChild(ctSel);
+
+        const amtSpan = document.createElement("span");
+        amtSpan.style.fontSize = ".75rem";
+        amtSpan.textContent = "Amount per card:";
+        paramsDiv.appendChild(amtSpan);
+        const amtInp = document.createElement("input");
+        amtInp.type = "number";
+        amtInp.className = "editor-tl-amount board-form-input";
+        amtInp.style.cssText = "width:70px;font-size:.78rem;";
+        amtInp.min = "0";
+        amtInp.value = act.type === t ? (act.amount ?? 0) : 0;
+        paramsDiv.appendChild(amtInp);
+      }
+    }
+
+    typeSel.addEventListener("change", () => {
+      act.type = typeSel.value;
+      act.amount = 0; act.count = 1; act.card_type = null; act.chooser = "attacker";
+      renderParams();
+    });
+    renderParams();
+    return entry;
+  }
+
+  for (const a of actions) {
+    actionsContainer.appendChild(buildActionEntry(a));
+  }
+  actionsSection.appendChild(actionsContainer);
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "btn btn-sm";
+  addBtn.style.cssText = "margin-top:.4rem;font-size:.75rem;";
+  addBtn.textContent = "+ Add action";
+  addBtn.addEventListener("click", () => {
+    actionsContainer.appendChild(buildActionEntry({ type: "steal_money", amount: 0 }));
+  });
+  actionsSection.appendChild(addBtn);
+
+  detailsDiv.appendChild(actionsSection);
   container.appendChild(detailsDiv);
 
   function syncVisibility() {
@@ -4958,7 +5954,7 @@ function buildFeeForGreenField(value) {
   hint.textContent = "Extra cost a player can pay when playing this card to turn it green (overrides default tag). Leave empty for no upgrade option.";
   container.appendChild(hint);
 
-  const RESOURCE_KEYS = ["money", "engineers", "suits", "servers", "ads", "reputation"];
+  const RESOURCE_KEYS = ["money", "engineers", "suits", "servers", "ads", "reputation", "data"];
   const dictEl = document.createElement("div");
   dictEl.className = "editor-dict-container fee-for-green-dict";
   dictEl.style.marginTop = ".3rem";
@@ -5187,7 +6183,7 @@ function buildProduciblesField(producibles) {
     entry.appendChild(immDict);
 
     // Production bonuses on craft
-    const PROD_KEYS = ["HR", "data_centers", "ad_campaigns", "money"];
+    const PROD_KEYS = ["HR", "data_centers", "ad_campaigns", "money", "data"];
     entry.appendChild(sectionLabel("Production bonus on craft (/yr):"));
     const prodDict = document.createElement("div");
     prodDict.className = "editor-dict-container producible-production-dict";
@@ -5211,6 +6207,97 @@ function buildProduciblesField(producibles) {
   addBtn.addEventListener("click", () => list.appendChild(buildProducibleEntry({})));
   container.appendChild(addBtn);
 
+  return container;
+}
+
+// ── Resource conversion field builder ─────────────────────────
+function buildResourceConversionField(conv) {
+  const RESOURCE_KEYS = ["money", "engineers", "suits", "servers", "ads", "reputation", "users", "data"];
+
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.resourceConversionKey = "resource_conversion";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "resource conversion (once per year)";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:.6rem;opacity:.6;margin-bottom:.3rem;";
+  hint.textContent = "A clickable button on the played card: spend a resource, get another. Usable once per year.";
+  container.appendChild(hint);
+
+  const inner = document.createElement("div");
+  inner.className = "editor-conversion-inner";
+  container.appendChild(inner);
+
+  function render(val) {
+    inner.innerHTML = "";
+    if (!val) {
+      const addBtn = document.createElement("button");
+      addBtn.className = "btn btn-sm editor-add-btn";
+      addBtn.textContent = "+ Add conversion";
+      addBtn.addEventListener("click", () => render({ name: "", cost: {}, gain: {} }));
+      inner.appendChild(addBtn);
+      return;
+    }
+
+    const entry = document.createElement("div");
+    entry.style.cssText = "border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:.5rem .6rem;margin-top:.4rem;background:rgba(0,0,0,.15);";
+
+    const nameRow = document.createElement("div");
+    nameRow.style.cssText = "display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;";
+    const nameLabel = document.createElement("span");
+    nameLabel.style.cssText = "font-size:.65rem;opacity:.7;";
+    nameLabel.textContent = "Button label:";
+    const nameInp = document.createElement("input");
+    nameInp.type = "text";
+    nameInp.className = "editor-input conv-name";
+    nameInp.placeholder = "e.g. Refine Data";
+    nameInp.style.cssText = "flex:1;";
+    if (val.name) nameInp.value = val.name;
+    nameRow.append(nameLabel, nameInp);
+    entry.appendChild(nameRow);
+
+    function sectionLabel(text) {
+      const l = document.createElement("div");
+      l.style.cssText = "font-size:.6rem;opacity:.55;margin-top:.4rem;margin-bottom:.15rem;";
+      l.textContent = text;
+      return l;
+    }
+
+    entry.appendChild(sectionLabel("Cost (resources spent):"));
+    const costDict = document.createElement("div");
+    costDict.className = "editor-dict-container conv-cost-dict";
+    Object.entries(val.cost || {}).forEach(([k, v]) => costDict.appendChild(buildDictRow(k, v, RESOURCE_KEYS)));
+    const addCostBtn = document.createElement("button");
+    addCostBtn.className = "btn btn-sm editor-add-btn";
+    addCostBtn.textContent = "+ Add cost resource";
+    addCostBtn.addEventListener("click", () => costDict.appendChild(buildDictRow("", 0, RESOURCE_KEYS)));
+    entry.append(costDict, addCostBtn);
+
+    entry.appendChild(sectionLabel("Gain (resources received):"));
+    const gainDict = document.createElement("div");
+    gainDict.className = "editor-dict-container conv-gain-dict";
+    Object.entries(val.gain || {}).forEach(([k, v]) => gainDict.appendChild(buildDictRow(k, v, RESOURCE_KEYS)));
+    const addGainBtn = document.createElement("button");
+    addGainBtn.className = "btn btn-sm editor-add-btn";
+    addGainBtn.textContent = "+ Add gain resource";
+    addGainBtn.addEventListener("click", () => gainDict.appendChild(buildDictRow("", 0, RESOURCE_KEYS)));
+    entry.append(gainDict, addGainBtn);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "btn btn-sm editor-remove-btn";
+    removeBtn.textContent = "× Remove conversion";
+    removeBtn.style.marginTop = ".5rem";
+    removeBtn.addEventListener("click", () => render(null));
+    entry.appendChild(removeBtn);
+
+    inner.appendChild(entry);
+  }
+
+  render(conv || null);
   return container;
 }
 
@@ -5406,15 +6493,172 @@ function buildAdjacentPlacementFeeTargetTypesField(nextToList) {
   return container;
 }
 
+// ── Combined adjacent placement economics field ───────────────
+function buildAdjacentPlacementEconomicsField(card) {
+  const container = document.createElement("div");
+  container.className = "editor-boosts-field";
+  container.dataset.adjacentPlacementEconomicsKey = "adjacent_placement_economics";
+
+  const header = document.createElement("div");
+  header.className = "editor-field-header";
+  header.textContent = "adjacent placement fee / bonus";
+  container.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-bottom:.4rem";
+  hint.textContent = "Configure both sides of adjacency: pay fee when placed next to opponent target types, and grant bonus when placed next to target types.";
+  container.appendChild(hint);
+
+  const typeOptions = (typeof BUILDABLE_TILE_TYPE_OPTIONS !== "undefined" && Array.isArray(BUILDABLE_TILE_TYPE_OPTIONS))
+    ? BUILDABLE_TILE_TYPE_OPTIONS.map(([val]) => val).filter(Boolean)
+    : (FIELD_OPTIONS.build || []).filter(Boolean);
+
+  const mkTypeList = (rowClass, initialVals, addLabel) => {
+    const wrap = document.createElement("div");
+    wrap.className = "editor-requirements-list";
+
+    function addRow(val) {
+      const row = document.createElement("div");
+      row.className = "editor-req-row editor-dict-row";
+      const sel = document.createElement("select");
+      sel.className = rowClass;
+      sel.style.flex = "1";
+      const noneOpt = document.createElement("option");
+      noneOpt.value = "";
+      noneOpt.textContent = "(choose build type)";
+      if (!val) noneOpt.selected = true;
+      sel.appendChild(noneOpt);
+      typeOptions.forEach(t => {
+        const o = document.createElement("option");
+        o.value = t;
+        const emoji = (typeof TILE_LABELS !== "undefined" && TILE_LABELS[t]) ? TILE_LABELS[t] : "▫";
+        o.textContent = `${emoji} ${t}`;
+        if (t === val) o.selected = true;
+        sel.appendChild(o);
+      });
+      const rmBtn = document.createElement("button");
+      rmBtn.className = "btn btn-sm editor-remove-btn";
+      rmBtn.textContent = "×";
+      rmBtn.addEventListener("click", () => row.remove());
+      row.appendChild(sel);
+      row.appendChild(rmBtn);
+      wrap.appendChild(row);
+    }
+
+    (initialVals || []).forEach(v => addRow(v));
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn btn-sm";
+    addBtn.textContent = addLabel;
+    addBtn.style.marginTop = ".4rem";
+    addBtn.addEventListener("click", () => addRow(""));
+    wrap.appendChild(addBtn);
+    return wrap;
+  };
+
+  // Fee amount
+  const feeRow = document.createElement("div");
+  feeRow.className = "editor-dict-row";
+  feeRow.style.marginTop = ".35rem";
+  const feeLbl = document.createElement("span");
+  feeLbl.className = "editor-boost-label";
+  feeLbl.textContent = "adjacent_placement_fee:";
+  const feeInp = document.createElement("input");
+  feeInp.type = "number";
+  feeInp.className = "editor-adj-fee-amount";
+  feeInp.value = Number(card?.adjacent_placement_fee || 0);
+  feeRow.appendChild(feeLbl);
+  feeRow.appendChild(makeNumSpinner(feeInp, { min: 0 }));
+  container.appendChild(feeRow);
+
+  const feeTargetsLbl = document.createElement("div");
+  feeTargetsLbl.className = "editor-field-hint";
+  feeTargetsLbl.style.marginTop = ".35rem";
+  feeTargetsLbl.textContent = "adjacent_placement_fee_target_types:";
+  container.appendChild(feeTargetsLbl);
+  const feeTargetsList = mkTypeList(
+    "editor-adj-fee-target-type",
+    card?.adjacent_placement_fee_target_types || [],
+    "+ Add Fee Target Type"
+  );
+  container.appendChild(feeTargetsList);
+
+  // Bonus section (stored into bonuses_by_placing_next_to_building)
+  const bonusHdr = document.createElement("div");
+  bonusHdr.className = "editor-field-hint";
+  bonusHdr.style.cssText = "margin-top:.5rem;font-weight:700;";
+  bonusHdr.textContent = "adjacent_placement_bonus:";
+  container.appendChild(bonusHdr);
+
+  const existingBonusList = card?.bonuses_by_placing_next_to_building || [];
+  let existingBonusTargets = [];
+  let existingBonusImmediate = {};
+  let existingBonusProduction = {};
+  for (const entry of existingBonusList) {
+    existingBonusTargets.push(..._parseBonusBuildTypeKeys(entry));
+    for (const [k, v] of Object.entries(entry?.immediate || {})) {
+      existingBonusImmediate[k] = (existingBonusImmediate[k] || 0) + (Number(v) || 0);
+    }
+    for (const [k, v] of Object.entries(entry?.production || {})) {
+      existingBonusProduction[k] = (existingBonusProduction[k] || 0) + (Number(v) || 0);
+    }
+  }
+  existingBonusTargets = [...new Set(existingBonusTargets)];
+
+  const bonusTargetsLbl = document.createElement("div");
+  bonusTargetsLbl.className = "editor-field-hint";
+  bonusTargetsLbl.textContent = "adjacent_placement_bonus_target_types:";
+  container.appendChild(bonusTargetsLbl);
+  const bonusTargetsList = mkTypeList(
+    "editor-adj-bonus-target-type",
+    existingBonusTargets,
+    "+ Add Bonus Target Type"
+  );
+  container.appendChild(bonusTargetsList);
+
+  const bonusImmLbl = document.createElement("div");
+  bonusImmLbl.className = "editor-field-hint";
+  bonusImmLbl.textContent = "Bonus immediate resources:";
+  container.appendChild(bonusImmLbl);
+  const bonusResKeys = ["money", "engineers", "suits", "servers", "ads", "reputation", "users", "data"];
+  const bonusImm = document.createElement("div");
+  bonusImm.className = "editor-dict-container editor-adj-bonus-immediate";
+  Object.entries(existingBonusImmediate).forEach(([k, v]) => bonusImm.appendChild(buildDictRow(k, v, bonusResKeys)));
+  const addImmBtn = document.createElement("button");
+  addImmBtn.className = "btn btn-sm editor-add-btn";
+  addImmBtn.textContent = "+ Add bonus resource";
+  addImmBtn.style.marginTop = ".2rem";
+  addImmBtn.addEventListener("click", () => bonusImm.insertBefore(buildDictRow(bonusResKeys[0], 0, bonusResKeys), addImmBtn));
+  bonusImm.appendChild(addImmBtn);
+  container.appendChild(bonusImm);
+
+  const bonusProdLbl = document.createElement("div");
+  bonusProdLbl.className = "editor-field-hint";
+  bonusProdLbl.textContent = "Bonus production (/yr):";
+  container.appendChild(bonusProdLbl);
+  const prodKeys = ["HR", "data_centers", "ad_campaigns", "money", "data"];
+  const bonusProd = document.createElement("div");
+  bonusProd.className = "editor-dict-container editor-adj-bonus-production";
+  Object.entries(existingBonusProduction).forEach(([k, v]) => bonusProd.appendChild(buildDictRow(k, v, prodKeys)));
+  const addProdBtn = document.createElement("button");
+  addProdBtn.className = "btn btn-sm editor-add-btn";
+  addProdBtn.textContent = "+ Add bonus production";
+  addProdBtn.style.marginTop = ".2rem";
+  addProdBtn.addEventListener("click", () => bonusProd.insertBefore(buildDictRow(prodKeys[0], 0, prodKeys), addProdBtn));
+  bonusProd.appendChild(addProdBtn);
+  container.appendChild(bonusProd);
+
+  return container;
+}
+
 // ── Card placement-adjacent bonuses field ─────────────────────
 function buildBonusesByPlacingNextToBuildingField(savedRaw) {
   const section = _makeConditionalBonusSection(
-    "bonuses by placing next to building",
+    "adjacent placement bonus target types",
     savedRaw
   );
   const hint = document.createElement("div");
   hint.style.cssText = "font-size:.72rem;color:var(--text-dim);margin-bottom:.4rem";
-  hint.textContent = "One-time bonus when this tile is placed next to matching building types.";
+  hint.textContent = "One-time bonus when this tile is placed next to matching building types (e.g. Data Center next to any Power Plant).";
   section.insertBefore(hint, section.querySelector(".board-bonus-conditions-container"));
   section.dataset.bonusesByPlacingNextToBuildingKey = "bonuses_by_placing_next_to_building";
   return section;
@@ -5656,7 +6900,7 @@ function buildTiersField(tiers) {
   container.appendChild(list);
 
   const TIER_RESOURCE_KEYS = ["users", "money", "engineers", "suits", "servers", "ads", "reputation", "data"];
-  const TIER_PRODUCTION_KEYS = ["money", "HR", "data_centers", "ad_campaigns"];
+  const TIER_PRODUCTION_KEYS = ["money", "HR", "data_centers", "ad_campaigns", "data"];
 
   function _detectExisting(tierData) {
     let resKey = "users", resVal = 0, prodKey = "money", prodVal = 0;
@@ -5889,8 +7133,18 @@ function buildBoostEntry(boost) {
   tcInput.className = "boost-target-count";
   tcInput.value = boost.target_count || 0;
   tcInput.placeholder = "0 = unlimited";
+  const tcUnlimited = document.createElement("input");
+  tcUnlimited.type = "checkbox";
+  tcUnlimited.className = "boost-target-unlimited";
+  tcUnlimited.checked = !!boost.target_count_unlimited || Number(boost.target_count || 0) <= 0;
+  const tcUnlimitedLbl = document.createElement("label");
+  tcUnlimitedLbl.style.cssText = "display:inline-flex;align-items:center;gap:.25rem;font-size:.75rem;opacity:.9;";
+  tcUnlimitedLbl.appendChild(tcUnlimited);
+  tcUnlimitedLbl.appendChild(document.createTextNode("Unlimited"));
+  if (tcUnlimited.checked) tcInput.value = 0;
   tcRow.appendChild(tcLabel);
   tcRow.appendChild(makeNumSpinner(tcInput, { min: 0 }));
+  tcRow.appendChild(tcUnlimitedLbl);
   entry.appendChild(tcRow);
 
   // ── Mutual exclusivity: target_id disables target_type + target_count ──
@@ -5900,17 +7154,21 @@ function buildBoostEntry(boost) {
       cb.disabled = usingId;
       if (usingId) cb.checked = false;
     });
-    tcInput.disabled = usingId;
-    if (usingId) tcInput.value = 0;
+    const unlimited = tcUnlimited.checked;
+    tcInput.disabled = usingId || unlimited;
+    if (usingId || unlimited) tcInput.value = 0;
+    tcUnlimited.disabled = usingId;
+    tcUnlimitedLbl.style.opacity = usingId ? "0.55" : "1";
     ttRow.style.opacity = usingId ? "0.35" : "1";
     tcRow.style.opacity = usingId ? "0.35" : "1";
   }
   tidInput.addEventListener("input", syncTypeCountState);
+  tcUnlimited.addEventListener("change", syncTypeCountState);
   syncTypeCountState(); // apply on initial render
 
   // ── bonus: split into resources and production ──
   const BOOST_RESOURCE_KEYS = ["money", "engineers", "suits", "servers", "ads", "reputation", "users", "data"];
-  const BOOST_PRODUCTION_KEYS = ["HR", "data_centers", "ad_campaigns", "money"];
+  const BOOST_PRODUCTION_KEYS = ["HR", "data_centers", "ad_campaigns", "money", "data"];
 
   const bonusContainer = document.createElement("div");
   bonusContainer.className = "boost-bonus-rows";
@@ -5961,6 +7219,7 @@ function collectFormData(fieldsEl, originalCard) {
     const el = row.querySelector("input, textarea, select");
     if (!el) return;
     const key = el.dataset.fieldKey;
+    if (!key || key === "undefined") return;
     let val = el.value;
     if (el.tagName === "SELECT") {
       val = val === "" ? null : val;
@@ -5999,9 +7258,26 @@ function collectFormData(fieldsEl, originalCard) {
 
   const reqContainer = fieldsEl.querySelector("[data-requirements-key='requirements']");
   if (reqContainer) {
-    const reqs = [...reqContainer.querySelectorAll(".editor-req-type")]
-      .map(sel => sel.value)
-      .filter(v => v && v !== "undefined" && v !== "null");
+    const singleReqs = [...reqContainer.querySelectorAll(".editor-req-row")]
+      .map(row => {
+        const t = row.querySelector(".editor-req-type")?.value || "";
+        const c = Number(row.querySelector(".editor-req-count")?.value || 1);
+        if (!t || t === "undefined" || t === "null") return null;
+        const count = Math.max(1, c || 1);
+        return count > 1 ? { type: t, count } : t;
+      })
+      .filter(Boolean);
+    const anyReqs = [...reqContainer.querySelectorAll(".editor-req-any-row")]
+      .map(row => {
+        const count = Math.max(1, Number(row.querySelector(".editor-req-any-count")?.value || 1));
+        const types = [...row.querySelectorAll(".editor-req-any-type-cb:checked")]
+          .map(cb => cb.value)
+          .filter(v => v && v !== "undefined" && v !== "null");
+        if (!types.length) return null;
+        return { types, count };
+      })
+      .filter(Boolean);
+    const reqs = [...singleReqs, ...anyReqs];
     data.requirements = reqs.length > 0 ? reqs : null;
 
     const cardIds = [...reqContainer.querySelectorAll(".editor-req-card-id")]
@@ -6044,7 +7320,8 @@ function collectFormData(fieldsEl, originalCard) {
 
   const stealContainer = fieldsEl.querySelector("[data-steal-card-key='steal_card']");
   if (stealContainer) {
-    data.steal_card = stealContainer.querySelector(".editor-steal-card-enabled")?.checked || false;
+    const sel = stealContainer.querySelector(".editor-steal-card-select");
+    data.steal_card = sel?.value || null;
   }
 
   const poachContainer = fieldsEl.querySelector("[data-poach-employees-key='poach_employees']");
@@ -6057,6 +7334,49 @@ function collectFormData(fieldsEl, originalCard) {
       };
     } else {
       data.poach_employees = null;
+    }
+  }
+
+  const tlContainer = fieldsEl.querySelector("[data-targeted-leverage-key='targeted_leverage']");
+  if (tlContainer) {
+    const enabled = tlContainer.querySelector(".editor-tl-enabled")?.checked;
+    if (enabled) {
+      const noCond = tlContainer.querySelector(".editor-tl-no-condition")?.checked;
+      const vulnType = tlContainer.querySelector(".editor-tl-vuln-type")?.value || null;
+      const vulnIdRaw = tlContainer.querySelector(".editor-tl-vuln-card-id")?.value?.trim();
+      const vulnId = vulnIdRaw ? parseInt(vulnIdRaw, 10) : null;
+      const actions = [];
+      tlContainer.querySelectorAll(".editor-tl-action-entry").forEach(entry => {
+        const type = entry.querySelector(".editor-tl-action-type")?.value;
+        if (!type) return;
+        const act = { type };
+        if (type === "steal_money" || type === "steal_users" || type === "steal_data") {
+          act.amount = parseInt(entry.querySelector(".editor-tl-amount")?.value) || 0;
+        } else if (type === "steal_cards" || type === "deactivate_cards" || type === "delete_cards") {
+          act.count = parseInt(entry.querySelector(".editor-tl-count")?.value) || 1;
+          act.chooser = entry.querySelector(".editor-tl-chooser")?.value || "attacker";
+        } else if (type === "fee_per_type") {
+          act.card_type = entry.querySelector(".editor-tl-fee-card-type")?.value || null;
+          act.amount = parseInt(entry.querySelector(".editor-tl-amount")?.value) || 0;
+        }
+        actions.push(act);
+      });
+      const tctVal = tlContainer.querySelector(".editor-tl-target-card-type")?.value || null;
+      const tciRaw = tlContainer.querySelector(".editor-tl-target-card-id")?.value?.trim();
+      const tciVal = tciRaw ? parseInt(tciRaw, 10) : null;
+      const tfRaw = tlContainer.querySelector(".editor-tl-target-fee-card-id")?.value?.trim();
+      const tfVal = tfRaw ? parseInt(tfRaw, 10) : null;
+      data.targeted_leverage = {
+        no_condition: !!noCond,
+        vulnerability_type: noCond ? null : vulnType,
+        vulnerability_card_id: noCond ? null : (isNaN(vulnId) ? null : vulnId),
+        target_card_type: tctVal,
+        target_card_id: isNaN(tciVal) ? null : tciVal,
+        target_fee_card_id: isNaN(tfVal) ? null : tfVal,
+        actions,
+      };
+    } else {
+      data.targeted_leverage = null;
     }
   }
 
@@ -6109,6 +7429,33 @@ function collectFormData(fieldsEl, originalCard) {
     data.producibles = items;
   }
 
+  const convContainer = fieldsEl.querySelector("[data-resource-conversion-key='resource_conversion']");
+  if (convContainer) {
+    const inner = convContainer.querySelector(".editor-conversion-inner");
+    const nameInp = inner?.querySelector(".conv-name");
+    if (nameInp) {
+      const cost = {};
+      inner.querySelectorAll(".conv-cost-dict .editor-dict-row").forEach(row => {
+        const k = row.querySelector(".editor-dict-key")?.value.trim();
+        const v = Number(row.querySelector(".editor-dict-val")?.value) || 0;
+        if (k) cost[k] = v;
+      });
+      const gain = {};
+      inner.querySelectorAll(".conv-gain-dict .editor-dict-row").forEach(row => {
+        const k = row.querySelector(".editor-dict-key")?.value.trim();
+        const v = Number(row.querySelector(".editor-dict-val")?.value) || 0;
+        if (k) gain[k] = v;
+      });
+      data.resource_conversion = {
+        name: nameInp.value.trim() || "",
+        cost: Object.keys(cost).length ? cost : {},
+        gain: Object.keys(gain).length ? gain : {},
+      };
+    } else {
+      data.resource_conversion = null;
+    }
+  }
+
   const pollutionContainer = fieldsEl.querySelector("[data-pollution-tag-key='pollution_tag']");
   if (pollutionContainer) {
     const checked = pollutionContainer.querySelector(".editor-pollution-tag-radio:checked");
@@ -6139,6 +7486,44 @@ function collectFormData(fieldsEl, originalCard) {
       .map(sel => sel.value)
       .filter(v => v && v !== "undefined" && v !== "null");
     data.only_playable_on_terrains = terrains.length > 0 ? terrains : null;
+  }
+
+  const adjEco = fieldsEl.querySelector("[data-adjacent-placement-economics-key='adjacent_placement_economics']");
+  if (adjEco) {
+    data.adjacent_placement_fee = Number(adjEco.querySelector(".editor-adj-fee-amount")?.value || 0);
+    const feeTargets = [...adjEco.querySelectorAll(".editor-adj-fee-target-type")]
+      .map(sel => sel.value)
+      .filter(v => v && v !== "undefined" && v !== "null");
+    data.adjacent_placement_fee_target_types = feeTargets.length ? feeTargets : null;
+
+    const bonusTargets = [...adjEco.querySelectorAll(".editor-adj-bonus-target-type")]
+      .map(sel => sel.value)
+      .filter(v => v && v !== "undefined" && v !== "null");
+
+    const bonusImmediate = {};
+    adjEco.querySelectorAll(".editor-adj-bonus-immediate .editor-dict-row").forEach(row => {
+      const k = row.querySelector(".editor-dict-key")?.value.trim();
+      const v = Number(row.querySelector(".editor-dict-val")?.value) || 0;
+      if (k) bonusImmediate[k] = v;
+    });
+    const bonusProduction = {};
+    adjEco.querySelectorAll(".editor-adj-bonus-production .editor-dict-row").forEach(row => {
+      const k = row.querySelector(".editor-dict-key")?.value.trim();
+      const v = Number(row.querySelector(".editor-dict-val")?.value) || 0;
+      if (k) bonusProduction[k] = v;
+    });
+
+    if (bonusTargets.length || Object.keys(bonusImmediate).length || Object.keys(bonusProduction).length) {
+      const entry = {
+        immediate: Object.keys(bonusImmediate).length ? bonusImmediate : {},
+        production: Object.keys(bonusProduction).length ? bonusProduction : {},
+      };
+      if (bonusTargets.length === 1) entry.build_type = bonusTargets[0];
+      else if (bonusTargets.length > 1) entry.build_types = bonusTargets;
+      data.bonuses_by_placing_next_to_building = [entry];
+    } else {
+      data.bonuses_by_placing_next_to_building = null;
+    }
   }
 
   const adjFeeTargetsContainer = fieldsEl.querySelector("[data-adjacent-placement-fee-target-types-key='adjacent_placement_fee_target_types']");
@@ -6198,7 +7583,10 @@ function collectFormData(fieldsEl, originalCard) {
       const targetType = checkedTypes.length === 0 ? null
         : checkedTypes.length === 1 ? checkedTypes[0]
         : checkedTypes;
-      const targetCount = (!tid && targetType) ? (Number(entry.querySelector(".boost-target-count")?.value) || 0) : 0;
+      const unlimitedChecked = !!entry.querySelector(".boost-target-unlimited")?.checked;
+      const targetCount = (!tid && targetType && !unlimitedChecked)
+        ? (Number(entry.querySelector(".boost-target-count")?.value) || 0)
+        : 0;
       const bonus = {};
       const production = {};
       entry.querySelectorAll(".boost-bonus-rows [data-boost-section='production'] .editor-dict-row").forEach(row => {
@@ -6214,6 +7602,7 @@ function collectFormData(fieldsEl, originalCard) {
       if (tid || targetType) {
         const b = { target_id: tid || null, target_type: targetType, bonus };
         if (Object.keys(production).length) b.production = production;
+        if (targetType && unlimitedChecked) b.target_count_unlimited = true;
         if (targetType && targetCount) b.target_count = targetCount;
         boosts.push(b);
       }
@@ -6392,7 +7781,9 @@ function renderTreesView() {
           ...Object.entries(b.production || {}).map(([k,v]) => `${v > 0 ? "+" : ""}${fmtCardVal(k, v)} ${emojiRes(k)}/yr`),
         ];
         const bonusStr = bonusParts.join(" ") || "none";
-        const countStr = b.target_count ? ` (×${b.target_count} max)` : "";
+        const countStr = (b.target_count_unlimited || !b.target_count)
+          ? " (×∞)"
+          : ` (×${b.target_count} max)`;
         tag.textContent = `Boost: ${bonusStr}${countStr}`;
       } else {
         tag.textContent = `Fee: 💰$${b.fee}B`;
@@ -6744,6 +8135,7 @@ function hexToRgba(hex, alpha) {
 }
 
 const TILE_LABELS = {
+  power_plant:               "⚡",
   nuclear_power_plant:       "☢️",
   natural_gas_power_plant:   "🔥",
   coal_power_plant:          "⛏️",
@@ -6768,6 +8160,7 @@ const TILE_LABELS = {
 };
 
 const TILE_FULL_NAMES = {
+  power_plant:               "Any Power Plant",
   nuclear_power_plant:       "Nuclear Power Plant",
   natural_gas_power_plant:   "Natural Gas Power Plant",
   coal_power_plant:          "Coal Power Plant",
@@ -6934,7 +8327,11 @@ function previewPlacementBonuses(tile, tileType) {
     const ptType = pt?.type?.replace(/ /g, "_");
     if (pt && ptType && !seenAdjPlaced.has(ptType)) {
       seenAdjPlaced.add(ptType);
-      for (const entry of _normBonusList(pt.placed_tile_adjacency_bonuses)) {
+      const placedBonusSources = [
+        ..._normBonusList(pt.placed_tile_adjacency_bonuses),
+        ..._normBonusList(pt.bonuses_by_placing_next_to_building),
+      ];
+      for (const entry of placedBonusSources) {
         if (_entryMatchesBuildType(entry, tileType)) {
           for (const [res, amt] of Object.entries(entry.immediate || {}))
             immediate[res] = (immediate[res] || 0) + amt;
@@ -7254,6 +8651,18 @@ function renderBoard() {
         if (buildStr) info += `<br>${buildStr}`;
         const adjStr = _formatConditionalBonuses(tile.adjacency_bonuses, "Adj");
         if (adjStr) info += `<br>${adjStr}`;
+        if (tile.placed_tile) {
+          const placedAdjStr = _formatConditionalBonuses(
+            tile.placed_tile.placed_tile_adjacency_bonuses,
+            "Adj from placed tile"
+          );
+          if (placedAdjStr) info += `<br>${placedAdjStr}`;
+          const placedCardAdjStr = _formatConditionalBonuses(
+            tile.placed_tile.bonuses_by_placing_next_to_building,
+            "Adj from placed tile (card)"
+          );
+          if (placedCardAdjStr) info += `<br>${placedCardAdjStr}`;
+        }
       }
 
       tooltip.innerHTML = info;
@@ -7834,6 +9243,7 @@ function _collectResRows(container) {
 // Options for the "When building: [type]" dropdown in each bonus condition block
 const TILE_TYPE_BONUS_OPTIONS = [
   [null,                        "(any build type — always applies)"],
+  ["power_plant",               "⚡ Any Power Plant"],
   ["nuclear_power_plant",       "☢️ Nuclear Power Plant"],
   ["natural_gas_power_plant",   "🔥 Natural Gas Power Plant"],
   ["coal_power_plant",          "⛏️ Coal Power Plant"],
@@ -7886,15 +9296,16 @@ function _parseTargetCoordKeys(entry) {
 }
 
 function _parseBonusBuildTypeKeys(entry) {
+  const norm = (v) => String(v || "").trim().replace(/ /g, "_");
   const keys = [];
   const list = entry?.build_types;
   if (Array.isArray(list)) {
     list.forEach(v => {
-      if (!_isUnsetLike(v) && v) keys.push(String(v));
+      if (!_isUnsetLike(v) && v) keys.push(norm(v));
     });
   }
   if (!keys.length && !_isUnsetLike(entry?.build_type) && entry?.build_type) {
-    keys.push(String(entry.build_type));
+    keys.push(norm(entry.build_type));
   }
   return [...new Set(keys)];
 }
@@ -7914,8 +9325,24 @@ function _parseBonusTerrainTypeKeys(entry) {
 }
 
 function _entryMatchesBuildType(entry, tileType) {
+  const tt = String(tileType || "").trim().replace(/ /g, "_");
   const keys = _parseBonusBuildTypeKeys(entry);
-  return !keys.length || keys.includes(tileType);
+  if (!keys.length) return true;
+  if (keys.includes(tt)) return true;
+  if (keys.includes("power_plant")) {
+    const powerPlantTypes = new Set([
+      "nuclear_power_plant",
+      "natural_gas_power_plant",
+      "coal_power_plant",
+      "pv_power_plant",
+      "wind_power_plant",
+      "geothermal_power_plant",
+      "hydroelectric_power_plant",
+      "solar_thermal",
+    ]);
+    return powerPlantTypes.has(tt);
+  }
+  return false;
 }
 
 function _entryMatchesTerrainType(entry, terrainType) {

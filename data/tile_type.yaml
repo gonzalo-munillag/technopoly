@@ -25,7 +25,7 @@ lake:
   - hydroelectric_power_plant
   build_bonuses:
   - immediate:
-      money: -200
+      money: -2
     production: {}
     build_type: data_center
   adjacency_bonuses:
@@ -42,10 +42,20 @@ sea:
   - data_center
   build_bonuses:
   - immediate:
-      money: -300
+      money: -3
     production: {}
     build_type: data_center
-  adjacency_bonuses: []
+  adjacency_bonuses:
+  - immediate:
+      money: 1
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - data_center
+    - distribution_center
+    - factory
 empty:
   only_build:
   - nuclear_power_plant
@@ -111,7 +121,7 @@ industrial:
   - communication_tower
   build_bonuses:
   - immediate:
-      money: 100
+      money: 1
     production: {}
     build_types:
     - nuclear_power_plant
@@ -137,11 +147,11 @@ sun:
   - communication_tower
   build_bonuses:
   - immediate:
-      money: 200
+      money: 2
     production: {}
     build_type: pv_power_plant
   - immediate:
-      money: -200
+      money: -2
     production: {}
     build_types:
     - nuclear_power_plant
@@ -166,11 +176,11 @@ wind:
   - communication_tower
   build_bonuses:
   - immediate:
-      money: 200
+      money: 2
     production: {}
     build_type: wind_power_plant
   - immediate:
-      money: -200
+      money: -2
     production: {}
     build_types:
     - nuclear_power_plant
@@ -195,11 +205,11 @@ gas_reserve:
   - communication_tower
   build_bonuses:
   - immediate:
-      money: 100
+      money: 2
     production: {}
     build_type: natural_gas_power_plant
   - immediate:
-      money: -200
+      money: -2
     production: {}
     build_types:
     - nuclear_power_plant
@@ -221,13 +231,11 @@ coal:
   - communication_tower
   build_bonuses:
   - immediate:
-      money: 100
+      money: 2
     production: {}
-    build_types:
-    - coal_power_plant
-    - communication_tower
+    build_type: coal_power_plant
   - immediate:
-      money: -200
+      money: -2
     production: {}
     build_types:
     - nuclear_power_plant
@@ -237,6 +245,7 @@ coal:
     - data_center
     - distribution_center
     - factory
+    - communication_tower
   adjacency_bonuses: []
 geothermal:
   only_build:

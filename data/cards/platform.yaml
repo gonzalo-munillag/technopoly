@@ -3,7 +3,6 @@
   description: null
   type: software platform
   number: 1
-  disabled: 'true'
   adjacent_placement_fee: 0
   costs:
     users: 0
@@ -60,13 +59,12 @@
     bonus:
       users: 10
     target_count: 3
+  disabled: true
 - name: Social Network
   id: 14
   description: null
   type: social platform
   number: 2
-  disabled: 'true'
-  adjacent_placement_fee: 0
   costs:
     engineers: 5
     suits: 4
@@ -85,13 +83,20 @@
   production: null
   build: null
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage: null
   court_threshold_modifier: null
   producibles: []
+  resource_conversion: null
   pollution_tag: neutral
   fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
+  adjacent_placement_fee: 0
   adjacent_placement_fee_target_types: null
   bonuses_by_placing_next_to_building: null
   bonuses_by_building_on_terrain_type: null
@@ -114,13 +119,13 @@
     bonus:
       users: 10
     target_count: 3
+  disabled: true
 - name: App Store
   id: 15
   description: null
   type: online marketplace
   number: 3
   disabled: 'true'
-  adjacent_placement_fee: 0
   costs:
     engineers: 4
     suits: 4
@@ -140,13 +145,20 @@
     money: 2
   build: null
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage: null
   court_threshold_modifier: null
   producibles: []
+  resource_conversion: null
   pollution_tag: neutral
   fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
+  adjacent_placement_fee: 0
   adjacent_placement_fee_target_types: null
   bonuses_by_placing_next_to_building: null
   bonuses_by_building_on_terrain_type: null
@@ -270,7 +282,6 @@
     cringe platform that is itself confused about what it is. '
   type: social platform
   number: 1
-  disabled: 'true'
   adjacent_placement_fee: 0
   costs:
     engineers: 6
@@ -313,6 +324,7 @@
     users: 30
     money: 1
   boosts: null
+  disabled: true
 - name: Web Browser
   id: 19
   description: null
@@ -533,7 +545,6 @@
   type: hardware manufacturer
   number: 1
   adjacent_placement_fee: 4
-  disabled: 'true'
   costs:
     engineers: 10
     suits: 4
@@ -583,6 +594,7 @@
     money: 1
     data_cost: 200
   boosts: null
+  disabled: true
 - name: Tablet OEM
   id: 24
   description: null
@@ -678,7 +690,6 @@
   description: null
   type: hardware manufacturer
   number: 1
-  disabled: 'true'
   adjacent_placement_fee: 4
   costs:
     engineers: 10
@@ -729,6 +740,7 @@
     users: 10
     money: 1
   boosts: null
+  disabled: true
 - name: Robot OEM
   id: 27
   description: null
@@ -782,7 +794,6 @@
   type: hardware manufacturer
   number: 1
   adjacent_placement_fee: 4
-  disabled: 'true'
   costs:
     engineers: 8
     suits: 8
@@ -837,6 +848,7 @@
     bonus: {}
     production:
       money: 2
+  disabled: true
 - name: Wearable OEM
   id: 29
   description: null
@@ -1249,7 +1261,6 @@
   type: hardware manufacturer
   number: 1
   adjacent_placement_fee: 4
-  disabled: 'true'
   costs:
     engineers: 15
     suits: 0
@@ -1311,6 +1322,7 @@
     production:
       data_centers: 1
     target_count: 5
+  disabled: true
 - name: Mainframe Computer OEM
   id: 38
   description: 'Designed for reliability and massive transaction processing.
@@ -1319,7 +1331,6 @@
   type: hardware manufacturer
   number: 1
   adjacent_placement_fee: 4
-  disabled: 'true'
   costs:
     engineers: 8
     suits: 0
@@ -1380,6 +1391,7 @@
     production:
       data_centers: 1
     target_count: 3
+  disabled: true
 - name: Smart Vehicle OEM
   id: 39
   description: 'Manufacture passenger cars, boats, planes, motorbikes, ... whatever
@@ -1449,7 +1461,6 @@
   type: hardware manufacturer
   number: 1
   adjacent_placement_fee: 4
-  disabled: 'true'
   costs:
     engineers: 8
     suits: 0
@@ -1509,6 +1520,7 @@
     production:
       data_centers: 1
     target_count: 3
+  disabled: true
 - name: Content Delivery Network
   id: 41
   description: null
@@ -1645,7 +1657,6 @@
   type: hardware manufacturer
   number: 1
   adjacent_placement_fee: 4
-  disabled: 'true'
   costs:
     engineers: 12
     suits: 2
@@ -1699,6 +1710,7 @@
     bonus:
       money: 6
     target_count: 2
+  disabled: true
 - name: System on a Chip OEM
   id: 44
   description: SoC is an integrated circuit that combines CPU, RAM, input/output,
@@ -1767,7 +1779,6 @@
   type: hardware manufacturer
   number: 3
   adjacent_placement_fee: 4
-  disabled: 'true'
   costs:
     engineers: 13
     suits: 0
@@ -1891,7 +1902,6 @@
   placed_tile_adjacency_bonuses: null
   tiers: null
   boosts: null
-  disabled: true
 - name: Telco
   id: 47
   description: null
@@ -1974,7 +1984,6 @@
   description: Amazon
   type: online marketplace
   number: 1
-  disabled: 'true'
   adjacent_placement_fee: 0
   costs:
     engineers: 4
@@ -2016,6 +2025,7 @@
     users: 10
     money: 3
   boosts: null
+  disabled: true
 - name: Location Services
   id: 49
   description: null
@@ -2233,7 +2243,6 @@
   type: software platform
   number: 1
   adjacent_placement_fee: 0
-  disabled: 'true'
   costs:
     engineers: 5
     suits: 2
@@ -2275,6 +2284,7 @@
     users: 10
     money: 1
   boosts: null
+  disabled: true
 - name: EdTech Platform
   id: 54
   description: null
@@ -2386,7 +2396,6 @@
   description: null
   type: hardware manufacturer
   number: 1
-  disabled: 'true'
   adjacent_placement_fee: 4
   costs:
     engineers: 7
@@ -2491,7 +2500,6 @@
   description: null
   type: hardware manufacturer
   number: 1
-  disabled: 'true'
   adjacent_placement_fee: 4
   costs:
     engineers: 10
@@ -3091,6 +3099,7 @@
     users: 30
     money: 1
   boosts: null
+  disabled: true
 - name: Payment Service
   id: 70
   description: null
@@ -3191,12 +3200,13 @@
     target_type: null
     bonus:
       users: 10
+  disabled: true
 - name: Porn Platform
   id: 72
-  description: null
+  description: Pornhub, only fans
   type: software platform
   number: 1
-  adjacent_placement_fee: 0
+  disabled: 'true'
   costs:
     engineers: 6
     suits: 6
@@ -3218,13 +3228,20 @@
     money: 2
   build: null
   requirements: null
-  min_reputation: null
+  required_card_ids: null
+  play_thresholds: null
+  lose_card_rule: null
+  steal_card: null
+  poach_employees: null
+  targeted_leverage: null
   court_threshold_modifier: null
   producibles: []
+  resource_conversion: null
   pollution_tag: neutral
   fee_for_green: null
   only_playable_next_to: null
   only_playable_on_terrains: null
+  adjacent_placement_fee: 0
   adjacent_placement_fee_target_types: null
   bonuses_by_placing_next_to_building: null
   bonuses_by_building_on_terrain_type: null
@@ -3238,7 +3255,6 @@
       users: 20
     production:
       money: 1
-  disabled: true
 - name: Cybersecurity Services
   id: 73
   description: null
@@ -3437,6 +3453,7 @@
     bonus: {}
     production:
       money: 2
+  disabled: true
 - name: Travel Booking Service
   id: 77
   description: null
@@ -3486,3 +3503,4 @@
     users: 10
     money: 2
   boosts: null
+  disabled: true

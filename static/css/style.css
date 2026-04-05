@@ -592,6 +592,18 @@ body::after {
   color: var(--accent);
   font-weight: 600;
 }
+.card-effect-item.card-effect-positive {
+  color: #6fc8ff;
+  background: rgba(80, 170, 255, .18);
+}
+.card-effect-item.card-effect-negative {
+  color: #ff7d7d;
+  background: rgba(255, 85, 85, .18);
+}
+.card-effect-item.card-effect-neutral {
+  color: var(--accent);
+  background: rgba(201,162,39,.12);
+}
 
 .card-boosts {
   padding: .08rem .5rem .14rem;

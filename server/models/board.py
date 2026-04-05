@@ -168,16 +168,32 @@ def _matches_target_coords(entry: dict, row: int, col: int) -> bool:
         return False
 
 def _matches_build_type(entry: dict, tile_type: str) -> bool:
+    power_plant_types = {
+        "nuclear_power_plant",
+        "natural_gas_power_plant",
+        "coal_power_plant",
+        "pv_power_plant",
+        "wind_power_plant",
+        "geothermal_power_plant",
+        "hydroelectric_power_plant",
+        "solar_thermal",
+    }
+    def _matches_value(raw: str | None) -> bool:
+        raw_norm = None
+        if isinstance(raw, str):
+            raw_norm = raw.strip().replace(" ", "_")
+        val = _normalize_tile_type(raw_norm)
+        if val is None:
+            return True
+        # Group selector: apply to any power plant tile.
+        if raw_norm == "power_plant":
+            return tile_type in power_plant_types
+        return val == tile_type
+
     bts = entry.get("build_types")
     if isinstance(bts, list) and bts:
-        normalized = {
-            _normalize_tile_type(x)
-            for x in bts
-            if _normalize_tile_type(x)
-        }
-        return tile_type in normalized
-    bt = _normalize_tile_type(entry.get("build_type"))
-    return bt is None or bt == tile_type
+        return any(_matches_value(x) for x in bts)
+    return _matches_value(entry.get("build_type"))
 
 def _matches_terrain_type(entry: dict, terrain: str) -> bool:
     tts = entry.get("terrain_types")
@@ -512,6 +528,9 @@ class Board:
             "type": tile_type,
             "owner_id": owner_id,
             "placed_tile_adjacency_bonuses": _normalize_adjacency_bonuses(placed_tile_adjacency_bonuses),
+            # Keep this on the placed tile so future adjacent placements can also
+            # resolve card-level adjacency bonuses from already-placed neighbors.
+            "bonuses_by_placing_next_to_building": _normalize_adjacency_bonuses(bonuses_by_placing_next_to_building),
         }
         tile["placed_tile"] = tile_record
 
@@ -546,7 +565,13 @@ class Board:
             pt_type = _normalize_tile_type(pt.get("type"))
             if pt_type and pt_type not in seen_adj_placed:
                 seen_adj_placed.add(pt_type)
-                for entry in _normalize_adjacency_bonuses(pt.get("placed_tile_adjacency_bonuses", {})):
+                bonus_sources = []
+                bonus_sources.extend(_normalize_adjacency_bonuses(pt.get("placed_tile_adjacency_bonuses", {})))
+                # Backward/UX compatibility: if a player configured adjacency bonus
+                # in the card-level "next to building" field on the placed neighbor,
+                # apply it here as well for future adjacent placements.
+                bonus_sources.extend(_normalize_adjacency_bonuses(pt.get("bonuses_by_placing_next_to_building", {})))
+                for entry in bonus_sources:
                     if _matches_build_type(entry, tile_type):
                         for res, amt in (entry.get("immediate") or {}).items():
                             immediate[res] = immediate.get(res, 0) + amt

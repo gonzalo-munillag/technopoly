@@ -18,7 +18,6 @@
     data_centers: 1
     ad_campaigns: 1
   boosts: null
-  disabled: true
 - name: OmniCorp NEW TEST
   id: 2
   type: null

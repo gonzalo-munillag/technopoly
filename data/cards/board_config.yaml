@@ -166,12 +166,12 @@
   col: 11
   terrain: lake
   name: ''
-  build_bonuses:
+  build_bonuses: &id002
   - immediate:
-      money: -6
+      money: -2
     production: {}
     build_type: data_center
-  adjacency_bonuses:
+  adjacency_bonuses: &id003
   - immediate: {}
     production:
       money: 1
@@ -215,13 +215,7 @@
   col: 2
   terrain: rare_metal_mine
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
   only_build:
-  - data_center
   - rare_metal_mine
 - row: 1
   col: 3
@@ -273,9 +267,9 @@
   col: 5
   terrain: industrial
   name: ''
-  build_bonuses:
+  build_bonuses: &id001
   - immediate:
-      money: 3
+      money: 1
     production: {}
     build_types:
     - nuclear_power_plant
@@ -301,20 +295,7 @@
   col: 6
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -329,20 +310,7 @@
   col: 7
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -403,20 +371,8 @@
   col: 10
   terrain: lake
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate: {}
-    production:
-      money: 1
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - data_center
+  build_bonuses: *id002
+  adjacency_bonuses: *id003
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -424,20 +380,7 @@
   col: 11
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -452,20 +395,8 @@
   col: 12
   terrain: lake
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate: {}
-    production:
-      money: 1
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - data_center
+  build_bonuses: *id002
+  adjacency_bonuses: *id003
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -506,15 +437,13 @@
   col: 2
   terrain: coal
   name: ''
-  build_bonuses:
+  build_bonuses: &id004
   - immediate:
-      money: 3
+      money: 2
     production: {}
-    build_types:
-    - coal_power_plant
-    - communication_tower
+    build_type: coal_power_plant
   - immediate:
-      money: -6
+      money: -2
     production: {}
     build_types:
     - nuclear_power_plant
@@ -524,6 +453,7 @@
     - data_center
     - distribution_center
     - factory
+    - communication_tower
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -536,24 +466,7 @@
   col: 3
   terrain: coal
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - coal_power_plant
-    - communication_tower
-  - immediate:
-      money: -6
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
+  build_bonuses: *id004
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -602,20 +515,7 @@
   col: 6
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -630,20 +530,7 @@
   col: 7
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -797,24 +684,7 @@
   col: 2
   terrain: coal
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - coal_power_plant
-    - communication_tower
-  - immediate:
-      money: -6
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
+  build_bonuses: *id004
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -827,20 +697,8 @@
   col: 3
   terrain: lake
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate: {}
-    production:
-      money: 1
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - data_center
+  build_bonuses: *id002
+  adjacency_bonuses: *id003
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -866,20 +724,7 @@
   col: 5
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -894,20 +739,7 @@
   col: 6
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -922,20 +754,7 @@
   col: 7
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -1078,20 +897,8 @@
   col: 1
   terrain: lake
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate: {}
-    production:
-      money: 1
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - data_center
+  build_bonuses: *id002
+  adjacency_bonuses: *id003
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -1434,20 +1241,8 @@
   col: 7
   terrain: lake
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate: {}
-    production:
-      money: 1
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - data_center
+  build_bonuses: *id002
+  adjacency_bonuses: *id003
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -1553,20 +1348,8 @@
   col: 2
   terrain: lake
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate: {}
-    production:
-      money: 1
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - data_center
+  build_bonuses: *id002
+  adjacency_bonuses: *id003
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -1758,13 +1541,13 @@
   col: 3
   terrain: wind
   name: ''
-  build_bonuses:
+  build_bonuses: &id005
   - immediate:
-      money: 6
+      money: 2
     production: {}
     build_type: wind_power_plant
   - immediate:
-      money: -6
+      money: -2
     production: {}
     build_types:
     - nuclear_power_plant
@@ -1789,23 +1572,7 @@
   col: 4
   terrain: wind
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 6
-    production: {}
-    build_type: wind_power_plant
-  - immediate:
-      money: -6
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id005
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -1820,23 +1587,7 @@
   col: 5
   terrain: wind
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 6
-    production: {}
-    build_type: wind_power_plant
-  - immediate:
-      money: -6
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id005
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -1851,20 +1602,7 @@
   col: 6
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -1879,20 +1617,7 @@
   col: 7
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -1907,20 +1632,7 @@
   col: 8
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -2019,20 +1731,7 @@
   col: 7
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -2052,20 +1751,8 @@
   col: 13
   terrain: lake
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate: {}
-    production:
-      money: 1
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - data_center
+  build_bonuses: *id002
+  adjacency_bonuses: *id003
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -2130,20 +1817,7 @@
   col: 14
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -2158,22 +1832,30 @@
   col: 15
   terrain: sea
   name: ''
-  build_bonuses:
+  build_bonuses: &id006
   - immediate:
-      money: -9
+      money: -3
     production: {}
     build_type: data_center
+  adjacency_bonuses: &id007
+  - immediate:
+      money: 1
+    production: {}
+    build_types:
+    - nuclear_power_plant
+    - natural_gas_power_plant
+    - coal_power_plant
+    - data_center
+    - distribution_center
+    - factory
   only_build:
   - data_center
 - row: 5
   col: 14
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 6
@@ -2279,20 +1961,8 @@
   col: 0
   terrain: lake
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate: {}
-    production:
-      money: 1
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - data_center
+  build_bonuses: *id002
+  adjacency_bonuses: *id003
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -2411,20 +2081,7 @@
   col: -1
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -2444,20 +2101,7 @@
   col: -2
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -2472,11 +2116,8 @@
   col: -3
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 3
@@ -2541,20 +2182,7 @@
   col: -2
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -2748,13 +2376,13 @@
   col: 3
   terrain: gas_reserve
   name: ''
-  build_bonuses:
+  build_bonuses: &id008
   - immediate:
-      money: 3
+      money: 2
     production: {}
     build_type: natural_gas_power_plant
   - immediate:
-      money: -6
+      money: -2
     production: {}
     build_types:
     - nuclear_power_plant
@@ -2932,11 +2560,8 @@
   col: 13
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 9
@@ -2973,22 +2598,7 @@
   col: 2
   terrain: gas_reserve
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_type: natural_gas_power_plant
-  - immediate:
-      money: -6
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id008
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -3081,31 +2691,15 @@
   col: 11
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 8
   col: 8
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -3120,20 +2714,7 @@
   col: 9
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -3166,20 +2747,7 @@
   col: 1
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -3212,20 +2780,7 @@
   col: 0
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -3240,13 +2795,13 @@
   col: 0
   terrain: sun
   name: ''
-  build_bonuses:
+  build_bonuses: &id009
   - immediate:
-      money: 6
+      money: 2
     production: {}
     build_type: pv_power_plant
   - immediate:
-      money: -6
+      money: -2
     production: {}
     build_types:
     - nuclear_power_plant
@@ -3271,23 +2826,7 @@
   col: 1
   terrain: sun
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 6
-    production: {}
-    build_type: pv_power_plant
-  - immediate:
-      money: -6
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id009
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -3337,23 +2876,7 @@
   col: -1
   terrain: sun
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 6
-    production: {}
-    build_type: pv_power_plant
-  - immediate:
-      money: -6
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id009
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -3368,20 +2891,7 @@
   col: 3
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -3396,339 +2906,175 @@
   col: 6
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    target_coords:
-    - - 8
-      - 7
-    - - 8
-      - 6
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 0
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 1
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 3
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 4
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 5
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 6
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 7
   col: -4
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 8
   col: -3
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 11
   col: 5
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 10
   col: 6
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 9
   col: 7
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    target_coords:
-    - - 8
-      - 8
-    - - 8
-      - 7
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 9
   col: 8
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    target_coords:
-    - - 8
-      - 9
-    - - 8
-      - 8
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 9
   col: 9
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    target_coords:
-    - - 8
-      - 10
-    - - 8
-      - 9
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 9
   col: 10
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    target_coords:
-    - - 8
-      - 10
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 10
   col: 12
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 9
   col: 13
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 8
   col: 14
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 7
   col: 14
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 6
   col: 15
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 3
   col: 15
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 2
   col: 15
   terrain: industrial
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - wind_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id001
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -3743,33 +3089,24 @@
   col: 16
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 1
   col: 15
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 0
   col: 16
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 10
@@ -3804,22 +3141,7 @@
   col: 3
   terrain: gas_reserve
   name: ''
-  build_bonuses:
-  - immediate:
-      money: 3
-    production: {}
-    build_type: natural_gas_power_plant
-  - immediate:
-      money: -6
-    production: {}
-    build_types:
-    - nuclear_power_plant
-    - coal_power_plant
-    - pv_power_plant
-    - data_center
-    - distribution_center
-    - factory
-    - communication_tower
+  build_bonuses: *id008
   only_build:
   - nuclear_power_plant
   - natural_gas_power_plant
@@ -3879,11 +3201,8 @@
   col: 6
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: -3
@@ -4198,13 +3517,7 @@
   col: -6
   terrain: rare_metal_mine
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
   only_build:
-  - data_center
   - rare_metal_mine
 - row: -3
   col: -6
@@ -4238,20 +3551,8 @@
   col: -7
   terrain: lake
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -6
-    production: {}
-    build_type: data_center
-  adjacency_bonuses:
-  - immediate: {}
-    production:
-      money: 1
-    build_types:
-    - nuclear_power_plant
-    - natural_gas_power_plant
-    - coal_power_plant
-    - data_center
+  build_bonuses: *id002
+  adjacency_bonuses: *id003
   only_build:
   - data_center
   - hydroelectric_power_plant
@@ -4259,32 +3560,23 @@
   col: 12
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 11
   col: 13
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
 - row: 10
   col: 14
   terrain: sea
   name: ''
-  build_bonuses:
-  - immediate:
-      money: -9
-    production: {}
-    build_type: data_center
+  build_bonuses: *id006
+  adjacency_bonuses: *id007
   only_build:
   - data_center
